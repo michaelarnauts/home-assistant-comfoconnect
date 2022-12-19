@@ -19,6 +19,7 @@ This integration supports the following additional features over the existing in
 * Allows to modify the balance mode, bypass mode, temperature profile and ventilation mode.
 * Changes to fan speed won't be reverted after 2 hours.
 * Support to clear alarms.
+* Ignores invalid sensor values at the beginning of a session. (Workaround for bridge firmware bug)
 
 ## Installation
 
