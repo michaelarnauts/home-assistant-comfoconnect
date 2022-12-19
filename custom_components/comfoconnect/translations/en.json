@@ -1,0 +1,63 @@
+{
+    "config": {
+        "abort": {
+            "no_devices_found": "No devices found on the network",
+            "reauth_successful": "Re-authentication was successful"
+        },
+        "create_entry": {
+            "default": "Some sensors are not enabled by default. You can enable them in the entity registry after the integration configuration."
+        },
+        "error": {
+            "invalid_pin": "Invalid PIN"
+        },
+        "step": {
+            "confirm": {
+                "description": "Do you want to start set up?"
+            },
+            "enter_pin": {
+                "description": "The selected ComfoConnect LAN C bridge isn't using the default PIN. Please enter the correct PIN.",
+                "title": "Enter PIN"
+            },
+            "manual": {
+                "data": {
+                    "host": "Host"
+                },
+                "description": "Enter a ComfoConnect LAN C bridge hostname or IP address below.",
+                "title": "Add a ComfoConnect LAN C bridge manually"
+            },
+            "user": {
+                "data": {
+                    "host": "Host"
+                },
+                "description": "Select the ComfoConnect LAN C bridge from the list below.",
+                "title": "Add a ComfoConnect LAN C bridge"
+            }
+        }
+    },
+    "entity": {
+        "select": {
+            "balance": {
+                "state": {
+                    "balance": "Balance",
+                    "exhaust_only": "Exhaust only",
+                    "supply_only": "Supply only"
+                }
+            },
+            "setting": {
+                "state": {
+                    "auto": "Auto",
+                    "manual": "Manual",
+                    "off": "Off",
+                    "on": "On"
+                }
+            },
+            "temperature_profile": {
+                "state": {
+                    "cool": "Cool",
+                    "normal": "Normal",
+                    "warm": "Warm"
+                }
+            }
+        }
+    }
+}

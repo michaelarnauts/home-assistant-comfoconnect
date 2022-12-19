@@ -1,0 +1,11 @@
+{
+  "domain": "comfoconnect",
+  "name": "Zehnder ComfoAir Q",
+  "config_flow": true,
+  "documentation": "https://www.home-assistant.io/integrations/comfoconnect",
+  "requirements": ["aiocomfoconnect==0.1.5"],
+  "codeowners": ["@michaelarnauts"],
+  "iot_class": "local_push",
+  "loggers": ["aiocomfoconnect"],
+  "version": "0.1.5"
+}

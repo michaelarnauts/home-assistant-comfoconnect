@@ -1,0 +1,63 @@
+{
+  "entity": {
+    "select": {
+      "setting": {
+        "state": {
+          "auto": "Auto",
+          "manual": "Manual",
+          "on": "[%key:common::state::on%]",
+          "off": "[%key:common::state::off%]"
+        }
+      },
+      "balance": {
+        "state": {
+          "balance": "Balance",
+          "supply_only": "Supply only",
+          "exhaust_only": "Exhaust only"
+        }
+      },
+      "temperature_profile": {
+        "state": {
+          "warm": "Warm",
+          "normal": "Normal",
+          "cool": "Cool"
+        }
+      }
+    }
+  },
+  "config": {
+    "error": {
+      "invalid_pin": "Invalid PIN"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "host": "[%key:common::config_flow::data::host%]"
+        },
+        "title": "Add a ComfoConnect LAN C bridge",
+        "description": "Select the ComfoConnect LAN C bridge from the list below."
+      },
+      "manual": {
+        "data": {
+          "host": "[%key:common::config_flow::data::host%]"
+        },
+        "title": "Add a ComfoConnect LAN C bridge manually",
+        "description": "Enter a ComfoConnect LAN C bridge hostname or IP address below."
+      },
+      "enter_pin": {
+        "title": "Enter PIN",
+        "description": "The selected ComfoConnect LAN C bridge isn't using the default PIN. Please enter the correct PIN."
+      },
+      "confirm": {
+        "description": "[%key:common::config_flow::description::confirm_setup%]"
+      }
+    },
+    "create_entry": {
+      "default": "Some sensors are not enabled by default. You can enable them in the entity registry after the integration configuration."
+    },
+    "abort": {
+      "no_devices_found": "[%key:common::config_flow::abort::no_devices_found%]",
+      "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]"
+    }
+  }
+}
