@@ -59,7 +59,7 @@ SELECT_TYPES = (
         get_value_fn=lambda ccb: cast(Coroutine, ccb.get_mode()),
         set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_mode(option)),
         options=[VentilationMode.AUTO, VentilationMode.MANUAL],
-        translation_key="setting",
+        # translation_key="setting",
         sensor=SENSORS.get(SENSOR_OPERATING_MODE),
         sensor_value_fn=lambda value: {
             -1: VentilationMode.AUTO,
@@ -78,7 +78,7 @@ SELECT_TYPES = (
             VentilationSetting.ON,
             VentilationSetting.OFF,
         ],
-        translation_key="setting",
+        # translation_key="setting",
         sensor=SENSORS.get(SENSOR_BYPASS_ACTIVATION_STATE),
         sensor_value_fn=lambda value: {
             0: VentilationSetting.AUTO,
@@ -97,7 +97,7 @@ SELECT_TYPES = (
             VentilationBalance.SUPPLY_ONLY,
             VentilationBalance.EXHAUST_ONLY,
         ],
-        translation_key="balance",
+        # translation_key="balance",
     ),
     ComfoconnectSelectEntityDescription(
         key="temperature_profile",
@@ -113,7 +113,7 @@ SELECT_TYPES = (
             VentilationTemperatureProfile.NORMAL,
             VentilationTemperatureProfile.COOL,
         ],
-        translation_key="temperature_profile",
+        # translation_key="temperature_profile",
         sensor=SENSORS.get(SENSOR_PROFILE_TEMPERATURE),
         sensor_value_fn=lambda value: {
             0: VentilationTemperatureProfile.NORMAL,
