@@ -64,7 +64,7 @@ SELECT_TYPES = (
         sensor_value_fn=lambda value: {
             -1: VentilationMode.AUTO,
             1: VentilationMode.MANUAL,
-        }[value],
+        }.get(value),
     ),
     ComfoconnectSelectEntityDescription(
         key="bypass_mode",
@@ -84,7 +84,7 @@ SELECT_TYPES = (
             0: VentilationSetting.AUTO,
             1: VentilationSetting.ON,
             2: VentilationSetting.OFF,
-        }[value],
+        }.get(value),
     ),
     ComfoconnectSelectEntityDescription(
         key="balance_mode",
@@ -119,7 +119,7 @@ SELECT_TYPES = (
             0: VentilationTemperatureProfile.NORMAL,
             1: VentilationTemperatureProfile.COOL,
             2: VentilationTemperatureProfile.WARM,
-        }[value],
+        }.get(value),
     ),
 )
 
