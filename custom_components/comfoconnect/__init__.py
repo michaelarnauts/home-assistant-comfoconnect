@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import timedelta
 import logging
 
+import aiocomfoconnect
 from aiocomfoconnect import ComfoConnect
 from aiocomfoconnect.exceptions import (
     AioComfoConnectNotConnected,
@@ -24,6 +25,8 @@ from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.typing import ConfigType
 
 from .const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN
+
+COMFOCONNECT_AUTO = "auto"
 
 PLATFORMS: list[Platform] = [
     Platform.FAN,
@@ -57,7 +60,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Zehnder ComfoConnect from a config entry."""
 
     hass.data.setdefault(DOMAIN, {})
-    bridge = ComfoConnectBridge(hass, entry)
+
+    if entry.data[CONF_HOST] == COMFOCONNECT_AUTO:
+        bridges = await aiocomfoconnect.discover_bridges()
+        if len(bridges) != 0:
+            bridge = ComfoConnectBridge(hass, entry, bridges[0].host)
+        else:
+            bridge = ComfoConnectBridge(hass, entry)
 
     try:
         await bridge.connect(entry.data[CONF_LOCAL_UUID])
@@ -139,15 +148,24 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 class ComfoConnectBridge(ComfoConnect):
     """Representation of a ComfoConnect bridge."""
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry):
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, overwriteHost: str = None):
         """Initialize the ComfoConnect bridge."""
-        super().__init__(
-            entry.data[CONF_HOST],
-            entry.data[CONF_UUID],
-            hass.loop,
-            self.sensor_callback,
-            self.alarm_callback,
-        )
+        if overwriteHost is not None:
+            super().__init__(
+                overwriteHost,
+                entry.data[CONF_UUID],
+                hass.loop,
+                self.sensor_callback,
+                self.alarm_callback,
+            )
+        else:
+            super().__init__(
+                entry.data[CONF_HOST],
+                entry.data[CONF_UUID],
+                hass.loop,
+                self.sensor_callback,
+                self.alarm_callback,
+            )
         self.hass = hass
 
     @callback

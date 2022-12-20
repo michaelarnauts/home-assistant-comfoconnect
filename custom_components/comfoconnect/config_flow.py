@@ -19,6 +19,7 @@ from .const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN
 
 DEFAULT_PIN = "0000"
 COMFOCONNECT_MANUAL_BRIDGE_ID = "manual"
+COMFOCONNECT_AUTO = "auto"
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -29,6 +30,7 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     def __init__(self) -> None:
         """Initialize the Hue flow."""
+        self.isAuto = None
         self.bridge: Bridge | None = None
         self.local_uuid: str | None = None
         self.discovered_bridges: dict[str, Bridge] | None = None
@@ -100,12 +102,17 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None and user_input[CONF_HOST] is not None:
             # We need to discover the bridge to get its UUID
+            self.isAuto = 0;
+            if user_input[CONF_HOST] == COMFOCONNECT_AUTO:
+                user_input[CONF_HOST] = None
+                self.isAuto = 1
             bridges = await aiocomfoconnect.discover_bridges(user_input[CONF_HOST])
             if len(bridges) == 0:
                 # Could not discover the bridge
                 errors = {"base": "invalid_host"}
             else:
                 self.bridge = bridges[0]
+
                 # Don't allow to configure the same bridge twice
                 await self.async_set_unique_id(
                     self.bridge.uuid, raise_on_progress=False
@@ -158,6 +165,16 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self.hass.config_entries.async_reload(self.context["entry_id"])
             )
             return self.async_abort(reason="reauth_successful")
+
+        if self.isAuto == 1:
+            return self.async_create_entry(
+                title=COMFOCONNECT_AUTO,
+                data={
+                    CONF_HOST: COMFOCONNECT_AUTO,
+                    CONF_UUID: self.bridge.uuid,
+                    CONF_LOCAL_UUID: self.local_uuid,
+                },
+            )
 
         return self.async_create_entry(
             title=self.bridge.host,
