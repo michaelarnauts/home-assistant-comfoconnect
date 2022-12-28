@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass
 from datetime import timedelta
 
@@ -30,6 +31,7 @@ from aiocomfoconnect.sensors import (
     SENSORS,
     Sensor as AioComfoConnectSensor,
 )
+
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -64,7 +66,7 @@ class ComfoconnectRequiredKeysMixin:
     """Mixin for required keys."""
 
     ccb_sensor: AioComfoConnectSensor
-
+    rounding: float
 
 @dataclass
 class ComfoconnectSensorEntityDescription(
@@ -83,6 +85,7 @@ SENSOR_TYPES = (
         name="Inside temperature",
         native_unit_of_measurement=TEMP_CELSIUS,
         ccb_sensor=SENSORS.get(SENSOR_TEMPERATURE_EXTRACT),
+        rounding=0
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_HUMIDITY_EXTRACT,
@@ -91,6 +94,7 @@ SENSOR_TYPES = (
         name="Inside humidity",
         native_unit_of_measurement=PERCENTAGE,
         ccb_sensor=SENSORS.get(SENSOR_HUMIDITY_EXTRACT),
+        rounding=0
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_RMOT,
@@ -101,6 +105,7 @@ SENSOR_TYPES = (
         ccb_sensor=SENSORS.get(SENSOR_RMOT),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
+        rounding=0
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_TEMPERATURE_OUTDOOR,
@@ -109,6 +114,7 @@ SENSOR_TYPES = (
         name="Outside temperature",
         native_unit_of_measurement=TEMP_CELSIUS,
         ccb_sensor=SENSORS.get(SENSOR_TEMPERATURE_OUTDOOR),
+        rounding=0
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_HUMIDITY_OUTDOOR,
@@ -117,6 +123,7 @@ SENSOR_TYPES = (
         name="Outside humidity",
         native_unit_of_measurement=PERCENTAGE,
         ccb_sensor=SENSORS.get(SENSOR_HUMIDITY_OUTDOOR),
+        rounding=0
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_TEMPERATURE_SUPPLY,
@@ -125,6 +132,7 @@ SENSOR_TYPES = (
         name="Supply temperature",
         native_unit_of_measurement=TEMP_CELSIUS,
         ccb_sensor=SENSORS.get(SENSOR_TEMPERATURE_SUPPLY),
+        rounding=0
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_HUMIDITY_SUPPLY,
@@ -133,6 +141,7 @@ SENSOR_TYPES = (
         name="Supply humidity",
         native_unit_of_measurement=PERCENTAGE,
         ccb_sensor=SENSORS.get(SENSOR_HUMIDITY_SUPPLY),
+        rounding=0
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_FAN_SUPPLY_SPEED,
@@ -143,6 +152,7 @@ SENSOR_TYPES = (
         ccb_sensor=SENSORS.get(SENSOR_FAN_SUPPLY_SPEED),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
+        rounding=10
         throttle=True,
     ),
     ComfoconnectSensorEntityDescription(
@@ -154,6 +164,7 @@ SENSOR_TYPES = (
         ccb_sensor=SENSORS.get(SENSOR_FAN_SUPPLY_DUTY),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
+        rounding=0
         throttle=True,
     ),
     ComfoconnectSensorEntityDescription(
@@ -165,6 +176,7 @@ SENSOR_TYPES = (
         ccb_sensor=SENSORS.get(SENSOR_FAN_EXHAUST_SPEED),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
+        rounding=10
         throttle=True,
     ),
     ComfoconnectSensorEntityDescription(
@@ -176,6 +188,7 @@ SENSOR_TYPES = (
         ccb_sensor=SENSORS.get(SENSOR_FAN_EXHAUST_DUTY),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
+        rounding=0
         throttle=True,
     ),
     ComfoconnectSensorEntityDescription(
@@ -185,6 +198,7 @@ SENSOR_TYPES = (
         name="Exhaust temperature",
         native_unit_of_measurement=TEMP_CELSIUS,
         ccb_sensor=SENSORS.get(SENSOR_TEMPERATURE_EXHAUST),
+        rounding=0
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_HUMIDITY_EXHAUST,
@@ -193,6 +207,7 @@ SENSOR_TYPES = (
         name="Exhaust humidity",
         native_unit_of_measurement=PERCENTAGE,
         ccb_sensor=SENSORS.get(SENSOR_HUMIDITY_EXHAUST),
+        rounding=0
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_FAN_SUPPLY_FLOW,
@@ -203,6 +218,7 @@ SENSOR_TYPES = (
         ccb_sensor=SENSORS.get(SENSOR_FAN_SUPPLY_FLOW),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
+        rounding=10
         throttle=True,
     ),
     ComfoconnectSensorEntityDescription(
@@ -214,6 +230,7 @@ SENSOR_TYPES = (
         ccb_sensor=SENSORS.get(SENSOR_FAN_EXHAUST_FLOW),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
+        rounding=10
         throttle=True,
     ),
     ComfoconnectSensorEntityDescription(
@@ -223,6 +240,7 @@ SENSOR_TYPES = (
         native_unit_of_measurement=PERCENTAGE,
         icon="mdi:camera-iris",
         ccb_sensor=SENSORS.get(SENSOR_BYPASS_STATE),
+        rounding=0
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_DAYS_TO_REPLACE_FILTER,
@@ -231,6 +249,7 @@ SENSOR_TYPES = (
         icon="mdi:calendar",
         ccb_sensor=SENSORS.get(SENSOR_DAYS_TO_REPLACE_FILTER),
         entity_category=EntityCategory.DIAGNOSTIC,
+        rounding=0
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_POWER_USAGE,
@@ -241,6 +260,7 @@ SENSOR_TYPES = (
         ccb_sensor=SENSORS.get(SENSOR_POWER_USAGE),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
+        rounding=0
         throttle=True,
     ),
     ComfoconnectSensorEntityDescription(
@@ -252,6 +272,7 @@ SENSOR_TYPES = (
         ccb_sensor=SENSORS.get(SENSOR_POWER_USAGE_TOTAL),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
+        rounding=0
         throttle=True,
     ),
     ComfoconnectSensorEntityDescription(
@@ -263,6 +284,7 @@ SENSOR_TYPES = (
         ccb_sensor=SENSORS.get(SENSOR_PREHEATER_POWER),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
+        rounding=0
         throttle=True,
     ),
     ComfoconnectSensorEntityDescription(
@@ -274,6 +296,7 @@ SENSOR_TYPES = (
         ccb_sensor=SENSORS.get(SENSOR_PREHEATER_POWER_TOTAL),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
+        rounding=0
         throttle=True,
     ),
 )
@@ -314,6 +337,9 @@ class ComfoConnectSensor(SensorEntity):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._ccb.uuid)},
         )
+        self._rounding = description.rounding
+        self._last_rcv_timestamp = None
+        self._attr_native_value = None
 
     async def async_added_to_hass(self) -> None:
         """Register for sensor updates."""
@@ -347,5 +373,39 @@ class ComfoConnectSensor(SensorEntity):
             value,
         )
 
-        self._attr_native_value = value
-        self.schedule_update_ha_state()
+        old_value = self._attr_native_value
+        should_update = False
+
+        if old_value is None:
+            should_update = True
+        else:
+            low_limit = old_value - (old_value * self._rounding) / 100
+            high_limit = old_value + (old_value * self._rounding) / 100
+            if value > high_limit:
+                should_update = True
+            if value < low_limit:
+                should_update = True
+
+        if should_update:
+            self._attr_native_value = value
+            self.schedule_update_ha_state()
+
+        self._last_rcv_timestamp = time.time();
+
+    def _is_change(self, value) -> bool:
+        old_value = self._attr_native_value
+        _LOGGER.warning(
+            "Old value %s new %s perc $s",
+            old_value,
+            value,
+            self._rounding
+        )
+        if old_value is None:
+            return True
+        low_limit = old_value - (old_value * self._rounding) / 100
+        high_limit = old_value + (old_value * self._rounding) / 100
+        if value > high_limit:
+            return True
+        if value < low_limit:
+            return True
+        return False
