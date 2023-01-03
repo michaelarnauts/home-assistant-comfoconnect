@@ -1,8 +1,9 @@
 """Sensor for the ComfoConnect integration."""
 from __future__ import annotations
 
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
+from datetime import timedelta
 
 from aiocomfoconnect.sensors import (
     SENSOR_BYPASS_STATE,
@@ -29,7 +30,6 @@ from aiocomfoconnect.sensors import (
     SENSORS,
     Sensor as AioComfoConnectSensor,
 )
-
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -50,10 +50,13 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import Throttle
 
 from . import DOMAIN, SIGNAL_COMFOCONNECT_UPDATE_RECEIVED, ComfoConnectBridge
 
 _LOGGER = logging.getLogger(__name__)
+
+MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=10)
 
 
 @dataclass
@@ -68,6 +71,8 @@ class ComfoconnectSensorEntityDescription(
     SensorEntityDescription, ComfoconnectRequiredKeysMixin
 ):
     """Describes ComfoConnect sensor entity."""
+
+    throttle: bool = False
 
 
 SENSOR_TYPES = (
@@ -138,6 +143,7 @@ SENSOR_TYPES = (
         ccb_sensor=SENSORS.get(SENSOR_FAN_SUPPLY_SPEED),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
+        throttle=True,
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_FAN_SUPPLY_DUTY,
@@ -148,6 +154,7 @@ SENSOR_TYPES = (
         ccb_sensor=SENSORS.get(SENSOR_FAN_SUPPLY_DUTY),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
+        throttle=True,
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_FAN_EXHAUST_SPEED,
@@ -158,6 +165,7 @@ SENSOR_TYPES = (
         ccb_sensor=SENSORS.get(SENSOR_FAN_EXHAUST_SPEED),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
+        throttle=True,
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_FAN_EXHAUST_DUTY,
@@ -168,6 +176,7 @@ SENSOR_TYPES = (
         ccb_sensor=SENSORS.get(SENSOR_FAN_EXHAUST_DUTY),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
+        throttle=True,
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_TEMPERATURE_EXHAUST,
@@ -194,6 +203,7 @@ SENSOR_TYPES = (
         ccb_sensor=SENSORS.get(SENSOR_FAN_SUPPLY_FLOW),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
+        throttle=True,
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_FAN_EXHAUST_FLOW,
@@ -204,6 +214,7 @@ SENSOR_TYPES = (
         ccb_sensor=SENSORS.get(SENSOR_FAN_EXHAUST_FLOW),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
+        throttle=True,
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_BYPASS_STATE,
@@ -230,6 +241,7 @@ SENSOR_TYPES = (
         ccb_sensor=SENSORS.get(SENSOR_POWER_USAGE),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
+        throttle=True,
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_POWER_USAGE_TOTAL,
@@ -240,6 +252,7 @@ SENSOR_TYPES = (
         ccb_sensor=SENSORS.get(SENSOR_POWER_USAGE_TOTAL),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
+        throttle=True,
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_PREHEATER_POWER,
@@ -250,6 +263,7 @@ SENSOR_TYPES = (
         ccb_sensor=SENSORS.get(SENSOR_PREHEATER_POWER),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
+        throttle=True,
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_PREHEATER_POWER_TOTAL,
@@ -260,6 +274,7 @@ SENSOR_TYPES = (
         ccb_sensor=SENSORS.get(SENSOR_PREHEATER_POWER_TOTAL),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
+        throttle=True,
     ),
 )
 
@@ -307,11 +322,18 @@ class ComfoConnectSensor(SensorEntity):
             self.entity_description.name,
             self.entity_description.key,
         )
+
+        # If the sensor should be throttled, pass it through the Throttle utility
+        if self.entity_description.throttle:
+            update_handler = Throttle(MIN_TIME_BETWEEN_UPDATES)(self._handle_update)
+        else:
+            update_handler = self._handle_update
+
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
                 SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(self.entity_description.key),
-                self._handle_update,
+                update_handler,
             )
         )
         await self._ccb.register_sensor(self.entity_description.ccb_sensor)
