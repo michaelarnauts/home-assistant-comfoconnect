@@ -15,11 +15,14 @@ integration in Home Assistant.
 
 This integration supports the following additional features over the existing integration:
 
-* Configurable through the UI.
-* Allows to modify the balance mode, bypass mode, temperature profile and ventilation mode.
-* Changes to fan speed won't be reverted after 2 hours.
-* Support to clear alarms.
-* Ignores invalid sensor values at the beginning of a session. (Workaround for bridge firmware bug)
+* Configurable through the UI
+* Allows to modify the balance mode, bypass mode, temperature profile and ventilation mode
+* Changes to fan speed won't be reverted after 2 hours
+* Support to clear alarms
+* Ignores invalid sensor values at the beginning of a session (Workaround for bridge firmware bug)
+* Throttles high frequency sensor updates (airflow & fan duty) to once every 10 seconds
+
+**Note: Not all sensors are enabled by default. You can enable them on the integration page.**
 
 ## Installation
 
