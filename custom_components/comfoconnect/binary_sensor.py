@@ -22,6 +22,7 @@ from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import DOMAIN, SIGNAL_COMFOCONNECT_UPDATE_RECEIVED, ComfoConnectBridge
+from .connection_sensor import comfo_connection_sensor_initialize
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -72,6 +73,12 @@ async def async_setup_entry(
         )
         for description in SENSOR_TYPES
     ]
+
+    connection_sensor = comfo_connection_sensor_initialize(
+        ccb=ccb, config_entry=config_entry
+    )
+
+    sensors.append(connection_sensor)
 
     async_add_entities(sensors, True)
 

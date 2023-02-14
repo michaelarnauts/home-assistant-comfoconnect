@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from datetime import timedelta
 import logging
-
+import time
+import aiocomfoconnect
 from aiocomfoconnect import ComfoConnect
 from aiocomfoconnect.exceptions import (
     AioComfoConnectNotConnected,
@@ -23,7 +24,12 @@ from homeassistant.helpers.dispatcher import dispatcher_send
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.typing import ConfigType
 
+from typing import Callable
+from typing import List
+
 from .const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN
+
+COMFOCONNECT_AUTO = "auto"
 
 PLATFORMS: list[Platform] = [
     Platform.FAN,
@@ -38,6 +44,13 @@ _LOGGER = logging.getLogger(__name__)
 SIGNAL_COMFOCONNECT_UPDATE_RECEIVED = "comfoconnect_update_received_{}"
 
 KEEP_ALIVE_INTERVAL = timedelta(seconds=60)
+
+CALLBACK_FUNCTION: Callable[[bool], None] = None
+
+
+def set_conn_update(function: Callable[[bool], None]):
+    global CALLBACK_FUNCTION
+    CALLBACK_FUNCTION = function
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -57,7 +70,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Zehnder ComfoConnect from a config entry."""
 
     hass.data.setdefault(DOMAIN, {})
-    bridge = ComfoConnectBridge(hass, entry)
+
+    if entry.data[CONF_HOST] == COMFOCONNECT_AUTO:
+        bridges = await aiocomfoconnect.discover_bridges()
+        if len(bridges) != 0:
+            bridge = ComfoConnectBridge(hass, entry, bridges[0].host)
+        else:
+            bridge = ComfoConnectBridge(hass, entry)
 
     try:
         await bridge.connect(entry.data[CONF_LOCAL_UUID])
@@ -105,6 +124,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         """Send keepalive to the bridge."""
         _LOGGER.debug("Sending keepalive...")
         try:
+            now = time.time()
+            last_received = bridge.get_last_received()
+
+            if last_received + 120 < now:
+                CALLBACK_FUNCTION(False)
+                bridge.unavailable_sensors()
+                bridge.set_last_received(last_received)
+            else:
+                CALLBACK_FUNCTION(True)
+
             await bridge.cmd_keepalive()
         except AioComfoConnectNotConnected:
             # Reconnect when connection has been dropped
@@ -139,23 +168,48 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 class ComfoConnectBridge(ComfoConnect):
     """Representation of a ComfoConnect bridge."""
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry):
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, overwriteHost: str = None):
         """Initialize the ComfoConnect bridge."""
-        super().__init__(
-            entry.data[CONF_HOST],
-            entry.data[CONF_UUID],
-            hass.loop,
-            self.sensor_callback,
-            self.alarm_callback,
-        )
+        if overwriteHost is not None:
+            super().__init__(
+                overwriteHost,
+                entry.data[CONF_UUID],
+                hass.loop,
+                self.sensor_callback,
+                self.alarm_callback,
+            )
+        else:
+            super().__init__(
+                entry.data[CONF_HOST],
+                entry.data[CONF_UUID],
+                hass.loop,
+                self.sensor_callback,
+                self.alarm_callback,
+            )
         self.hass = hass
+        self._ha_sensors: List[Sensor] = []
+        self._last_rcv_timestamp = time.time()
 
+    def get_last_received(self) -> float:
+        return self._last_rcv_timestamp
+
+    def set_last_received(self, value: float) -> None:
+        self._last_rcv_timestamp = value
     @callback
     def sensor_callback(self, sensor: Sensor, value):
         """Notify listeners that we have received an update."""
+        self._last_rcv_timestamp = time.time()
         dispatcher_send(
             self.hass, SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(sensor.id), value
         )
+
+    async def register_sensor(self, sensor: Sensor):
+        self._ha_sensors.append(sensor)
+        await super().register_sensor(sensor)
+
+    def unavailable_sensors(self):
+        for sensor in self._ha_sensors:
+            self.sensor_callback(sensor, None)
 
     @callback
     def alarm_callback(self, node_id, errors):

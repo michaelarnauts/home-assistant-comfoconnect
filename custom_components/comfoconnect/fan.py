@@ -94,7 +94,9 @@ class ComfoConnectFan(FanEntity):
         _LOGGER.debug(
             "Handle update for fan speed (%d): %s", SENSOR_FAN_SPEED_MODE, value
         )
-        if value == 0:
+        if value is None:
+            self._attr_percentage = 0
+        elif value == 0:
             self._attr_percentage = 0
         else:
             self._attr_percentage = ordered_list_item_to_percentage(
