@@ -170,8 +170,6 @@ SENSOR_TYPES = (
         ccb_sensor=SENSORS.get(SENSOR_FAN_EXHAUST_SPEED),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
-        minAllowedDifference=10,
-        throttle=True,
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_FAN_EXHAUST_DUTY,
