@@ -107,7 +107,9 @@ class ComfoConnectBinarySensor(BinarySensorEntity):
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
-                SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(self.entity_description.key),
+                SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(
+                    self._ccb.uuid, self.entity_description.key
+                ),
                 self._handle_update,
             )
         )

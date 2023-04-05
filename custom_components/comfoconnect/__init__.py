@@ -35,7 +35,7 @@ PLATFORMS: list[Platform] = [
 
 _LOGGER = logging.getLogger(__name__)
 
-SIGNAL_COMFOCONNECT_UPDATE_RECEIVED = "comfoconnect_update_received_{}"
+SIGNAL_COMFOCONNECT_UPDATE_RECEIVED = "comfoconnect_update_{}_{}"
 
 KEEP_ALIVE_INTERVAL = timedelta(seconds=60)
 
@@ -154,7 +154,9 @@ class ComfoConnectBridge(ComfoConnect):
     def sensor_callback(self, sensor: Sensor, value):
         """Notify listeners that we have received an update."""
         dispatcher_send(
-            self.hass, SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(sensor.id), value
+            self.hass,
+            SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(self.uuid, sensor.id),
+            value,
         )
 
     @callback
