@@ -332,7 +332,9 @@ class ComfoConnectSensor(SensorEntity):
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
-                SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(self.entity_description.key),
+                SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(
+                    self._ccb.uuid, self.entity_description.key
+                ),
                 update_handler,
             )
         )

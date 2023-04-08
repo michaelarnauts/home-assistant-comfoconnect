@@ -73,7 +73,9 @@ class ComfoConnectFan(FanEntity):
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
-                SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(SENSOR_FAN_SPEED_MODE),
+                SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(
+                    self._ccb.uuid, SENSOR_FAN_SPEED_MODE
+                ),
                 self._handle_speed_update,
             )
         )
@@ -83,7 +85,9 @@ class ComfoConnectFan(FanEntity):
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
-                SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(SENSOR_OPERATING_MODE),
+                SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(
+                    self._ccb.uuid, SENSOR_OPERATING_MODE
+                ),
                 self._handle_mode_update,
             )
         )

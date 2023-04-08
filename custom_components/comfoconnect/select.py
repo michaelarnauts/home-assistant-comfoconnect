@@ -174,7 +174,7 @@ class ComfoConnectSelect(SelectEntity):
             async_dispatcher_connect(
                 self.hass,
                 SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(
-                    self.entity_description.sensor.id
+                    self._ccb.uuid, self.entity_description.sensor.id
                 ),
                 self._handle_update,
             )

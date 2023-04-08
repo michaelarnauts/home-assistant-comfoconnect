@@ -16,6 +16,7 @@ integration in Home Assistant.
 This integration supports the following additional features over the existing integration:
 
 * Configurable through the UI
+* Support for multiple bridges
 * Allows to modify the balance mode, bypass mode, temperature profile and ventilation mode
 * Changes to fan speed won't be reverted after 2 hours
 * Support to clear alarms
