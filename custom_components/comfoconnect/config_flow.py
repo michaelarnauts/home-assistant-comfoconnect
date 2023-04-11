@@ -5,10 +5,9 @@ import logging
 from typing import Any
 
 import aiocomfoconnect
+import voluptuous as vol
 from aiocomfoconnect import Bridge
 from aiocomfoconnect.exceptions import ComfoConnectNotAllowed
-import voluptuous as vol
-
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_PIN
 from homeassistant.data_entry_flow import FlowResult

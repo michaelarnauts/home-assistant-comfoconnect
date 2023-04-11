@@ -10,7 +10,6 @@ from aiocomfoconnect.sensors import (
     SENSOR_OPERATING_MODE,
     SENSORS,
 )
-
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -66,6 +65,12 @@ class ComfoConnectFan(FanEntity):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._ccb.uuid)},
         )
+
+    @property
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        _LOGGER.error("fan available: %s", self._ccb.is_connected())
+        return self._ccb.is_connected()
 
     async def async_added_to_hass(self) -> None:
         """Register for sensor updates."""

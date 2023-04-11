@@ -1,9 +1,9 @@
 """Button for the ComfoConnect integration."""
 from __future__ import annotations
 
+import logging
 from collections.abc import Awaitable, Coroutine
 from dataclasses import dataclass
-import logging
 from typing import Any, Callable, cast
 
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
@@ -76,6 +76,12 @@ class ComfoConnectButton(ButtonEntity):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._ccb.uuid)},
         )
+
+    @property
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        _LOGGER.error("button available: %s", self._ccb.is_connected())
+        return self._ccb.is_connected()
 
     async def async_press(self) -> None:
         """Press the button."""

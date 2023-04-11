@@ -1,9 +1,9 @@
 """Select for the ComfoConnect integration."""
 from __future__ import annotations
 
+import logging
 from collections.abc import Awaitable, Coroutine
 from dataclasses import dataclass
-import logging
 from typing import Any, Callable, cast
 
 from aiocomfoconnect.const import (
@@ -17,9 +17,8 @@ from aiocomfoconnect.sensors import (
     SENSOR_OPERATING_MODE,
     SENSOR_PROFILE_TEMPERATURE,
     SENSORS,
-    Sensor as AioComfoConnectSensor,
 )
-
+from aiocomfoconnect.sensors import Sensor as AioComfoConnectSensor
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -159,6 +158,12 @@ class ComfoConnectSelect(SelectEntity):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._ccb.uuid)},
         )
+
+    @property
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        _LOGGER.error("select available: %s", self._ccb.is_connected())
+        return self._ccb.is_connected()
 
     async def async_added_to_hass(self) -> None:
         """Register for sensor updates."""

@@ -32,8 +32,8 @@ from aiocomfoconnect.sensors import (
     SENSOR_TEMPERATURE_OUTDOOR,
     SENSOR_TEMPERATURE_SUPPLY,
     SENSORS,
-    Sensor as AioComfoConnectSensor,
 )
+from aiocomfoconnect.sensors import Sensor as AioComfoConnectSensor
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -359,6 +359,12 @@ class ComfoConnectSensor(SensorEntity):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._ccb.uuid)},
         )
+
+    @property
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        _LOGGER.error("sensor available: %s", self._ccb.is_connected())
+        return self._ccb.is_connected()
 
     async def async_added_to_hass(self) -> None:
         """Register for sensor updates."""

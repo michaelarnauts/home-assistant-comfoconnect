@@ -1,16 +1,15 @@
 """Binary Sensor for the ComfoConnect integration."""
 from __future__ import annotations
 
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 
 from aiocomfoconnect.sensors import (
     SENSOR_SEASON_COOLING_ACTIVE,
     SENSOR_SEASON_HEATING_ACTIVE,
     SENSORS,
-    Sensor as AioComfoConnectSensor,
 )
-
+from aiocomfoconnect.sensors import Sensor as AioComfoConnectSensor
 from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
@@ -96,6 +95,12 @@ class ComfoConnectBinarySensor(BinarySensorEntity):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._ccb.uuid)},
         )
+
+    @property
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        _LOGGER.error("binary_sensor available: %s", self._ccb.is_connected())
+        return self._ccb.is_connected()
 
     async def async_added_to_hass(self) -> None:
         """Register for sensor updates."""

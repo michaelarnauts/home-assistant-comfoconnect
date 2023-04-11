@@ -1,19 +1,19 @@
 """Support to control a Zehnder ComfoAir Q350/450/600 ventilation unit."""
 from __future__ import annotations
 
-from datetime import timedelta
 import logging
+from datetime import timedelta
 
 from aiocomfoconnect import ComfoConnect
 from aiocomfoconnect.exceptions import (
     AioComfoConnectNotConnected,
+    AioComfoConnectTimeout,
     ComfoConnectError,
     ComfoConnectNotAllowed,
 )
 from aiocomfoconnect.properties import PROPERTY_FIRMWARE_VERSION, PROPERTY_MODEL
 from aiocomfoconnect.sensors import Sensor
 from aiocomfoconnect.util import version_decode
-
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import CONF_HOST, EVENT_HOMEASSISTANT_STOP, Platform
 from homeassistant.core import HomeAssistant, callback
@@ -37,7 +37,7 @@ _LOGGER = logging.getLogger(__name__)
 
 SIGNAL_COMFOCONNECT_UPDATE_RECEIVED = "comfoconnect_update_{}_{}"
 
-KEEP_ALIVE_INTERVAL = timedelta(seconds=60)
+KEEP_ALIVE_INTERVAL = timedelta(seconds=30)
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -105,10 +105,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         """Send keepalive to the bridge."""
         _LOGGER.debug("Sending keepalive...")
         try:
-            await bridge.cmd_keepalive()
-        except AioComfoConnectNotConnected:
+            # Use cmd_time_request as a keepalive since cmd_keepalive doesn't send back a reply we can wait for
+            await bridge.cmd_time_request()
+
+            # TODO: Mark sensors as available
+
+        except (AioComfoConnectNotConnected, AioComfoConnectTimeout):
             # Reconnect when connection has been dropped
-            await bridge.connect(entry.data[CONF_LOCAL_UUID])
+            try:
+                await bridge.connect(entry.data[CONF_LOCAL_UUID])
+            except AioComfoConnectTimeout:
+                _LOGGER.debug("Connection timed out. Retrying later...")
+
+                # TODO: Mark all sensors as unavailable
 
     entry.async_on_unload(
         async_track_time_interval(hass, send_keepalive, KEEP_ALIVE_INTERVAL)
