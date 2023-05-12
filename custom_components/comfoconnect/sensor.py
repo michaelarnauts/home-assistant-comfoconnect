@@ -6,6 +6,10 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 from aiocomfoconnect.sensors import (
+    SENSOR_ANALOG_INPUT_1,
+    SENSOR_ANALOG_INPUT_2,
+    SENSOR_ANALOG_INPUT_3,
+    SENSOR_ANALOG_INPUT_4,
     SENSOR_BYPASS_STATE,
     SENSOR_DAYS_TO_REPLACE_FILTER,
     SENSOR_FAN_EXHAUST_DUTY,
@@ -45,6 +49,7 @@ from homeassistant.const import (
     TEMP_CELSIUS,
     TIME_DAYS,
     VOLUME_FLOW_RATE_CUBIC_METERS_PER_HOUR,
+    ELECTRIC_POTENTIAL_VOLT,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
@@ -273,6 +278,46 @@ SENSOR_TYPES = (
         native_unit_of_measurement=ENERGY_KILO_WATT_HOUR,
         ccb_sensor=SENSORS.get(SENSOR_PREHEATER_POWER_TOTAL),
         entity_registry_enabled_default=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        throttle=True,
+    ),
+    ComfoconnectSensorEntityDescription(
+        key=SENSOR_ANALOG_INPUT_1,
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        name="Analog Input 1",
+        native_unit_of_measurement=ELECTRIC_POTENTIAL_VOLT,
+        ccb_sensor=SENSORS.get(SENSOR_ANALOG_INPUT_1),
+        entity_category=EntityCategory.DIAGNOSTIC,
+        throttle=True,
+    ),
+    ComfoconnectSensorEntityDescription(
+        key=SENSOR_ANALOG_INPUT_2,
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        name="Analog Input 2",
+        native_unit_of_measurement=ELECTRIC_POTENTIAL_VOLT,
+        ccb_sensor=SENSORS.get(SENSOR_ANALOG_INPUT_2),
+        entity_category=EntityCategory.DIAGNOSTIC,
+        throttle=True,
+    ),
+    ComfoconnectSensorEntityDescription(
+        key=SENSOR_ANALOG_INPUT_3,
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        name="Analog Input 3",
+        native_unit_of_measurement=ELECTRIC_POTENTIAL_VOLT,
+        ccb_sensor=SENSORS.get(SENSOR_ANALOG_INPUT_3),
+        entity_category=EntityCategory.DIAGNOSTIC,
+        throttle=True,
+    ),
+    ComfoconnectSensorEntityDescription(
+        key=SENSOR_ANALOG_INPUT_4,
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        name="Analog Input 4",
+        native_unit_of_measurement=ELECTRIC_POTENTIAL_VOLT,
+        ccb_sensor=SENSORS.get(SENSOR_ANALOG_INPUT_4),
         entity_category=EntityCategory.DIAGNOSTIC,
         throttle=True,
     ),
