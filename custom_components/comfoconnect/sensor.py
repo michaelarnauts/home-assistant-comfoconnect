@@ -32,8 +32,8 @@ from aiocomfoconnect.sensors import (
     SENSOR_TEMPERATURE_OUTDOOR,
     SENSOR_TEMPERATURE_SUPPLY,
     SENSORS,
+    Sensor as AioComfoConnectSensor,
 )
-from aiocomfoconnect.sensors import Sensor as AioComfoConnectSensor
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,

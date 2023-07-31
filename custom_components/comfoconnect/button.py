@@ -1,9 +1,9 @@
 """Button for the ComfoConnect integration."""
 from __future__ import annotations
 
-import logging
 from collections.abc import Awaitable, Coroutine
 from dataclasses import dataclass
+import logging
 from typing import Any, Callable, cast
 
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription

@@ -10,6 +10,7 @@ from aiocomfoconnect.sensors import (
     SENSOR_OPERATING_MODE,
     SENSORS,
 )
+
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant

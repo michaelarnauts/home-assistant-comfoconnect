@@ -1,15 +1,16 @@
 """Binary Sensor for the ComfoConnect integration."""
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
+import logging
 
 from aiocomfoconnect.sensors import (
     SENSOR_SEASON_COOLING_ACTIVE,
     SENSOR_SEASON_HEATING_ACTIVE,
     SENSORS,
+    Sensor as AioComfoConnectSensor,
 )
-from aiocomfoconnect.sensors import Sensor as AioComfoConnectSensor
+
 from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
