@@ -96,12 +96,6 @@ class ComfoConnectBinarySensor(BinarySensorEntity):
             identifiers={(DOMAIN, self._ccb.uuid)},
         )
 
-    @property
-    def available(self) -> bool:
-        """Return True if entity is available."""
-        _LOGGER.error("binary_sensor available: %s", self._ccb.is_connected())
-        return self._ccb.is_connected()
-
     async def async_added_to_hass(self) -> None:
         """Register for sensor updates."""
         _LOGGER.debug(

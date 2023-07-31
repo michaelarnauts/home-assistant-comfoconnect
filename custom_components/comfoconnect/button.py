@@ -77,12 +77,6 @@ class ComfoConnectButton(ButtonEntity):
             identifiers={(DOMAIN, self._ccb.uuid)},
         )
 
-    @property
-    def available(self) -> bool:
-        """Return True if entity is available."""
-        _LOGGER.error("button available: %s", self._ccb.is_connected())
-        return self._ccb.is_connected()
-
     async def async_press(self) -> None:
         """Press the button."""
         await self.entity_description.press_fn(self._ccb, self._attr_unique_id)
