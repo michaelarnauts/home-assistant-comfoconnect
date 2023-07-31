@@ -78,6 +78,39 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except ComfoConnectError as err:
         raise ConfigEntryError from err
 
+    except AioComfoConnectTimeout as err:
+        # We got a timeout, this can happen when the IP address of the bridge has changed.
+        _LOGGER.warning(
+            'Timeout connecting to bridge "%s", trying discovery again.',
+            entry.data[CONF_HOST],
+        )
+
+        bridges = await discover_bridges()
+        discovered_bridge = next(
+            (b for b in bridges if b.uuid == entry.data[CONF_UUID]), None
+        )
+        if not discovered_bridge:
+            _LOGGER.warning(
+                'Unable to discover bridge "%s". Retrying later.', entry.data[CONF_UUID]
+            )
+            raise ConfigEntryNotReady from err
+
+        # Try again, with the updated host this time
+        bridge = ComfoConnectBridge(hass, discovered_bridge.host, entry.data[CONF_UUID])
+        try:
+            await bridge.connect(entry.data[CONF_LOCAL_UUID])
+
+            # Update the host in the config entry
+            hass.config_entries.async_update_entry(
+                entry, data={**entry.data, CONF_HOST: discovered_bridge.host}
+            )
+
+        except ComfoConnectNotAllowed:
+            raise ConfigEntryAuthFailed("Access denied")
+
+        except ComfoConnectError as err:
+            raise ConfigEntryNotReady from err
+
     hass.data[DOMAIN][entry.entry_id] = bridge
 
     # Get device information
