@@ -5,7 +5,6 @@ import logging
 from datetime import timedelta
 
 from aiocomfoconnect import ComfoConnect, discover_bridges
-from aiocomfoconnect.const import TYPE_CN_STRING, UNIT_NODE
 from aiocomfoconnect.exceptions import (
     AioComfoConnectNotConnected,
     AioComfoConnectTimeout,
@@ -16,7 +15,6 @@ from aiocomfoconnect.properties import (
     PROPERTY_FIRMWARE_VERSION,
     PROPERTY_MODEL,
     PROPERTY_NAME,
-    Property,
 )
 from aiocomfoconnect.sensors import Sensor
 from aiocomfoconnect.util import version_decode
@@ -117,9 +115,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     bridge_info = await bridge.cmd_version_request()
     unit_model = await bridge.get_property(PROPERTY_MODEL)
     unit_firmware = await bridge.get_property(PROPERTY_FIRMWARE_VERSION)
-    unit_name = await bridge.get_property(
-        Property(UNIT_NODE, 0x01, 0x14, TYPE_CN_STRING)
-    )
+    unit_name = await bridge.get_property(PROPERTY_NAME)
 
     device_registry = dr.async_get(hass)
 
