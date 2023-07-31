@@ -143,6 +143,7 @@ async def async_setup_entry(
 class ComfoConnectSelect(SelectEntity):
     """Representation of a ComfoConnect select."""
 
+    _attr_has_entity_name = True
     entity_description: ComfoconnectSelectEntityDescription
 
     def __init__(
@@ -155,7 +156,7 @@ class ComfoConnectSelect(SelectEntity):
         self._ccb = ccb
         self.entity_description = description
         self._attr_should_poll = False if description.sensor else True
-        self._attr_unique_id = f"{config_entry.unique_id}-{description.key}"
+        self._attr_unique_id = f"{self._ccb.uuid}-{description.key}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._ccb.uuid)},
         )

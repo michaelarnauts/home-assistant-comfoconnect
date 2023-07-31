@@ -56,12 +56,13 @@ class ComfoConnectFan(FanEntity):
     _attr_supported_features = FanEntityFeature.SET_SPEED | FanEntityFeature.PRESET_MODE
     _attr_preset_modes = list(PRESET_MODES)
     _attr_speed_count = len(FAN_SPEEDS)
+    _attr_has_entity_name = True
+    _attr_name = None
 
     def __init__(self, ccb: ComfoConnectBridge, config_entry: ConfigEntry) -> None:
         """Initialize the ComfoConnect fan."""
         self._ccb = ccb
-        self._attr_name = "ComfoAir Q"
-        self._attr_unique_id = config_entry.unique_id
+        self._attr_unique_id = self._ccb.uuid
         self._attr_preset_mode = None
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._ccb.uuid)},

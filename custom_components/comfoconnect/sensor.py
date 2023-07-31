@@ -344,6 +344,7 @@ class ComfoConnectSensor(SensorEntity):
     """Representation of a ComfoConnect sensor."""
 
     _attr_should_poll = False
+    _attr_has_entity_name = True
     entity_description: ComfoconnectSensorEntityDescription
 
     def __init__(
@@ -355,7 +356,7 @@ class ComfoConnectSensor(SensorEntity):
         """Initialize the ComfoConnect sensor."""
         self._ccb = ccb
         self.entity_description = description
-        self._attr_unique_id = f"{config_entry.unique_id}-{description.key}"
+        self._attr_unique_id = f"{self._ccb.uuid}-{description.key}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._ccb.uuid)},
         )

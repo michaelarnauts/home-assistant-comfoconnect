@@ -4,20 +4,30 @@ from __future__ import annotations
 import logging
 from datetime import timedelta
 
-from aiocomfoconnect import ComfoConnect
+from aiocomfoconnect import ComfoConnect, discover_bridges
+from aiocomfoconnect.const import TYPE_CN_STRING, UNIT_NODE
 from aiocomfoconnect.exceptions import (
     AioComfoConnectNotConnected,
     AioComfoConnectTimeout,
     ComfoConnectError,
     ComfoConnectNotAllowed,
 )
-from aiocomfoconnect.properties import PROPERTY_FIRMWARE_VERSION, PROPERTY_MODEL
+from aiocomfoconnect.properties import (
+    PROPERTY_FIRMWARE_VERSION,
+    PROPERTY_MODEL,
+    PROPERTY_NAME,
+    Property,
+)
 from aiocomfoconnect.sensors import Sensor
 from aiocomfoconnect.util import version_decode
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import CONF_HOST, EVENT_HOMEASSISTANT_STOP, Platform
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryError
+from homeassistant.exceptions import (
+    ConfigEntryAuthFailed,
+    ConfigEntryError,
+    ConfigEntryNotReady,
+)
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.dispatcher import dispatcher_send
 from homeassistant.helpers.event import async_track_time_interval
@@ -57,9 +67,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Zehnder ComfoConnect from a config entry."""
 
     hass.data.setdefault(DOMAIN, {})
-    bridge = ComfoConnectBridge(hass, entry)
 
     try:
+        bridge = ComfoConnectBridge(hass, entry.data[CONF_HOST], entry.data[CONF_UUID])
         await bridge.connect(entry.data[CONF_LOCAL_UUID])
 
     except ComfoConnectNotAllowed:
@@ -74,6 +84,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     bridge_info = await bridge.cmd_version_request()
     unit_model = await bridge.get_property(PROPERTY_MODEL)
     unit_firmware = await bridge.get_property(PROPERTY_FIRMWARE_VERSION)
+    unit_name = await bridge.get_property(
+        Property(UNIT_NODE, 0x01, 0x14, TYPE_CN_STRING)
+    )
 
     device_registry = dr.async_get(hass)
 
@@ -82,8 +95,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, bridge_info.serialNumber)},
         manufacturer="Zehnder",
-        name="ComfoConnect LAN C",
-        default_model="ComfoConnect LAN C",
+        name=bridge_info.serialNumber,
+        model="ComfoConnect LAN C",
         sw_version=version_decode(bridge_info.gatewayVersion),
     )
 
@@ -92,8 +105,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, bridge.uuid)},
         manufacturer="Zehnder",
-        name=unit_model,
-        default_model=unit_model,
+        name=unit_name,
+        model=unit_model,
         sw_version=version_decode(unit_firmware),
         via_device=(DOMAIN, bridge_info.serialNumber),
     )
@@ -148,11 +161,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 class ComfoConnectBridge(ComfoConnect):
     """Representation of a ComfoConnect bridge."""
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry):
+    def __init__(self, hass: HomeAssistant, host: str, uuid: str):
         """Initialize the ComfoConnect bridge."""
         super().__init__(
-            entry.data[CONF_HOST],
-            entry.data[CONF_UUID],
+            host,
+            uuid,
             hass.loop,
             self.sensor_callback,
             self.alarm_callback,
