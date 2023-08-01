@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from datetime import timedelta
+from typing import Callable
 
 from aiocomfoconnect.sensors import (
     SENSOR_ANALOG_INPUT_1,
@@ -33,6 +34,7 @@ from aiocomfoconnect.sensors import (
     SENSOR_TEMPERATURE_SUPPLY,
     SENSORS,
     Sensor as AioComfoConnectSensor,
+    SENSOR_AIRFLOW_CONSTRAINTS,
 )
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -78,6 +80,7 @@ class ComfoconnectSensorEntityDescription(
     """Describes ComfoConnect sensor entity."""
 
     throttle: bool = False
+    mapping: Callable = None
 
 
 SENSOR_TYPES = (
@@ -321,6 +324,14 @@ SENSOR_TYPES = (
         entity_category=EntityCategory.DIAGNOSTIC,
         throttle=True,
     ),
+    ComfoconnectSensorEntityDescription(
+        key=SENSOR_AIRFLOW_CONSTRAINTS,
+        icon="mdi:fan-alert",
+        name="Airflow Constraint",
+        ccb_sensor=SENSORS.get(SENSOR_AIRFLOW_CONSTRAINTS),
+        entity_category=EntityCategory.DIAGNOSTIC,
+        mapping=lambda x: "" if x is None else x[0],
+    ),
 )
 
 
@@ -395,5 +406,8 @@ class ComfoConnectSensor(SensorEntity):
             value,
         )
 
-        self._attr_native_value = value
+        if self.entity_description.mapping:
+            self._attr_native_value = self.entity_description.mapping(value)
+        else:
+            self._attr_native_value = value
         self.schedule_update_ha_state()
