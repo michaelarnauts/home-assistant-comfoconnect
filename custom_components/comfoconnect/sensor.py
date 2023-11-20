@@ -330,7 +330,7 @@ SENSOR_TYPES = (
         name="Airflow Constraint",
         ccb_sensor=SENSORS.get(SENSOR_AIRFLOW_CONSTRAINTS),
         entity_category=EntityCategory.DIAGNOSTIC,
-        mapping=lambda x: "" if x is None else x[0],
+        mapping=lambda x: x[0] if x else "",
     ),
 )
 
