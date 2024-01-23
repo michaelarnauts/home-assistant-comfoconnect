@@ -124,8 +124,8 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Register on the bridge."""
 
         if self.local_uuid is None:
-            # Generate our own UUID if non is provided
-            self.local_uuid = random_uuid_hex()
+            # Use default UUID if non is provided
+            self.local_uuid = "00000000000000000000000000000001"
 
         # Connect to the bridge
         await self.bridge.connect(self.local_uuid)
