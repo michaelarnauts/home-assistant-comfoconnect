@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import logging
 
 from aiocomfoconnect.sensors import (
+    SENSOR_COMFOFOND_GHE_PRESENT,
     SENSOR_SEASON_COOLING_ACTIVE,
     SENSOR_SEASON_HEATING_ACTIVE,
     SENSORS,
@@ -52,6 +53,13 @@ SENSOR_TYPES = (
         key=SENSOR_SEASON_COOLING_ACTIVE,
         name="Cooling Season Active",
         ccb_sensor=SENSORS.get(SENSOR_SEASON_COOLING_ACTIVE),
+        entity_registry_enabled_default=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    ComfoconnectBinarySensorEntityDescription(
+        key=SENSOR_COMFOFOND_GHE_PRESENT,
+        name="ComfoFond GHE present",
+        ccb_sensor=SENSORS.get(SENSOR_COMFOFOND_GHE_PRESENT),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
