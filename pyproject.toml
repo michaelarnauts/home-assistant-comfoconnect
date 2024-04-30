@@ -7,8 +7,8 @@ readme = "README.md"
 packages = [{include = "home_assistant_comfoconnect"}]
 
 [tool.poetry.dependencies]
-python = "^3.9"
-aiocomfoconnect = "^0.1.9"
+python = "^3.10"
+aiocomfoconnect = "^0.1.10"
 
 [tool.poetry.group.dev.dependencies]
 homeassistant = "^2022.12.0"
