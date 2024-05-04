@@ -57,6 +57,12 @@
                     "normal": "Normal",
                     "warm": "Warm"
                 }
+            },
+            "comfocool": {
+                "state": {
+                    "auto": "Auto",
+                    "off": "Off"
+                }
             }
         }
     }
