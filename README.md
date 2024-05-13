@@ -1,4 +1,4 @@
-# Home Assistant Zehnder ComfoAirQ integration
+# Home Assistant Zehnder ComfoAirQ / ComfoCoolQ integration
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 
@@ -11,6 +11,7 @@ integration in Home Assistant.
 
 * Control ventilation speed
 * Control ventilation mode (auto / manual)
+* Control ComfoCool mode (auto / off)
 * Show various sensors
 
 This integration supports the following additional features over the existing integration:
