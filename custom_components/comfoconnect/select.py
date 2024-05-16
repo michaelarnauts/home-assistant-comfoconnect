@@ -128,7 +128,9 @@ SELECT_TYPES = (
         name="ComfoCool Mode",
         entity_category=EntityCategory.CONFIG,
         get_value_fn=lambda ccb: cast(Coroutine, ccb.get_comfocool_mode()),
-        set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_comfocool_mode(option)),
+        set_value_fn=lambda ccb, option: cast(
+            Coroutine, ccb.set_comfocool_mode(option)
+        ),
         options=[
             ComfoCoolMode.AUTO,
             ComfoCoolMode.OFF,
