@@ -1,4 +1,5 @@
 """Fan for the ComfoConnect integration."""
+
 from __future__ import annotations
 
 import logging

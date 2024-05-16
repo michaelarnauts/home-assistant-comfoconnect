@@ -1,4 +1,5 @@
 """Support to control a Zehnder ComfoAir Q350/450/600 ventilation unit."""
+
 from __future__ import annotations
 
 import logging
