@@ -1,0 +1,20 @@
+name: "CI"
+
+on:
+  push:
+    branches:
+      - "master"
+    tags-ignore:
+      - "**"
+  pull_request:
+
+jobs:
+  lint:
+    name: "Lint"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout the repository"
+        uses: actions/checkout@v3
+
+      - name: "Check format"
+        uses: psf/black@stable
