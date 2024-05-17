@@ -369,7 +369,6 @@ SENSOR_TYPES = (
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_COMFOCOOL_STATE,
-        state_class=SensorDeviceClass.NONE,
         name="ComfoCool state",
         ccb_sensor=SENSORS.get(SENSOR_COMFOCOOL_STATE),
         entity_registry_enabled_default=False,
