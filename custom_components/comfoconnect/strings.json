@@ -22,6 +22,12 @@
           "normal": "Normal",
           "cool": "Cool"
         }
+      },
+      "comfocool": {
+        "state": {
+          "auto": "Auto",
+          "off": "Off"
+        }
       }
     }
   },

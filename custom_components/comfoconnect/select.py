@@ -12,6 +12,7 @@ from aiocomfoconnect.const import (
     VentilationMode,
     VentilationSetting,
     VentilationTemperatureProfile,
+    ComfoCoolMode,
 )
 from aiocomfoconnect.sensors import (
     SENSOR_BYPASS_ACTIVATION_STATE,
@@ -121,6 +122,20 @@ SELECT_TYPES = (
             1: VentilationTemperatureProfile.COOL,
             2: VentilationTemperatureProfile.WARM,
         }.get(value),
+    ),
+    ComfoconnectSelectEntityDescription(
+        key="comfocool",
+        name="ComfoCool Mode",
+        entity_category=EntityCategory.CONFIG,
+        get_value_fn=lambda ccb: cast(Coroutine, ccb.get_comfocool_mode()),
+        set_value_fn=lambda ccb, option: cast(
+            Coroutine, ccb.set_comfocool_mode(option)
+        ),
+        options=[
+            ComfoCoolMode.AUTO,
+            ComfoCoolMode.OFF,
+        ],
+        # translation_key="comfocool",
     ),
 )
 
