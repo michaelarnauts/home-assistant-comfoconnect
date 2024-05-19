@@ -18,6 +18,7 @@ from aiocomfoconnect.sensors import (
     SENSOR_BYPASS_ACTIVATION_STATE,
     SENSOR_OPERATING_MODE,
     SENSOR_PROFILE_TEMPERATURE,
+    SENSOR_COMFOCOOL_STATE,
     SENSORS,
     Sensor as AioComfoConnectSensor,
 )
