@@ -136,6 +136,11 @@ SELECT_TYPES = (
             ComfoCoolMode.OFF,
         ],
         # translation_key="comfocool",
+        sensor=SENSORS.get(SENSOR_COMFOCOOL_STATE),
+        sensor_value_fn=lambda value: {
+            0: ComfoCoolMode.OFF,
+            1: ComfoCoolMode.AUTO,
+        }.get(value),
     ),
 )
 
