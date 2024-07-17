@@ -26,17 +26,21 @@ jobs:
       - name: Check out ${{ github.sha }} from repository ${{ github.repository }}
         uses: actions/checkout@v4
 
-      - name: Install poetry
-        run: pipx install poetry
-
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: 'poetry'
+
+      - name: Install poetry
+        run: |
+          python -m pip install -U pip poetry
+          poetry --version
 
       - name: Install dependencies
-        run: poetry install --no-interaction
+        run: |
+          poetry check --no-interaction
+          poetry config virtualenvs.in-project true
+          poetry install --no-interaction
 
       - name: Run checks
         run: make check

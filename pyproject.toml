@@ -4,7 +4,7 @@ version = "0.1.12"
 description = "Home Assistant Zehnder ComfoAirQ integration"
 authors = ["Michaël Arnauts <michael.arnauts@gmail.com>"]
 readme = "README.md"
-packages = [{include = "home_assistant_comfoconnect"}]
+packages = [{include = "custom_components/comfoconnect"}]
 
 [tool.poetry.dependencies]
 python = ">=3.12,<3.13"
