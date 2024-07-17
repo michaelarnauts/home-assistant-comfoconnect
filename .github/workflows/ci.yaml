@@ -1,20 +1,42 @@
-name: "CI"
+name: CI
 
 on:
+  # Run action when pushed to master, or for commits in a pull request.
   push:
     branches:
-      - "master"
-    tags-ignore:
-      - "**"
+      - master
   pull_request:
+    branches:
+      - master
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
-  lint:
-    name: "Lint"
-    runs-on: ubuntu-latest
+  checks:
+    name: Code checks
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest ]
+        python-version: [ "3.10", "3.11", "3.12" ]
     steps:
-      - name: "Checkout the repository"
-        uses: actions/checkout@v3
+      - name: Check out ${{ github.sha }} from repository ${{ github.repository }}
+        uses: actions/checkout@v4
 
-      - name: "Check format"
-        uses: psf/black@stable
+      - name: Install poetry
+        run: pipx install poetry
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'poetry'
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      - name: Run checks
+        run: make check
