@@ -6,10 +6,9 @@ import logging
 from typing import Any
 
 import aiocomfoconnect
+import voluptuous as vol
 from aiocomfoconnect import Bridge
 from aiocomfoconnect.exceptions import ComfoConnectNotAllowed
-import voluptuous as vol
-
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_PIN
 from homeassistant.data_entry_flow import FlowResult
@@ -39,9 +38,7 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self.local_uuid = import_config.get("token")
         return await self.async_step_manual({CONF_HOST: import_config[CONF_HOST]})
 
-    async def async_step_reauth(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    async def async_step_reauth(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Handle a flow reauth."""
         self.bridge = Bridge(user_input[CONF_HOST], user_input[CONF_UUID])
         self.local_uuid = user_input[CONF_LOCAL_UUID]
@@ -61,20 +58,14 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self.bridge = self.discovered_bridges[user_input[CONF_UUID]]
 
                 # Don't allow to configure the same bridge twice
-                await self.async_set_unique_id(
-                    self.bridge.uuid, raise_on_progress=False
-                )
+                await self.async_set_unique_id(self.bridge.uuid, raise_on_progress=False)
                 self._abort_if_unique_id_configured()
 
                 return await self._register()
 
         # Find bridges on the network and filter out the ones we already have configured
         bridges = await aiocomfoconnect.discover_bridges()
-        self.discovered_bridges = {
-            bridge.uuid: bridge
-            for bridge in bridges
-            if bridge.uuid not in self._async_current_ids(False)
-        }
+        self.discovered_bridges = {bridge.uuid: bridge for bridge in bridges if bridge.uuid not in self._async_current_ids(False)}
 
         # Show the bridge selection form
         return self.async_show_form(
@@ -83,10 +74,7 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 {
                     vol.Required(CONF_UUID): vol.In(
                         {
-                            **{
-                                bridge.uuid: bridge.host
-                                for bridge in self.discovered_bridges.values()
-                            },
+                            **{bridge.uuid: bridge.host for bridge in self.discovered_bridges.values()},
                             COMFOCONNECT_MANUAL_BRIDGE_ID: "Manually add a ComfoConnect LAN C Bridge",
                         }
                     )
@@ -94,9 +82,7 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             ),
         )
 
-    async def async_step_manual(
-        self, user_input: ConfigType | None = None
-    ) -> FlowResult:
+    async def async_step_manual(self, user_input: ConfigType | None = None) -> FlowResult:
         """Handle manual bridge setup."""
         errors = {}
         if user_input is not None and user_input[CONF_HOST] is not None:
@@ -108,9 +94,7 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             else:
                 self.bridge = bridges[0]
                 # Don't allow to configure the same bridge twice
-                await self.async_set_unique_id(
-                    self.bridge.uuid, raise_on_progress=False
-                )
+                await self.async_set_unique_id(self.bridge.uuid, raise_on_progress=False)
                 self._abort_if_unique_id_configured()
 
                 return await self._register()
@@ -155,9 +139,7 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             await self.bridge._disconnect()
 
         if self.context.get("source") == config_entries.SOURCE_REAUTH:
-            self.hass.async_create_task(
-                self.hass.config_entries.async_reload(self.context["entry_id"])
-            )
+            self.hass.async_create_task(self.hass.config_entries.async_reload(self.context["entry_id"]))
             return self.async_abort(reason="reauth_successful")
 
         return self.async_create_entry(
@@ -185,9 +167,7 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 {
                     vol.Required(CONF_PIN): vol.All(
                         vol.Coerce(int),
-                        vol.Range(
-                            min=0, max=9999, msg="A PIN must be between 0000 and 9999"
-                        ),
+                        vol.Range(min=0, max=9999, msg="A PIN must be between 0000 and 9999"),
                     )
                 }
             ),

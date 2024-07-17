@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 
 from aiocomfoconnect.sensors import (
     SENSOR_COMFOCOOL_STATE,
@@ -11,9 +11,10 @@ from aiocomfoconnect.sensors import (
     SENSOR_SEASON_COOLING_ACTIVE,
     SENSOR_SEASON_HEATING_ACTIVE,
     SENSORS,
+)
+from aiocomfoconnect.sensors import (
     Sensor as AioComfoConnectSensor,
 )
-
 from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
@@ -37,9 +38,7 @@ class ComfoconnectRequiredKeysMixin:
 
 
 @dataclass
-class ComfoconnectBinarySensorEntityDescription(
-    BinarySensorEntityDescription, ComfoconnectRequiredKeysMixin
-):
+class ComfoconnectBinarySensorEntityDescription(BinarySensorEntityDescription, ComfoconnectRequiredKeysMixin):
     """Describes ComfoConnect binary sensor entity."""
 
 
@@ -83,12 +82,7 @@ async def async_setup_entry(
     """Set up the ComfoConnect binary sensors."""
     ccb = hass.data[DOMAIN][config_entry.entry_id]
 
-    sensors = [
-        ComfoConnectBinarySensor(
-            ccb=ccb, config_entry=config_entry, description=description
-        )
-        for description in SENSOR_TYPES
-    ]
+    sensors = [ComfoConnectBinarySensor(ccb=ccb, config_entry=config_entry, description=description) for description in SENSOR_TYPES]
 
     async_add_entities(sensors, True)
 
@@ -125,9 +119,7 @@ class ComfoConnectBinarySensor(BinarySensorEntity):
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
-                SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(
-                    self._ccb.uuid, self.entity_description.key
-                ),
+                SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(self._ccb.uuid, self.entity_description.key),
                 self._handle_update,
             )
         )

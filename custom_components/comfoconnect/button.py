@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Awaitable, Coroutine
 from dataclasses import dataclass
-import logging
 from typing import Any, Callable, cast
 
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
@@ -26,9 +26,7 @@ class ComfoconnectRequiredKeysMixin:
 
 
 @dataclass
-class ComfoconnectButtonEntityDescription(
-    ButtonEntityDescription, ComfoconnectRequiredKeysMixin
-):
+class ComfoconnectButtonEntityDescription(ButtonEntityDescription, ComfoconnectRequiredKeysMixin):
     """Describes ComfoConnect button entity."""
 
 
@@ -50,10 +48,7 @@ async def async_setup_entry(
     """Set up the ComfoConnect binary sensors."""
     ccb = hass.data[DOMAIN][config_entry.entry_id]
 
-    sensors = [
-        ComfoConnectButton(ccb=ccb, config_entry=config_entry, description=description)
-        for description in BUTTON_TYPES
-    ]
+    sensors = [ComfoConnectButton(ccb=ccb, config_entry=config_entry, description=description) for description in BUTTON_TYPES]
 
     async_add_entities(sensors, True)
 
