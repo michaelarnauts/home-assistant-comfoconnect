@@ -2,27 +2,28 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Awaitable, Coroutine
 from dataclasses import dataclass
-import logging
 from typing import Any, Callable, cast
 
 from aiocomfoconnect.const import (
+    ComfoCoolMode,
     VentilationBalance,
     VentilationMode,
     VentilationSetting,
     VentilationTemperatureProfile,
-    ComfoCoolMode,
 )
 from aiocomfoconnect.sensors import (
     SENSOR_BYPASS_ACTIVATION_STATE,
+    SENSOR_COMFOCOOL_STATE,
     SENSOR_OPERATING_MODE,
     SENSOR_PROFILE_TEMPERATURE,
-    SENSOR_COMFOCOOL_STATE,
     SENSORS,
+)
+from aiocomfoconnect.sensors import (
     Sensor as AioComfoConnectSensor,
 )
-
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -44,9 +45,7 @@ class ComfoconnectSelectDescriptionMixin:
 
 
 @dataclass
-class ComfoconnectSelectEntityDescription(
-    SelectEntityDescription, ComfoconnectSelectDescriptionMixin
-):
+class ComfoconnectSelectEntityDescription(SelectEntityDescription, ComfoconnectSelectDescriptionMixin):
     """Describes ComfoConnect select entity."""
 
     sensor: AioComfoConnectSensor = None
@@ -108,9 +107,7 @@ SELECT_TYPES = (
         icon="mdi:thermometer-auto",
         entity_category=EntityCategory.CONFIG,
         get_value_fn=lambda ccb: cast(Coroutine, ccb.get_temperature_profile()),
-        set_value_fn=lambda ccb, option: cast(
-            Coroutine, ccb.set_temperature_profile(option)
-        ),
+        set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_temperature_profile(option)),
         options=[
             VentilationTemperatureProfile.WARM,
             VentilationTemperatureProfile.NORMAL,
@@ -129,9 +126,7 @@ SELECT_TYPES = (
         name="ComfoCool Mode",
         entity_category=EntityCategory.CONFIG,
         get_value_fn=lambda ccb: cast(Coroutine, ccb.get_comfocool_mode()),
-        set_value_fn=lambda ccb, option: cast(
-            Coroutine, ccb.set_comfocool_mode(option)
-        ),
+        set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_comfocool_mode(option)),
         options=[
             ComfoCoolMode.AUTO,
             ComfoCoolMode.OFF,
@@ -154,10 +149,7 @@ async def async_setup_entry(
     """Set up the ComfoConnect selects."""
     ccb = hass.data[DOMAIN][config_entry.entry_id]
 
-    selects = [
-        ComfoConnectSelect(ccb=ccb, config_entry=config_entry, description=description)
-        for description in SELECT_TYPES
-    ]
+    selects = [ComfoConnectSelect(ccb=ccb, config_entry=config_entry, description=description) for description in SELECT_TYPES]
 
     async_add_entities(selects, True)
 
@@ -196,9 +188,7 @@ class ComfoConnectSelect(SelectEntity):
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
-                SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(
-                    self._ccb.uuid, self.entity_description.sensor.id
-                ),
+                SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(self._ccb.uuid, self.entity_description.sensor.id),
                 self._handle_update,
             )
         )
@@ -218,9 +208,7 @@ class ComfoConnectSelect(SelectEntity):
 
     async def async_update(self) -> None:
         """Update the state."""
-        self._attr_current_option = await self.entity_description.get_value_fn(
-            self._ccb
-        )
+        self._attr_current_option = await self.entity_description.get_value_fn(self._ccb)
 
     async def async_select_option(self, option: str) -> None:
         """Set the selected option."""

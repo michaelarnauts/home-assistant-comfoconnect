@@ -8,15 +8,16 @@ from datetime import timedelta
 from typing import Callable
 
 from aiocomfoconnect.sensors import (
+    SENSOR_AIRFLOW_CONSTRAINTS,
     SENSOR_ANALOG_INPUT_1,
     SENSOR_ANALOG_INPUT_2,
     SENSOR_ANALOG_INPUT_3,
     SENSOR_ANALOG_INPUT_4,
     SENSOR_BYPASS_STATE,
+    SENSOR_COMFOCOOL_CONDENSOR_TEMP,
     SENSOR_COMFOFOND_GHE_STATE,
     SENSOR_COMFOFOND_TEMP_GROUND,
     SENSOR_COMFOFOND_TEMP_OUTDOOR,
-    SENSOR_COMFOCOOL_CONDENSOR_TEMP,
     SENSOR_DAYS_TO_REPLACE_FILTER,
     SENSOR_FAN_EXHAUST_DUTY,
     SENSOR_FAN_EXHAUST_FLOW,
@@ -38,8 +39,9 @@ from aiocomfoconnect.sensors import (
     SENSOR_TEMPERATURE_OUTDOOR,
     SENSOR_TEMPERATURE_SUPPLY,
     SENSORS,
+)
+from aiocomfoconnect.sensors import (
     Sensor as AioComfoConnectSensor,
-    SENSOR_AIRFLOW_CONSTRAINTS,
 )
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -49,14 +51,14 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
-    UnitOfEnergy,
     PERCENTAGE,
-    UnitOfPower,
     REVOLUTIONS_PER_MINUTE,
+    UnitOfElectricPotential,
+    UnitOfEnergy,
+    UnitOfPower,
     UnitOfTemperature,
     UnitOfTime,
     UnitOfVolumeFlowRate,
-    UnitOfElectricPotential,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
@@ -79,9 +81,7 @@ class ComfoconnectRequiredKeysMixin:
 
 
 @dataclass
-class ComfoconnectSensorEntityDescription(
-    SensorEntityDescription, ComfoconnectRequiredKeysMixin
-):
+class ComfoconnectSensorEntityDescription(SensorEntityDescription, ComfoconnectRequiredKeysMixin):
     """Describes ComfoConnect sensor entity."""
 
     throttle: bool = False
@@ -387,10 +387,7 @@ async def async_setup_entry(
     """Set up the ComfoConnect sensors."""
     ccb = hass.data[DOMAIN][config_entry.entry_id]
 
-    sensors = [
-        ComfoConnectSensor(ccb=ccb, config_entry=config_entry, description=description)
-        for description in SENSOR_TYPES
-    ]
+    sensors = [ComfoConnectSensor(ccb=ccb, config_entry=config_entry, description=description) for description in SENSOR_TYPES]
 
     async_add_entities(sensors, True)
 
@@ -433,9 +430,7 @@ class ComfoConnectSensor(SensorEntity):
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
-                SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(
-                    self._ccb.uuid, self.entity_description.key
-                ),
+                SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(self._ccb.uuid, self.entity_description.key),
                 update_handler,
             )
         )

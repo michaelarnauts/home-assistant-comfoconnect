@@ -85,13 +85,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
 
         bridges = await discover_bridges()
-        discovered_bridge = next(
-            (b for b in bridges if b.uuid == entry.data[CONF_UUID]), None
-        )
+        discovered_bridge = next((b for b in bridges if b.uuid == entry.data[CONF_UUID]), None)
         if not discovered_bridge:
-            _LOGGER.warning(
-                'Unable to discover bridge "%s". Retrying later.', entry.data[CONF_UUID]
-            )
+            _LOGGER.warning('Unable to discover bridge "%s". Retrying later.', entry.data[CONF_UUID])
             raise ConfigEntryNotReady from err
 
         # Try again, with the updated host this time
@@ -100,9 +96,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             await bridge.connect(entry.data[CONF_LOCAL_UUID])
 
             # Update the host in the config entry
-            hass.config_entries.async_update_entry(
-                entry, data={**entry.data, CONF_HOST: discovered_bridge.host}
-            )
+            hass.config_entries.async_update_entry(entry, data={**entry.data, CONF_HOST: discovered_bridge.host})
 
         except ComfoConnectNotAllowed:
             raise ConfigEntryAuthFailed("Access denied")
@@ -162,18 +156,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
                 # TODO: Mark all sensors as unavailable
 
-    entry.async_on_unload(
-        async_track_time_interval(hass, send_keepalive, KEEP_ALIVE_INTERVAL)
-    )
+    entry.async_on_unload(async_track_time_interval(hass, send_keepalive, KEEP_ALIVE_INTERVAL))
 
     # Disconnect when shutting down
     async def disconnect_bridge(event):
         """Close connection to the bridge."""
         await bridge.disconnect()
 
-    entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, disconnect_bridge)
-    )
+    entry.async_on_unload(hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, disconnect_bridge))
 
     return True
 

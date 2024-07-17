@@ -1,18 +1,73 @@
 [tool.poetry]
 name = "home-assistant-comfoconnect"
-version = "0.1.0"
-description = ""
+version = "0.1.12"
+description = "Home Assistant Zehnder ComfoAirQ integration"
 authors = ["Michaël Arnauts <michael.arnauts@gmail.com>"]
 readme = "README.md"
-packages = [{include = "home_assistant_comfoconnect"}]
+packages = [{include = "custom_components/comfoconnect"}]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = ">=3.12,<3.13"
 aiocomfoconnect = "^0.1.11"
 
 [tool.poetry.group.dev.dependencies]
-homeassistant = "^2022.12.0"
+homeassistant = "^2024.06.0"
+ruff = "^0.5.2"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+extend-exclude = [
+    "__pycache__",
+    "build",
+    "dist",
+]
+target-version = "py312"
+line-length = 150
+src = ["custom_components"]
+
+[tool.ruff.lint]
+extend-select = [
+    "C4",
+    "D200",
+    "D201",
+    "D204",
+    "D205",
+    "D206",
+    "D210",
+    "D211",
+    "D213",
+    "D300",
+    "D400",
+    "D402",
+    "D403",
+    "D404",
+    "D419",
+    "E",
+    "F",
+    "G010",
+    "I001",
+    "INP001",
+    "N805",
+    "PERF101",
+    "PERF102",
+    "PERF401",
+    "PERF402",
+    "PGH004",
+    "PGH005",
+    "PIE794",
+    "PIE796",
+    "PIE807",
+    "PIE810",
+    "RET502",
+    "RET503",
+    "RET504",
+    "RET505",
+    "RUF015",
+    "RUF100",
+    "S101",
+    "T20",
+    "W",
+]
