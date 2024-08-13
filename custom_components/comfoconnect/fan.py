@@ -50,7 +50,7 @@ async def async_setup_entry(
 
 class ComfoConnectFan(FanEntity):
     """Representation of the ComfoConnect fan platform."""
-    
+
     _attr_enable_turn_on_off_backwards_compatibility = False
     _attr_icon = "mdi:air-conditioner"
     _attr_should_poll = False
@@ -80,7 +80,9 @@ class ComfoConnectFan(FanEntity):
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
-                SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(self._ccb.uuid, SENSOR_FAN_SPEED_MODE),
+                SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(
+                    self._ccb.uuid, SENSOR_FAN_SPEED_MODE
+                ),
                 self._handle_speed_update,
             )
         )
@@ -90,7 +92,9 @@ class ComfoConnectFan(FanEntity):
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
-                SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(self._ccb.uuid, SENSOR_OPERATING_MODE),
+                SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(
+                    self._ccb.uuid, SENSOR_OPERATING_MODE
+                ),
                 self._handle_mode_update,
             )
         )
@@ -98,11 +102,15 @@ class ComfoConnectFan(FanEntity):
 
     def _handle_speed_update(self, value: int) -> None:
         """Handle update callbacks."""
-        _LOGGER.debug("Handle update for fan speed (%d): %s", SENSOR_FAN_SPEED_MODE, value)
+        _LOGGER.debug(
+            "Handle update for fan speed (%d): %s", SENSOR_FAN_SPEED_MODE, value
+        )
         if value == 0:
             self._attr_percentage = 0
         else:
-            self._attr_percentage = ordered_list_item_to_percentage(FAN_SPEEDS, FAN_SPEED_MAPPING[value])
+            self._attr_percentage = ordered_list_item_to_percentage(
+                FAN_SPEEDS, FAN_SPEED_MAPPING[value]
+            )
 
         self.schedule_update_ha_state()
 
@@ -113,7 +121,9 @@ class ComfoConnectFan(FanEntity):
             SENSOR_OPERATING_MODE,
             value,
         )
-        self._attr_preset_mode = VentilationMode.AUTO if value == -1 else VentilationMode.MANUAL
+        self._attr_preset_mode = (
+            VentilationMode.AUTO if value == -1 else VentilationMode.MANUAL
+        )
         self.schedule_update_ha_state()
 
     @property
