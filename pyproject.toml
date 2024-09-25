@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "home-assistant-comfoconnect"
-version = "0.2.2"
+version = "0.2.3"
 description = "Home Assistant Zehnder ComfoAirQ integration"
 authors = ["Michaël Arnauts <michael.arnauts@gmail.com>"]
 readme = "README.md"
