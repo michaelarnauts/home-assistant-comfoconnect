@@ -11,6 +11,7 @@ from aiocomfoconnect.const import (
     ComfoCoolMode,
     VentilationBalance,
     VentilationMode,
+    VentilationSpeed,
     VentilationSetting,
     VentilationTemperatureProfile,
 )
@@ -18,6 +19,8 @@ from aiocomfoconnect.sensors import (
     SENSOR_BYPASS_ACTIVATION_STATE,
     SENSOR_COMFOCOOL_STATE,
     SENSOR_OPERATING_MODE,
+    SENSOR_FAN_SPEED_MODE,
+    SENSOR_FAN_SPEED_MODE_MODULATED,
     SENSOR_PROFILE_TEMPERATURE,
     SENSORS,
 )
@@ -66,6 +69,29 @@ SELECT_TYPES = (
         sensor_value_fn=lambda value: {
             -1: VentilationMode.AUTO,
             1: VentilationMode.MANUAL,
+        }.get(value),
+    ),
+    ComfoconnectSelectEntityDescription(
+        key="select_speed",
+        name="Ventilation Speed",
+        icon="mdi:speedometer-medium",
+        entity_category=EntityCategory.CONFIG,
+        get_value_fn=lambda ccb: cast(Coroutine, ccb.get_speed()),
+        set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_speed(option)),
+        options=[
+            VentilationSpeed.AWAY,
+            VentilationSpeed.LOW,
+            VentilationSpeed.MEDIUM,
+            VentilationSpeed.HIGH,
+        ],
+        # translation_key="setting",
+        sensor=SENSORS.get(SENSOR_FAN_SPEED_MODE),
+        # sensor=SENSORS.get(SENSOR_FAN_SPEED_MODE_MODULATED),
+        sensor_value_fn=lambda value: {
+            0: VentilationSpeed.AWAY,
+            1: VentilationSpeed.LOW,
+            2: VentilationSpeed.MEDIUM,
+            3: VentilationSpeed.HIGH,
         }.get(value),
     ),
     ComfoconnectSelectEntityDescription(
