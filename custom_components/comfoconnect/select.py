@@ -138,6 +138,14 @@ SELECT_TYPES = (
             1: ComfoCoolMode.AUTO,
         }.get(value),
     ),
+    ComfoconnectSelectEntityDescription(
+        key="boost_timeout",
+        name="Boost Mode",
+        icon="mdi:fan-plus",
+        get_value_fn=lambda ccb: cast(Coroutine, ccb.get_boost()),
+        set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_boost(True, int(option.split()[0]) * 60)),
+        options=["10 Minutes", "20 Minutes", "30 Minutes", "40 Minutes", "50 Minutes", "60 Minutes"],
+    ),
 )
 
 
