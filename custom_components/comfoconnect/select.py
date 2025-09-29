@@ -52,6 +52,18 @@ class ComfoconnectSelectEntityDescription(SelectEntityDescription, ComfoconnectS
     sensor_value_fn: Callable[[str], Any] = None
 
 
+async def get_boost_option(ccb):
+    result = await cast(Coroutine, ccb.get_boost())
+    return "Off" if not result else result
+
+async def set_boost_option(ccb, option):
+    if option == "Off":
+        return await cast(Coroutine, ccb.set_boost(False))
+    else:
+        minutes = int(option.split()[0])
+        return await cast(Coroutine, ccb.set_boost(True, minutes * 60))
+
+
 SELECT_TYPES = (
     ComfoconnectSelectEntityDescription(
         key="select_mode",
@@ -142,12 +154,8 @@ SELECT_TYPES = (
         key="boost_timeout",
         name="Boost Mode",
         icon="mdi:fan-plus",
-        get_value_fn=lambda ccb: cast(Coroutine, ccb.get_boost()),
-        set_value_fn=lambda ccb, option: (
-            cast(Coroutine, ccb.set_boost(False))
-            if option == "Off"
-            else cast(Coroutine, ccb.set_boost(True, int(option.split()[0]) * 60))
-        ),
+        get_value_fn=get_boost_option,
+        set_value_fn=set_boost_option,
         options=[
             "Off",
             "10 Minutes",
