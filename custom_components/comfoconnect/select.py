@@ -20,7 +20,6 @@ from aiocomfoconnect.sensors import (
     SENSOR_COMFOCOOL_STATE,
     SENSOR_OPERATING_MODE,
     SENSOR_FAN_SPEED_MODE,
-    SENSOR_FAN_SPEED_MODE_MODULATED,
     SENSOR_PROFILE_TEMPERATURE,
     SENSORS,
 )
@@ -86,7 +85,6 @@ SELECT_TYPES = (
         ],
         # translation_key="setting",
         sensor=SENSORS.get(SENSOR_FAN_SPEED_MODE),
-        # sensor=SENSORS.get(SENSOR_FAN_SPEED_MODE_MODULATED),
         sensor_value_fn=lambda value: {
             0: VentilationSpeed.AWAY,
             1: VentilationSpeed.LOW,
