@@ -21,12 +21,10 @@ from aiocomfoconnect.sensors import (
     SENSOR_PROFILE_TEMPERATURE,
     SENSORS,
 )
-from aiocomfoconnect.sensors import (
-    Sensor as AioComfoConnectSensor,
-)
+from aiocomfoconnect.sensors import Sensor as AioComfoConnectSensor
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -45,7 +43,9 @@ class ComfoconnectSelectDescriptionMixin:
 
 
 @dataclass
-class ComfoconnectSelectEntityDescription(SelectEntityDescription, ComfoconnectSelectDescriptionMixin):
+class ComfoconnectSelectEntityDescription(
+    SelectEntityDescription, ComfoconnectSelectDescriptionMixin
+):
     """Describes ComfoConnect select entity."""
 
     sensor: AioComfoConnectSensor = None
@@ -61,12 +61,8 @@ SELECT_TYPES = (
         get_value_fn=lambda ccb: cast(Coroutine, ccb.get_mode()),
         set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_mode(option)),
         options=[VentilationMode.AUTO, VentilationMode.MANUAL],
-        # translation_key="setting",
         sensor=SENSORS.get(SENSOR_OPERATING_MODE),
-        sensor_value_fn=lambda value: {
-            -1: VentilationMode.AUTO,
-            1: VentilationMode.MANUAL,
-        }.get(value),
+        sensor_value_fn=lambda value: {-1: VentilationMode.AUTO, 1: VentilationMode.MANUAL}.get(value),
     ),
     ComfoconnectSelectEntityDescription(
         key="bypass_mode",
@@ -75,18 +71,9 @@ SELECT_TYPES = (
         entity_category=EntityCategory.CONFIG,
         get_value_fn=lambda ccb: cast(Coroutine, ccb.get_bypass()),
         set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_bypass(option)),
-        options=[
-            VentilationSetting.AUTO,
-            VentilationSetting.ON,
-            VentilationSetting.OFF,
-        ],
-        # translation_key="setting",
+        options=[VentilationSetting.AUTO, VentilationSetting.ON, VentilationSetting.OFF],
         sensor=SENSORS.get(SENSOR_BYPASS_ACTIVATION_STATE),
-        sensor_value_fn=lambda value: {
-            0: VentilationSetting.AUTO,
-            1: VentilationSetting.ON,
-            2: VentilationSetting.OFF,
-        }.get(value),
+        sensor_value_fn=lambda value: {0: VentilationSetting.AUTO, 1: VentilationSetting.ON, 2: VentilationSetting.OFF}.get(value),
     ),
     ComfoconnectSelectEntityDescription(
         key="balance_mode",
@@ -94,12 +81,7 @@ SELECT_TYPES = (
         entity_category=EntityCategory.CONFIG,
         get_value_fn=lambda ccb: cast(Coroutine, ccb.get_balance_mode()),
         set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_balance_mode(option)),
-        options=[
-            VentilationBalance.BALANCE,
-            VentilationBalance.SUPPLY_ONLY,
-            VentilationBalance.EXHAUST_ONLY,
-        ],
-        # translation_key="balance",
+        options=[VentilationBalance.BALANCE, VentilationBalance.SUPPLY_ONLY, VentilationBalance.EXHAUST_ONLY],
     ),
     ComfoconnectSelectEntityDescription(
         key="temperature_profile",
@@ -108,18 +90,9 @@ SELECT_TYPES = (
         entity_category=EntityCategory.CONFIG,
         get_value_fn=lambda ccb: cast(Coroutine, ccb.get_temperature_profile()),
         set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_temperature_profile(option)),
-        options=[
-            VentilationTemperatureProfile.WARM,
-            VentilationTemperatureProfile.NORMAL,
-            VentilationTemperatureProfile.COOL,
-        ],
-        # translation_key="temperature_profile",
+        options=[VentilationTemperatureProfile.WARM, VentilationTemperatureProfile.NORMAL, VentilationTemperatureProfile.COOL],
         sensor=SENSORS.get(SENSOR_PROFILE_TEMPERATURE),
-        sensor_value_fn=lambda value: {
-            0: VentilationTemperatureProfile.NORMAL,
-            1: VentilationTemperatureProfile.COOL,
-            2: VentilationTemperatureProfile.WARM,
-        }.get(value),
+        sensor_value_fn=lambda value: {0: VentilationTemperatureProfile.NORMAL, 1: VentilationTemperatureProfile.COOL, 2: VentilationTemperatureProfile.WARM}.get(value),
     ),
     ComfoconnectSelectEntityDescription(
         key="comfocool",
@@ -127,24 +100,21 @@ SELECT_TYPES = (
         entity_category=EntityCategory.CONFIG,
         get_value_fn=lambda ccb: cast(Coroutine, ccb.get_comfocool_mode()),
         set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_comfocool_mode(option)),
-        options=[
-            ComfoCoolMode.AUTO,
-            ComfoCoolMode.OFF,
-        ],
-        # translation_key="comfocool",
+        options=[ComfoCoolMode.AUTO, ComfoCoolMode.OFF],
         sensor=SENSORS.get(SENSOR_COMFOCOOL_STATE),
-        sensor_value_fn=lambda value: {
-            0: ComfoCoolMode.OFF,
-            1: ComfoCoolMode.AUTO,
-        }.get(value),
+        sensor_value_fn=lambda value: {0: ComfoCoolMode.OFF, 1: ComfoCoolMode.AUTO}.get(value),
     ),
+    # Boost mode with Off option added
     ComfoconnectSelectEntityDescription(
         key="boost_timeout",
         name="Boost Mode",
         icon="mdi:fan-plus",
         get_value_fn=lambda ccb: cast(Coroutine, ccb.get_boost()),
-        set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_boost(True, int(option.split()[0]) * 60)),
-        options=["10 Minutes", "20 Minutes", "30 Minutes", "40 Minutes", "50 Minutes", "60 Minutes"],
+        set_value_fn=lambda ccb, option: (
+            cast(Coroutine, ccb.set_boost(False)) if option == "Off" else
+            cast(Coroutine, ccb.set_boost(True, int(option.split()[0]) * 60))
+        ),
+        options=["Off", "10 Minutes", "20 Minutes", "30 Minutes", "40 Minutes", "50 Minutes", "60 Minutes"],
     ),
 )
 
@@ -157,13 +127,16 @@ async def async_setup_entry(
     """Set up the ComfoConnect selects."""
     ccb = hass.data[DOMAIN][config_entry.entry_id]
 
-    selects = [ComfoConnectSelect(ccb=ccb, config_entry=config_entry, description=description) for description in SELECT_TYPES]
+    selects = [
+        ComfoConnectSelect(ccb=ccb, config_entry=config_entry, description=description)
+        for description in SELECT_TYPES
+    ]
 
     async_add_entities(selects, True)
 
 
 class ComfoConnectSelect(SelectEntity):
-    """Representation of a ComfoConnect select."""
+    """Representation of a ComfoConnect select entity."""
 
     _attr_has_entity_name = True
     entity_description: ComfoconnectSelectEntityDescription
@@ -174,7 +147,7 @@ class ComfoConnectSelect(SelectEntity):
         config_entry: ConfigEntry,
         description: ComfoconnectSelectEntityDescription,
     ) -> None:
-        """Initialize the ComfoConnect select."""
+        """Initialize the ComfoConnect select entity."""
         self._ccb = ccb
         self.entity_description = description
         self._attr_should_poll = False if description.sensor else True
@@ -210,7 +183,6 @@ class ComfoConnectSelect(SelectEntity):
             self.entity_description.sensor.id,
             value,
         )
-
         self._attr_current_option = self.entity_description.sensor_value_fn(value)
         self.schedule_update_ha_state()
 
