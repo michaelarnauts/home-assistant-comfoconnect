@@ -8,6 +8,7 @@
             "default": "Some sensors are not enabled by default. You can enable them in the entity registry after the integration configuration."
         },
         "error": {
+            "cannot_connect": "Cannot connect",
             "invalid_pin": "Invalid PIN"
         },
         "step": {
@@ -15,6 +16,9 @@
                 "description": "Do you want to start set up?"
             },
             "enter_pin": {
+                "data": {
+                    "pin": "PIN"
+                },
                 "description": "The selected ComfoConnect LAN C bridge isn't using the default PIN. Please enter the correct PIN.",
                 "title": "Enter PIN"
             },

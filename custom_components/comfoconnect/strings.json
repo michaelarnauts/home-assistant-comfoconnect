@@ -33,6 +33,7 @@
   },
   "config": {
     "error": {
+      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
       "invalid_pin": "Invalid PIN"
     },
     "step": {
@@ -51,6 +52,9 @@
         "description": "Enter a ComfoConnect LAN C bridge hostname or IP address below."
       },
       "enter_pin": {
+        "data": {
+          "pin": "[%key:common::config_flow::data::pin%]"
+        },
         "title": "Enter PIN",
         "description": "The selected ComfoConnect LAN C bridge isn't using the default PIN. Please enter the correct PIN."
       },
