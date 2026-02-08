@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import timedelta
 
@@ -181,16 +182,61 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 class ComfoConnectBridge(ComfoConnect):
     """Representation of a ComfoConnect bridge."""
 
+    CONNECT_TIMEOUT = 30
+
     def __init__(self, hass: HomeAssistant, host: str, uuid: str):
         """Initialize the ComfoConnect bridge."""
         super().__init__(
             host,
             uuid,
-            hass.loop,
-            self.sensor_callback,
-            self.alarm_callback,
+            sensor_callback=self.sensor_callback,
+            alarm_callback=self.alarm_callback,
         )
         self.hass = hass
+
+    async def connect(self, uuid: str) -> None:
+        """Connect to the bridge with a timeout.
+
+        The published ComfoConnect.connect() retries forever on timeout
+        without propagating the exception. We wrap it with a timeout so
+        the caller can handle unreachable bridges.
+        """
+        # Cancel any leftover reconnect tasks from a previous connection
+        await self._cancel_tasks()
+        try:
+            await asyncio.wait_for(
+                super().connect(uuid), timeout=self.CONNECT_TIMEOUT
+            )
+        except asyncio.TimeoutError as exc:
+            await self._cancel_tasks()
+            await self._disconnect()
+            raise AioComfoConnectTimeout(
+                f"Failed to connect within {self.CONNECT_TIMEOUT} seconds"
+            ) from exc
+
+    async def disconnect(self) -> None:
+        """Disconnect from the bridge and cancel background tasks.
+
+        The published ComfoConnect.disconnect() only closes the TCP
+        connection but doesn't cancel the background reconnect task
+        started by connect(), causing a task leak.
+        """
+        if self._sensor_hold:
+            self._sensor_hold.cancel()
+            self._sensor_hold = None
+        await self._cancel_tasks()
+        await super().disconnect()
+
+    async def _cancel_tasks(self) -> None:
+        """Cancel all background reconnect tasks."""
+        tasks = list(self._tasks)
+        for task in tasks:
+            task.cancel()
+        for task in tasks:
+            try:
+                await task
+            except (asyncio.CancelledError, Exception):
+                pass
 
     @callback
     def sensor_callback(self, sensor: Sensor, value):

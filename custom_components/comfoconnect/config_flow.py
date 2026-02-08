@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any
 
@@ -23,7 +24,6 @@ PIN_VALIDATOR = vol.All(
     vol.Coerce(int),
     vol.Range(min=0, max=9999, msg="A PIN must be between 0000 and 9999"),
 )
-OPTIONAL_PIN_SCHEMA = vol.Optional(CONF_PIN, default="")
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -94,29 +94,12 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 await self.async_set_unique_id(self.bridge.uuid, raise_on_progress=False)
                 self._abort_if_unique_id_configured()
 
-                pin = self._parse_optional_pin(user_input, errors)
-                if errors:
-                    return self._show_manual_form(errors, user_input.get(CONF_HOST))
                 try:
-                    return await self._register(pin)
+                    return await self._register()
                 except AioComfoConnectTimeout:
                     errors["base"] = "cannot_connect"
 
         return self._show_manual_form(errors, user_input.get(CONF_HOST) if user_input else None)
-
-    def _parse_optional_pin(self, user_input: ConfigType, errors: dict[str, str]) -> int | None:
-        """Validate the optional pin input."""
-        pin_input = user_input.get(CONF_PIN, "")
-        if pin_input == "":
-            return None
-
-        try:
-            pin = PIN_VALIDATOR(pin_input)
-        except vol.Invalid:
-            errors[CONF_PIN] = "invalid_pin"
-            return None
-
-        return pin
 
     def _show_user_form(self, errors: dict[str, str], selected_uuid: str | None) -> FlowResult:
         """Show the discovered bridge selection form."""
@@ -150,18 +133,17 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="manual",
             errors=errors,
-            data_schema=vol.Schema({host_field: str, OPTIONAL_PIN_SCHEMA: str}),
+            data_schema=vol.Schema({host_field: str}),
         )
 
     async def _register(self, pin: int | None = None) -> FlowResult:
         """Register on the bridge."""
 
         if self.local_uuid is None:
-            # Generate our own UUID if none is provided
             self.local_uuid = random_uuid_hex()
 
-        # Connect to the bridge
-        await self.bridge.connect(self.local_uuid)
+        # Use Bridge._connect() for TCP-only connection without session start
+        read_task = await self.bridge._connect(self.local_uuid)
         try:
             if pin is not None:
                 try:
@@ -171,7 +153,6 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         pin,
                     )
                 except ComfoConnectNotAllowed:
-                    # The app is already registered, proceed with session start.
                     pass
 
             try:
@@ -179,27 +160,52 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             except ComfoConnectNotAllowed:
                 if pin is not None:
-                    # We have tried connecting, but we have an invalid PIN. Ask the user for a new PIN.
                     return await self.async_step_enter_pin({}, {"base": "invalid_pin"})
 
                 try:
-                    # We probably are not registered yet, lets try to register.
                     await self.bridge.cmd_register_app(
                         self.local_uuid,
                         f"Home Assistant ({self.hass.config.location_name})",
                         DEFAULT_PIN,
                     )
-
                 except ComfoConnectNotAllowed:
-                    # We have tried connecting, but we have an invalid PIN. Ask the user for a new PIN.
                     return await self.async_step_enter_pin({}, {})
 
-                # Registration went fine, connect to the bridge again
+                await self.bridge.cmd_start_session(True)
+
+            except AioComfoConnectTimeout:
+                # ComfoConnect Pro doesn't reply to StartSession for
+                # unregistered UUIDs so reconnect before attempting registration.
+                read_task.cancel()
+                try:
+                    await read_task
+                except (asyncio.CancelledError, Exception):
+                    pass
+                read_task = await self.bridge._connect(self.local_uuid)
+
+                register_pin = pin if pin is not None else DEFAULT_PIN
+                try:
+                    await self.bridge.cmd_register_app(
+                        self.local_uuid,
+                        f"Home Assistant ({self.hass.config.location_name})",
+                        register_pin,
+                    )
+                except ComfoConnectNotAllowed:
+                    if pin is not None:
+                        return await self.async_step_enter_pin(
+                            {}, {"base": "invalid_pin"}
+                        )
+                    return await self.async_step_enter_pin({}, {})
+
                 await self.bridge.cmd_start_session(True)
 
         finally:
-            # Disconnect
-            await self.bridge.disconnect()
+            read_task.cancel()
+            try:
+                await read_task
+            except (asyncio.CancelledError, Exception):
+                pass
+            await self.bridge._disconnect()
 
         if self.context.get("source") == config_entries.SOURCE_REAUTH:
             self.hass.async_create_task(self.hass.config_entries.async_reload(self.context["entry_id"]))
@@ -222,16 +228,21 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the PIN entry step."""
         if user_input and CONF_PIN in user_input:
             try:
-                return await self._register(user_input[CONF_PIN])
-            except AioComfoConnectTimeout:
-                errors = {"base": "cannot_connect"}
+                pin = PIN_VALIDATOR(user_input[CONF_PIN])
+            except vol.Invalid:
+                errors = {CONF_PIN: "invalid_pin"}
+            else:
+                try:
+                    return await self._register(pin)
+                except AioComfoConnectTimeout:
+                    errors = {"base": "cannot_connect"}
 
         return self.async_show_form(
             step_id="enter_pin",
             errors=errors or {},
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_PIN): PIN_VALIDATOR
+                    vol.Required(CONF_PIN): str
                 }
             ),
         )

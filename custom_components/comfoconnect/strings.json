@@ -46,8 +46,7 @@
       },
       "manual": {
         "data": {
-          "host": "[%key:common::config_flow::data::host%]",
-          "pin": "[%key:common::config_flow::data::pin%]"
+          "host": "[%key:common::config_flow::data::host%]"
         },
         "title": "Add a ComfoConnect LAN C bridge manually",
         "description": "Enter a ComfoConnect LAN C bridge hostname or IP address below."
