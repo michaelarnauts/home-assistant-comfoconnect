@@ -449,4 +449,4 @@ class ComfoConnectSensor(SensorEntity):
             self._attr_native_value = self.entity_description.mapping(value)
         else:
             self._attr_native_value = value
-        self.schedule_update_ha_state()
+        self.async_write_ha_state()
