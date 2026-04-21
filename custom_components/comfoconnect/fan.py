@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 from aiocomfoconnect.const import VentilationMode, VentilationSpeed
+from aiocomfoconnect.exceptions import ComfoConnectNotConnected, ComfoConnectRmiError
 from aiocomfoconnect.sensors import (
     SENSOR_FAN_SPEED_MODE,
     SENSOR_OPERATING_MODE,
@@ -14,6 +15,7 @@ from aiocomfoconnect.sensors import (
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -145,7 +147,12 @@ class ComfoConnectFan(FanEntity):
         else:
             speed = percentage_to_ordered_list_item(FAN_SPEEDS, percentage)
 
-        await self._ccb.set_speed(speed)
+        try:
+            await self._ccb.set_speed(speed)
+        except ComfoConnectNotConnected as err:
+            raise HomeAssistantError(f"Not connected to ComfoConnect bridge: {err}") from err
+        except ComfoConnectRmiError as err:
+            raise HomeAssistantError(f"Failed to set fan speed: {err}") from err
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new preset mode."""
@@ -153,4 +160,9 @@ class ComfoConnectFan(FanEntity):
             raise ValueError(f"Invalid preset mode: {preset_mode}")
 
         _LOGGER.debug("Changing preset mode to %s", preset_mode)
-        await self._ccb.set_mode(preset_mode)
+        try:
+            await self._ccb.set_mode(preset_mode)
+        except ComfoConnectNotConnected as err:
+            raise HomeAssistantError(f"Not connected to ComfoConnect bridge: {err}") from err
+        except ComfoConnectRmiError as err:
+            raise HomeAssistantError(f"Failed to set preset mode: {err}") from err
