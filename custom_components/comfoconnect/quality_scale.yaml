@@ -1,0 +1,80 @@
+rules:
+  # ──── Bronze ────
+  action-setup:
+    status: exempt
+    comment: |
+      Integration does not register custom service actions.
+      All functionality is provided through standard platform entities
+      (fan, sensor, binary_sensor, select, button).
+  appropriate-polling: todo
+  brands: todo
+  common-modules: todo
+  config-flow: todo
+  config-flow-test-coverage: todo
+  dependency-transparency: done
+  docs-actions:
+    status: exempt
+    comment: |
+      Integration does not provide custom service actions.
+  docs-high-level-description: done
+  docs-installation-instructions: done
+  docs-removal-instructions: todo
+  entity-event-setup: done
+  entity-unique-id: done
+  has-entity-name: done
+  runtime-data: todo
+  test-before-configure: todo
+  test-before-setup: done
+  unique-config-entry: done
+
+  # ──── Silver ────
+  action-exceptions: todo
+  config-entry-unloading: done
+  docs-configuration-parameters: todo
+  docs-installation-parameters: todo
+  entity-unavailable: todo
+  integration-owner: done
+  log-when-unavailable: todo
+  parallel-updates: done
+  reauthentication-flow: done
+  test-coverage: todo
+
+  # ──── Gold ────
+  devices: done
+  diagnostics: todo
+  discovery: done
+  discovery-update-info: done
+  docs-data-update: todo
+  docs-examples: todo
+  docs-known-limitations: todo
+  docs-supported-devices: todo
+  docs-supported-functions: todo
+  docs-troubleshooting: todo
+  docs-use-cases: todo
+  dynamic-devices:
+    status: exempt
+    comment: |
+      Single-bridge integration. The ComfoConnect LAN C bridge
+      represents one ventilation unit. No dynamic device addition.
+  entity-category: done
+  entity-device-class: done
+  entity-disabled-by-default: done
+  entity-translations: todo
+  exception-translations: todo
+  icon-translations: todo
+  reconfiguration-flow: todo
+  repair-issues: todo
+  stale-devices:
+    status: exempt
+    comment: |
+      Single-device bridge. No stale device removal scenario.
+
+  # ──── Platinum ────
+  async-dependency: done
+  inject-websession:
+    status: exempt
+    comment: |
+      The aiocomfoconnect library uses a custom protobuf-over-TCP
+      protocol to communicate with the ComfoConnect LAN C bridge.
+      There is no HTTP/aiohttp websession to inject.
+  strict-typing: todo
