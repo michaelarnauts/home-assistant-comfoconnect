@@ -101,7 +101,7 @@ class ComfoConnectFan(FanEntity):
         else:
             self._attr_percentage = ordered_list_item_to_percentage(FAN_SPEEDS, FAN_SPEED_MAPPING[value])
 
-        self.schedule_update_ha_state()
+        self.async_write_ha_state()
 
     def _handle_mode_update(self, value: int) -> None:
         """Handle update callbacks."""
@@ -111,7 +111,7 @@ class ComfoConnectFan(FanEntity):
             value,
         )
         self._attr_preset_mode = VentilationMode.AUTO if value == -1 else VentilationMode.MANUAL
-        self.schedule_update_ha_state()
+        self.async_write_ha_state()
 
     @property
     def is_on(self) -> bool | None:

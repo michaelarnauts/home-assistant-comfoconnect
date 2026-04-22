@@ -212,7 +212,7 @@ class ComfoConnectSelect(SelectEntity):
         )
 
         self._attr_current_option = self.entity_description.sensor_value_fn(value)
-        self.schedule_update_ha_state()
+        self.async_write_ha_state()
 
     async def async_update(self) -> None:
         """Update the state."""
@@ -222,4 +222,4 @@ class ComfoConnectSelect(SelectEntity):
         """Set the selected option."""
         await self.entity_description.set_value_fn(self._ccb, option)
         self._attr_current_option = option
-        self.schedule_update_ha_state()
+        self.async_write_ha_state()
