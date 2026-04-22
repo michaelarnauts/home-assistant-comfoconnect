@@ -92,6 +92,7 @@ class ComfoConnectFan(FanEntity):
             )
         )
         await self._ccb.register_sensor(SENSORS.get(SENSOR_OPERATING_MODE))
+        self._attr_preset_mode = await self._ccb.get_mode()
 
     def _handle_speed_update(self, value: int) -> None:
         """Handle update callbacks."""
