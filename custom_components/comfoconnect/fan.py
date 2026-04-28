@@ -131,17 +131,15 @@ class ComfoConnectFan(FanEntity):
     ) -> None:
         """Turn on the fan, ensuring it correctly goes to AUTO mode."""
         if not self.is_on:
-            # Zet fan aan (standaard laag)
             if percentage is None:
                 percentage = ordered_list_item_to_percentage(FAN_SPEEDS, VentilationSpeed.LOW)
             await self.async_set_percentage(percentage)
 
-            # Forceer twee mode switches: Manual → Auto
+            # Two-step switch forces the unit into AUTO: Manual → Auto
             await self.async_set_preset_mode(VentilationMode.MANUAL)
             await asyncio.sleep(0.5)
             await self.async_set_preset_mode(VentilationMode.AUTO)
         else:
-            # Fan is al aan, gewoon mode instellen als opgegeven
             if preset_mode:
                 await self.async_set_preset_mode(preset_mode)
             if percentage is not None:

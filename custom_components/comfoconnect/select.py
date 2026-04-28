@@ -52,6 +52,11 @@ class ComfoconnectSelectEntityDescription(
     sensor_value_fn: Callable[[str], Any] = None
 
 
+async def _get_boost_option(ccb: ComfoConnectBridge) -> str | None:
+    """Map get_boost() bool to a select option string."""
+    return None if await ccb.get_boost() else "Off"
+
+
 SELECT_TYPES = (
     ComfoconnectSelectEntityDescription(
         key="select_mode",
@@ -109,7 +114,7 @@ SELECT_TYPES = (
         key="boost_timeout",
         name="Boost Mode",
         icon="mdi:fan-plus",
-        get_value_fn=lambda ccb: cast(Coroutine, ccb.get_boost()),
+        get_value_fn=_get_boost_option,
         set_value_fn=lambda ccb, option: (
             cast(Coroutine, ccb.set_boost(False)) if option == "Off" else
             cast(Coroutine, ccb.set_boost(True, int(option.split()[0]) * 60))
@@ -188,7 +193,9 @@ class ComfoConnectSelect(SelectEntity):
 
     async def async_update(self) -> None:
         """Update the state."""
-        self._attr_current_option = await self.entity_description.get_value_fn(self._ccb)
+        value = await self.entity_description.get_value_fn(self._ccb)
+        if value is not None:
+            self._attr_current_option = value
 
     async def async_select_option(self, option: str) -> None:
         """Set the selected option."""

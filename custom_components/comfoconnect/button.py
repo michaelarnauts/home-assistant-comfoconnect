@@ -68,7 +68,6 @@ class ComfoConnectButton(ButtonEntity):
         """Initialize the ComfoConnect sensor."""
         self._ccb = ccb
         self.entity_description = description
-        self._attr_name = f"{description.name}"
         self._attr_unique_id = f"{self._ccb.uuid}-{description.key}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._ccb.uuid)},

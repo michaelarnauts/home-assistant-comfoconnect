@@ -137,7 +137,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    @callback
     async def send_keepalive(now) -> None:
         """Send keepalive to the bridge."""
         _LOGGER.debug("Sending keepalive...")
@@ -186,9 +185,8 @@ class ComfoConnectBridge(ComfoConnect):
         super().__init__(
             host,
             uuid,
-            hass.loop,
-            self.sensor_callback,
-            self.alarm_callback,
+            sensor_callback=self.sensor_callback,
+            alarm_callback=self.alarm_callback,
         )
         self.hass = hass
 
