@@ -24,7 +24,7 @@ from aiocomfoconnect.sensors import (
 from aiocomfoconnect.sensors import Sensor as AioComfoConnectSensor
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -97,7 +97,11 @@ SELECT_TYPES = (
         set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_temperature_profile(option)),
         options=[VentilationTemperatureProfile.WARM, VentilationTemperatureProfile.NORMAL, VentilationTemperatureProfile.COOL],
         sensor=SENSORS.get(SENSOR_PROFILE_TEMPERATURE),
-        sensor_value_fn=lambda value: {0: VentilationTemperatureProfile.NORMAL, 1: VentilationTemperatureProfile.COOL, 2: VentilationTemperatureProfile.WARM}.get(value),
+        sensor_value_fn=lambda value: {
+            0: VentilationTemperatureProfile.NORMAL,
+            1: VentilationTemperatureProfile.COOL,
+            2: VentilationTemperatureProfile.WARM,
+        }.get(value),
     ),
     ComfoconnectSelectEntityDescription(
         key="comfocool",
