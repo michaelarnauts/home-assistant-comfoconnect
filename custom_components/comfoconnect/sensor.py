@@ -66,7 +66,7 @@ from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import Throttle
 
-from . import DOMAIN, SIGNAL_COMFOCONNECT_UPDATE_RECEIVED, ComfoConnectBridge
+from . import DOMAIN, SIGNAL_COMFOCONNECT_AVAILABLE, SIGNAL_COMFOCONNECT_UPDATE_RECEIVED, ComfoConnectBridge
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -296,6 +296,7 @@ SENSOR_TYPES = (
         name="Analog Input 1",
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         ccb_sensor=SENSORS.get(SENSOR_ANALOG_INPUT_1),
+        entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
         throttle=True,
     ),
@@ -306,6 +307,7 @@ SENSOR_TYPES = (
         name="Analog Input 2",
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         ccb_sensor=SENSORS.get(SENSOR_ANALOG_INPUT_2),
+        entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
         throttle=True,
     ),
@@ -316,6 +318,7 @@ SENSOR_TYPES = (
         name="Analog Input 3",
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         ccb_sensor=SENSORS.get(SENSOR_ANALOG_INPUT_3),
+        entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
         throttle=True,
     ),
@@ -326,6 +329,7 @@ SENSOR_TYPES = (
         name="Analog Input 4",
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         ccb_sensor=SENSORS.get(SENSOR_ANALOG_INPUT_4),
+        entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
         throttle=True,
     ),
@@ -421,6 +425,14 @@ class ComfoConnectSensor(SensorEntity):
             self.entity_description.key,
         )
 
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
+                SIGNAL_COMFOCONNECT_AVAILABLE.format(self._ccb.uuid),
+                self._handle_availability_update,
+            )
+        )
+
         # If the sensor should be throttled, pass it through the Throttle utility
         if self.entity_description.throttle:
             update_handler = Throttle(MIN_TIME_BETWEEN_UPDATES)(self._handle_update)
@@ -435,6 +447,11 @@ class ComfoConnectSensor(SensorEntity):
             )
         )
         await self._ccb.register_sensor(self.entity_description.ccb_sensor)
+
+    def _handle_availability_update(self, available: bool) -> None:
+        """Handle availability updates."""
+        self._attr_available = available
+        self.schedule_update_ha_state()
 
     def _handle_update(self, value):
         """Handle update callbacks."""

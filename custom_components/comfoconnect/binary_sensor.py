@@ -25,7 +25,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import DOMAIN, SIGNAL_COMFOCONNECT_UPDATE_RECEIVED, ComfoConnectBridge
+from . import DOMAIN, SIGNAL_COMFOCONNECT_AVAILABLE, SIGNAL_COMFOCONNECT_UPDATE_RECEIVED, ComfoConnectBridge
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -118,11 +118,23 @@ class ComfoConnectBinarySensor(BinarySensorEntity):
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
+                SIGNAL_COMFOCONNECT_AVAILABLE.format(self._ccb.uuid),
+                self._handle_availability_update,
+            )
+        )
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
                 SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(self._ccb.uuid, self.entity_description.key),
                 self._handle_update,
             )
         )
         await self._ccb.register_sensor(self.entity_description.ccb_sensor)
+
+    def _handle_availability_update(self, available: bool) -> None:
+        """Handle availability updates."""
+        self._attr_available = available
+        self.schedule_update_ha_state()
 
     def _handle_update(self, value):
         """Handle update callbacks."""

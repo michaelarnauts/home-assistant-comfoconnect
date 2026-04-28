@@ -45,6 +45,7 @@ PLATFORMS: list[Platform] = [
 _LOGGER = logging.getLogger(__name__)
 
 SIGNAL_COMFOCONNECT_UPDATE_RECEIVED = "comfoconnect_update_{}_{}"
+SIGNAL_COMFOCONNECT_AVAILABLE = "comfoconnect_available_{}"
 
 KEEP_ALIVE_INTERVAL = timedelta(seconds=30)
 
@@ -143,17 +144,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         try:
             # Use cmd_time_request as a keepalive since cmd_keepalive doesn't send back a reply we can wait for
             await bridge.cmd_time_request()
-
-            # TODO: Mark sensors as available
+            dispatcher_send(hass, SIGNAL_COMFOCONNECT_AVAILABLE.format(bridge.uuid), True)
 
         except (AioComfoConnectNotConnected, AioComfoConnectTimeout):
             # Reconnect when connection has been dropped
             try:
                 await bridge.connect(entry.data[CONF_LOCAL_UUID])
+                dispatcher_send(hass, SIGNAL_COMFOCONNECT_AVAILABLE.format(bridge.uuid), True)
             except AioComfoConnectTimeout:
                 _LOGGER.debug("Connection timed out. Retrying later...")
-
-                # TODO: Mark all sensors as unavailable
+                dispatcher_send(hass, SIGNAL_COMFOCONNECT_AVAILABLE.format(bridge.uuid), False)
 
     entry.async_on_unload(async_track_time_interval(hass, send_keepalive, KEEP_ALIVE_INTERVAL))
 

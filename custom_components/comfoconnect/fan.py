@@ -23,7 +23,7 @@ from homeassistant.util.percentage import (
     percentage_to_ordered_list_item,
 )
 
-from . import DOMAIN, SIGNAL_COMFOCONNECT_UPDATE_RECEIVED, ComfoConnectBridge
+from . import DOMAIN, SIGNAL_COMFOCONNECT_AVAILABLE, SIGNAL_COMFOCONNECT_UPDATE_RECEIVED, ComfoConnectBridge
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -88,6 +88,13 @@ class ComfoConnectFan(FanEntity):
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
+                SIGNAL_COMFOCONNECT_AVAILABLE.format(self._ccb.uuid),
+                self._handle_availability_update,
+            )
+        )
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
                 SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(self._ccb.uuid, SENSOR_FAN_SPEED_MODE),
                 self._handle_speed_update,
             )
@@ -102,6 +109,11 @@ class ComfoConnectFan(FanEntity):
             )
         )
         await self._ccb.register_sensor(SENSORS.get(SENSOR_OPERATING_MODE))
+
+    def _handle_availability_update(self, available: bool) -> None:
+        """Handle availability updates."""
+        self._attr_available = available
+        self.schedule_update_ha_state()
 
     def _handle_speed_update(self, value: int) -> None:
         """Handle update callbacks."""
