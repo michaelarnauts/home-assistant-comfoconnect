@@ -26,12 +26,12 @@ from aiocomfoconnect.sensors import (
 )
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import DOMAIN, SIGNAL_COMFOCONNECT_UPDATE_RECEIVED, ComfoConnectBridge
+from . import DOMAIN, SIGNAL_COMFOCONNECT_AVAILABILITY, SIGNAL_COMFOCONNECT_UPDATE_RECEIVED, ComfoConnectBridge
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -179,12 +179,22 @@ class ComfoConnectSelect(SelectEntity):
         self.entity_description = description
         self._attr_should_poll = False if description.sensor else True
         self._attr_unique_id = f"{self._ccb.uuid}-{description.key}"
+        self._attr_available = ccb.is_available
+        self._attr_current_option = None
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._ccb.uuid)},
         )
 
     async def async_added_to_hass(self) -> None:
-        """Register for sensor updates."""
+        """Register for sensor updates and availability changes."""
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
+                SIGNAL_COMFOCONNECT_AVAILABILITY.format(self._ccb.uuid),
+                self._handle_availability_update,
+            )
+        )
+        
         if not self.entity_description.sensor:
             return
 
@@ -201,6 +211,12 @@ class ComfoConnectSelect(SelectEntity):
             )
         )
         await self._ccb.register_sensor(self.entity_description.sensor)
+
+    @callback
+    def _handle_availability_update(self, available: bool) -> None:
+        """Handle bridge availability changes."""
+        self._attr_available = available
+        self.schedule_update_ha_state()
 
     def _handle_update(self, value):
         """Handle update callbacks."""
