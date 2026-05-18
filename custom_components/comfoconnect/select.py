@@ -31,7 +31,12 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import DOMAIN, SIGNAL_COMFOCONNECT_AVAILABILITY, SIGNAL_COMFOCONNECT_UPDATE_RECEIVED, ComfoConnectBridge
+from . import (
+    DOMAIN, 
+    SIGNAL_COMFOCONNECT_AVAILABILITY, 
+    SIGNAL_COMFOCONNECT_UPDATE_RECEIVED, 
+    ComfoConnectBridge,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -180,7 +185,6 @@ class ComfoConnectSelect(SelectEntity):
         self._attr_should_poll = False if description.sensor else True
         self._attr_unique_id = f"{self._ccb.uuid}-{description.key}"
         self._attr_available = ccb.is_available
-        self._attr_current_option = None
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._ccb.uuid)},
         )
@@ -194,7 +198,7 @@ class ComfoConnectSelect(SelectEntity):
                 self._handle_availability_update,
             )
         )
-        
+
         if not self.entity_description.sensor:
             return
 
