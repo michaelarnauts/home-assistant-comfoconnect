@@ -32,9 +32,9 @@ from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import (
-    DOMAIN, 
-    SIGNAL_COMFOCONNECT_AVAILABILITY, 
-    SIGNAL_COMFOCONNECT_UPDATE_RECEIVED, 
+    DOMAIN,
+    SIGNAL_COMFOCONNECT_AVAILABILITY,
+    SIGNAL_COMFOCONNECT_UPDATE_RECEIVED,
     ComfoConnectBridge,
 )
 
