@@ -108,10 +108,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN][entry.entry_id] = bridge
 
     # Get device information
-    bridge_info = await bridge.cmd_version_request()
-    unit_model = await bridge.get_property(PROPERTY_MODEL)
-    unit_firmware = await bridge.get_property(PROPERTY_FIRMWARE_VERSION)
-    unit_name = await bridge.get_property(PROPERTY_NAME)
+    try:
+        bridge_info = await bridge.cmd_version_request()
+        unit_model = await bridge.get_property(PROPERTY_MODEL)
+        unit_firmware = await bridge.get_property(PROPERTY_FIRMWARE_VERSION)
+        unit_name = await bridge.get_property(PROPERTY_NAME)
+    except (AioComfoConnectNotConnected, AioComfoConnectTimeout) as err:
+        # Bridge connected but did not answer device-info requests in time.
+        # Retry setup later instead of failing the integration outright.
+        await bridge.disconnect()
+        hass.data[DOMAIN].pop(entry.entry_id)
+        raise ConfigEntryNotReady("Timeout while reading device information") from err
 
     device_registry = dr.async_get(hass)
 
