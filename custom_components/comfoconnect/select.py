@@ -54,7 +54,10 @@ class ComfoconnectSelectEntityDescription(
 
 async def _get_boost_option(ccb: ComfoConnectBridge) -> str | None:
     """Map get_boost() bool to a select option string."""
-    return None if await ccb.get_boost() else "Off"
+    try:
+        return None if await ccb.get_boost() else "Off"
+    except AttributeError:
+        return None
 
 
 SELECT_TYPES = (
