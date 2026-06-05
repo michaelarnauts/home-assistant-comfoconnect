@@ -7,6 +7,10 @@ import logging
 from typing import Any
 
 from aiocomfoconnect.const import VentilationMode, VentilationSpeed
+from aiocomfoconnect.exceptions import (
+    AioComfoConnectNotConnected,
+    AioComfoConnectTimeout,
+)
 from aiocomfoconnect.sensors import (
     SENSOR_FAN_SPEED_MODE,
     SENSOR_OPERATING_MODE,
@@ -127,8 +131,28 @@ class ComfoConnectFan(FanEntity):
 
     def _handle_mode_update(self, value: int) -> None:
         """Handle update callbacks."""
-        self._attr_preset_mode = MODE_MAPPING.get(value, VentilationMode.MANUAL)
+        mode = MODE_MAPPING.get(value)
+        if mode is None:
+            # Ignore unrecognized/transient operating-mode values instead of
+            # flickering the preset to manual.
+            _LOGGER.debug("Ignoring unknown operating mode value: %s", value)
+            return
+        self._attr_preset_mode = mode
         self.schedule_update_ha_state()
+
+    async def async_update(self) -> None:
+        """Read the authoritative mode once at startup (update_before_add).
+
+        The operating-mode PDO is only pushed on change, so without this the
+        preset would stay None/stale after a restart until the next push.
+        """
+        try:
+            mode = await self._ccb.get_mode()
+        except (AioComfoConnectTimeout, AioComfoConnectNotConnected) as err:
+            _LOGGER.debug("Could not read initial ventilation mode: %s", err)
+            return
+        if mode in PRESET_MODES:
+            self._attr_preset_mode = mode
 
     @property
     def is_on(self) -> bool:
