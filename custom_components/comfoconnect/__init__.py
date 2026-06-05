@@ -127,8 +127,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, bridge_info.serialNumber)},
         manufacturer="Zehnder",
-        name=bridge_info.serialNumber,
+        name="ComfoConnect LAN C Bridge",
         model="ComfoConnect LAN C",
+        serial_number=bridge_info.serialNumber,
         sw_version=version_decode(bridge_info.gatewayVersion),
     )
 
