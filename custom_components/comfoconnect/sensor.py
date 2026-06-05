@@ -339,7 +339,7 @@ SENSOR_TYPES = (
         name="Airflow Constraint",
         ccb_sensor=SENSORS.get(SENSOR_AIRFLOW_CONSTRAINTS),
         entity_category=EntityCategory.DIAGNOSTIC,
-        mapping=lambda x: x[0] if x else "",
+        mapping=lambda x: ", ".join(x) if x else "None",
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_COMFOFOND_GHE_STATE,
