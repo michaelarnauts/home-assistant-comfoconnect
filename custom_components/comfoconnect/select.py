@@ -7,7 +7,10 @@ from collections.abc import Awaitable, Coroutine
 from dataclasses import dataclass
 from typing import Any, Callable, cast
 
-from aiocomfoconnect.exceptions import AioComfoConnectTimeout
+from aiocomfoconnect.exceptions import (
+    AioComfoConnectNotConnected,
+    AioComfoConnectTimeout,
+)
 from aiocomfoconnect.const import (
     ComfoCoolMode,
     VentilationBalance,
@@ -33,6 +36,10 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from . import DOMAIN, SIGNAL_COMFOCONNECT_AVAILABLE, SIGNAL_COMFOCONNECT_UPDATE_RECEIVED, ComfoConnectBridge
 
 _LOGGER = logging.getLogger(__name__)
+
+# Number of consecutive polling failures tolerated before a polled select is
+# marked unavailable in Home Assistant.
+MAX_UPDATE_FAILURES = 3
 
 
 @dataclass
@@ -160,6 +167,7 @@ class ComfoConnectSelect(SelectEntity):
         """Initialize the ComfoConnect select entity."""
         self._ccb = ccb
         self.entity_description = description
+        self._fail_count = 0
         self._attr_should_poll = False if description.sensor else True
         self._attr_unique_id = f"{self._ccb.uuid}-{description.key}"
         self._attr_device_info = DeviceInfo(
@@ -213,13 +221,25 @@ class ComfoConnectSelect(SelectEntity):
         """Update the state."""
         try:
             value = await self.entity_description.get_value_fn(self._ccb)
-        except (AioComfoConnectTimeout, AttributeError) as err:
-            # Bridge did not (properly) answer the polled RMI request. Keep the
-            # last known value instead of crashing and spamming the log.
+        except (AioComfoConnectTimeout, AioComfoConnectNotConnected, AttributeError) as err:
+            # Bridge did not (properly) answer the polled RMI request. Tolerate a
+            # few transient failures (keeping the last value), but mark the entity
+            # unavailable once they persist.
+            self._fail_count += 1
+            if self._fail_count >= MAX_UPDATE_FAILURES:
+                self._attr_available = False
             _LOGGER.debug(
-                "Update for %s failed: %s", self.entity_description.key, err
+                "Update for %s failed (%d/%d): %s",
+                self.entity_description.key,
+                self._fail_count,
+                MAX_UPDATE_FAILURES,
+                err,
             )
             return
+
+        # Successful poll: clear the failure streak and restore availability.
+        self._fail_count = 0
+        self._attr_available = True
         if value is not None:
             self._attr_current_option = value
 
