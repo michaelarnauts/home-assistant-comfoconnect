@@ -7,6 +7,7 @@ from collections.abc import Awaitable, Coroutine
 from dataclasses import dataclass
 from typing import Any, Callable, cast
 
+from aiocomfoconnect.exceptions import AioComfoConnectTimeout
 from aiocomfoconnect.const import (
     ComfoCoolMode,
     VentilationBalance,
@@ -54,10 +55,7 @@ class ComfoconnectSelectEntityDescription(
 
 async def _get_boost_option(ccb: ComfoConnectBridge) -> str | None:
     """Map get_boost() bool to a select option string."""
-    try:
-        return None if await ccb.get_boost() else "Off"
-    except AttributeError:
-        return None
+    return None if await ccb.get_boost() else "Off"
 
 
 SELECT_TYPES = (
@@ -213,7 +211,15 @@ class ComfoConnectSelect(SelectEntity):
 
     async def async_update(self) -> None:
         """Update the state."""
-        value = await self.entity_description.get_value_fn(self._ccb)
+        try:
+            value = await self.entity_description.get_value_fn(self._ccb)
+        except (AioComfoConnectTimeout, AttributeError) as err:
+            # Bridge did not (properly) answer the polled RMI request. Keep the
+            # last known value instead of crashing and spamming the log.
+            _LOGGER.debug(
+                "Update for %s failed: %s", self.entity_description.key, err
+            )
+            return
         if value is not None:
             self._attr_current_option = value
 
