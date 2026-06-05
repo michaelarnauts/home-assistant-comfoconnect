@@ -65,6 +65,11 @@ async def _get_boost_option(ccb: ComfoConnectBridge) -> str | None:
     return None if await ccb.get_boost() else "Off"
 
 
+async def _get_comfocool_option(ccb: ComfoConnectBridge) -> str:
+    """Map get_comfocool_mode() bool to a select option string."""
+    return ComfoCoolMode.AUTO if await ccb.get_comfocool_mode() else ComfoCoolMode.OFF
+
+
 SELECT_TYPES = (
     ComfoconnectSelectEntityDescription(
         key="select_mode",
@@ -115,7 +120,7 @@ SELECT_TYPES = (
         key="comfocool",
         name="ComfoCool Mode",
         entity_category=EntityCategory.CONFIG,
-        get_value_fn=lambda ccb: cast(Coroutine, ccb.get_comfocool_mode()),
+        get_value_fn=_get_comfocool_option,
         set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_comfocool_mode(option)),
         options=[ComfoCoolMode.AUTO, ComfoCoolMode.OFF],
         sensor=SENSORS.get(SENSOR_COMFOCOOL_STATE),
