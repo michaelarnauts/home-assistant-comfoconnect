@@ -87,6 +87,9 @@ class ComfoconnectSensorEntityDescription(SensorEntityDescription, ComfoconnectR
 
     throttle: bool = False
     mapping: Callable = None
+    # Ignore a pushed value of 0 (the bridge emits a spurious 0 for many
+    # sensors right after a reconnect). Auto-enabled for temperature/humidity.
+    ignore_zero: bool = False
 
 
 SENSOR_TYPES = (
@@ -175,6 +178,7 @@ SENSOR_TYPES = (
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
         throttle=True,
+        ignore_zero=True,
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_FAN_EXHAUST_SPEED,
@@ -196,6 +200,7 @@ SENSOR_TYPES = (
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
         throttle=True,
+        ignore_zero=True,
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_TEMPERATURE_EXHAUST,
@@ -248,6 +253,7 @@ SENSOR_TYPES = (
         icon="mdi:calendar",
         ccb_sensor=SENSORS.get(SENSOR_DAYS_TO_REPLACE_FILTER),
         entity_category=EntityCategory.DIAGNOSTIC,
+        ignore_zero=True,
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_POWER_USAGE,
@@ -259,6 +265,7 @@ SENSOR_TYPES = (
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
         throttle=True,
+        ignore_zero=True,
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_POWER_USAGE_TOTAL,
@@ -270,6 +277,7 @@ SENSOR_TYPES = (
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
         throttle=True,
+        ignore_zero=True,
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_PREHEATER_POWER,
@@ -470,6 +478,17 @@ class ComfoConnectSensor(RestoreSensor):
             self.entity_description.key,
             value,
         )
+
+        # The bridge pushes a spurious 0 for many sensors right after a
+        # reconnect. Drop it (keeping the last value) for sensors where 0 is
+        # implausible, so the value isn't corrupted until the next real push.
+        ignore_zero = self.entity_description.ignore_zero or self.device_class in (
+            SensorDeviceClass.TEMPERATURE,
+            SensorDeviceClass.HUMIDITY,
+        )
+        if ignore_zero and value == 0:
+            _LOGGER.debug("Ignoring spurious 0 for %s", self.entity_description.name)
+            return
 
         if self.entity_description.mapping:
             self._attr_native_value = self.entity_description.mapping(value)
