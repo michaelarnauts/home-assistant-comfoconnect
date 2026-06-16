@@ -45,8 +45,8 @@ from aiocomfoconnect.sensors import (
     Sensor as AioComfoConnectSensor,
 )
 from homeassistant.components.sensor import (
+    RestoreSensor,
     SensorDeviceClass,
-    SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
@@ -400,7 +400,7 @@ async def async_setup_entry(
     async_add_entities(sensors, True)
 
 
-class ComfoConnectSensor(SensorEntity):
+class ComfoConnectSensor(RestoreSensor):
     """Representation of a ComfoConnect sensor."""
 
     _attr_should_poll = False
@@ -428,6 +428,11 @@ class ComfoConnectSensor(SensorEntity):
             self.entity_description.name,
             self.entity_description.key,
         )
+
+        # Restore the last known value so the sensor isn't "unknown" at boot
+        # until the bridge pushes a fresh value (some PDOs update rarely).
+        if (last_data := await self.async_get_last_sensor_data()) is not None:
+            self._attr_native_value = last_data.native_value
 
         self.async_on_remove(
             async_dispatcher_connect(

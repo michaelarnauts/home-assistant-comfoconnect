@@ -24,6 +24,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from . import DOMAIN, SIGNAL_COMFOCONNECT_AVAILABLE, SIGNAL_COMFOCONNECT_UPDATE_RECEIVED, ComfoConnectBridge
 
@@ -87,7 +88,7 @@ async def async_setup_entry(
     async_add_entities(sensors, True)
 
 
-class ComfoConnectBinarySensor(BinarySensorEntity):
+class ComfoConnectBinarySensor(BinarySensorEntity, RestoreEntity):
     """Representation of a ComfoConnect sensor."""
 
     _attr_should_poll = False
@@ -115,6 +116,12 @@ class ComfoConnectBinarySensor(BinarySensorEntity):
             self.entity_description.name,
             self.entity_description.key,
         )
+
+        # Restore the last known state so the sensor isn't "unknown" at boot
+        # until the bridge pushes a fresh value (these PDOs update rarely).
+        if (last_state := await self.async_get_last_state()) is not None:
+            self._attr_is_on = last_state.state == "on"
+
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
