@@ -20,6 +20,7 @@ from aiocomfoconnect.sensors import (
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -195,7 +196,12 @@ class ComfoConnectFan(FanEntity):
         else:
             speed = percentage_to_ordered_list_item(FAN_SPEEDS, percentage)
 
-        await self._ccb.set_speed(speed)
+        try:
+            await self._ccb.set_speed(speed)
+        except (AioComfoConnectNotConnected, AioComfoConnectTimeout) as err:
+            raise HomeAssistantError(f"Not connected to ComfoConnect bridge: {err}") from err
+        except ComfoConnectError as err:
+            raise HomeAssistantError(f"Failed to set fan speed: {err}") from err
         self._attr_percentage = percentage
         self.schedule_update_ha_state()
 
@@ -205,6 +211,11 @@ class ComfoConnectFan(FanEntity):
             _LOGGER.warning("Invalid preset mode: %s", preset_mode)
             return
 
-        await self._ccb.set_mode(preset_mode)
+        try:
+            await self._ccb.set_mode(preset_mode)
+        except (AioComfoConnectNotConnected, AioComfoConnectTimeout) as err:
+            raise HomeAssistantError(f"Not connected to ComfoConnect bridge: {err}") from err
+        except ComfoConnectError as err:
+            raise HomeAssistantError(f"Failed to set preset mode: {err}") from err
         self._attr_preset_mode = preset_mode
         self.schedule_update_ha_state()

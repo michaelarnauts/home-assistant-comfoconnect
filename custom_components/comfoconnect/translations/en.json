@@ -8,7 +8,8 @@
             "default": "Some sensors are not enabled by default. You can enable them in the entity registry after the integration configuration."
         },
         "error": {
-            "invalid_pin": "Invalid PIN"
+            "invalid_pin": "Invalid PIN",
+            "invalid_host": "Could not find a ComfoConnect bridge at this address"
         },
         "step": {
             "confirm": {

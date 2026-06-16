@@ -33,7 +33,8 @@
   },
   "config": {
     "error": {
-      "invalid_pin": "Invalid PIN"
+      "invalid_pin": "Invalid PIN",
+      "invalid_host": "Could not find a ComfoConnect bridge at this address"
     },
     "step": {
       "user": {
