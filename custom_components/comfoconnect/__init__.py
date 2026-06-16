@@ -147,21 +147,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     async def send_keepalive(now) -> None:
-        """Send keepalive to the bridge."""
+        """Probe the bridge and report availability.
+
+        ComfoConnect.connect() runs its own internal reconnect loop, so we must
+        not call connect() again here: doing so spawns duplicate reconnect loops
+        and read tasks, which get orphaned ("Task was destroyed but it is
+        pending!"). We only probe the bridge and update entity availability; the
+        library restores the connection on its own.
+        """
         _LOGGER.debug("Sending keepalive...")
         try:
             # Use cmd_time_request as a keepalive since cmd_keepalive doesn't send back a reply we can wait for
             await bridge.cmd_time_request()
-            dispatcher_send(hass, SIGNAL_COMFOCONNECT_AVAILABLE.format(bridge.uuid), True)
-
         except (AioComfoConnectNotConnected, AioComfoConnectTimeout):
-            # Reconnect when connection has been dropped
-            try:
-                await bridge.connect(entry.data[CONF_LOCAL_UUID])
-                dispatcher_send(hass, SIGNAL_COMFOCONNECT_AVAILABLE.format(bridge.uuid), True)
-            except AioComfoConnectTimeout:
-                _LOGGER.debug("Connection timed out. Retrying later...")
-                dispatcher_send(hass, SIGNAL_COMFOCONNECT_AVAILABLE.format(bridge.uuid), False)
+            _LOGGER.debug("Keepalive failed; bridge unavailable (library will reconnect).")
+            dispatcher_send(hass, SIGNAL_COMFOCONNECT_AVAILABLE.format(bridge.uuid), False)
+        else:
+            dispatcher_send(hass, SIGNAL_COMFOCONNECT_AVAILABLE.format(bridge.uuid), True)
 
     entry.async_on_unload(async_track_time_interval(hass, send_keepalive, KEEP_ALIVE_INTERVAL))
 

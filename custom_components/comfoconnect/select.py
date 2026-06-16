@@ -10,6 +10,7 @@ from typing import Any, Callable, cast
 from aiocomfoconnect.exceptions import (
     AioComfoConnectNotConnected,
     AioComfoConnectTimeout,
+    ComfoConnectError,
 )
 from aiocomfoconnect.const import (
     ComfoCoolMode,
@@ -226,7 +227,7 @@ class ComfoConnectSelect(SelectEntity):
         """Update the state."""
         try:
             value = await self.entity_description.get_value_fn(self._ccb)
-        except (AioComfoConnectTimeout, AioComfoConnectNotConnected, AttributeError) as err:
+        except (AioComfoConnectTimeout, AioComfoConnectNotConnected, ComfoConnectError, AttributeError) as err:
             # Bridge did not (properly) answer the polled RMI request. Tolerate a
             # few transient failures (keeping the last value), but mark the entity
             # unavailable once they persist.

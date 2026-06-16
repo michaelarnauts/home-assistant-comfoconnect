@@ -10,6 +10,7 @@ from aiocomfoconnect.const import VentilationMode, VentilationSpeed
 from aiocomfoconnect.exceptions import (
     AioComfoConnectNotConnected,
     AioComfoConnectTimeout,
+    ComfoConnectError,
 )
 from aiocomfoconnect.sensors import (
     SENSOR_FAN_SPEED_MODE,
@@ -148,7 +149,7 @@ class ComfoConnectFan(FanEntity):
         """
         try:
             mode = await self._ccb.get_mode()
-        except (AioComfoConnectTimeout, AioComfoConnectNotConnected) as err:
+        except (AioComfoConnectTimeout, AioComfoConnectNotConnected, ComfoConnectError) as err:
             _LOGGER.debug("Could not read initial ventilation mode: %s", err)
             return
         if mode in PRESET_MODES:
