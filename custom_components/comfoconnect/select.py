@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Awaitable, Coroutine
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Any, Callable, cast
 
 from aiocomfoconnect.exceptions import (
@@ -41,6 +42,12 @@ _LOGGER = logging.getLogger(__name__)
 # Number of consecutive polling failures tolerated before a polled select is
 # marked unavailable in Home Assistant.
 MAX_UPDATE_FAILURES = 3
+
+# Poll the authoritative RMI value on a slow interval. The bridge pushes
+# (sensor-backed) values for responsiveness, but pushes a stale value on
+# reconnect; the periodic RMI read corrects any drift even when a reconnect
+# went unnoticed by the keepalive.
+SCAN_INTERVAL = timedelta(minutes=5)
 
 
 @dataclass
@@ -174,7 +181,10 @@ class ComfoConnectSelect(SelectEntity):
         self._ccb = ccb
         self.entity_description = description
         self._fail_count = 0
-        self._attr_should_poll = False if description.sensor else True
+        # Always poll the authoritative RMI value (slowly, see SCAN_INTERVAL).
+        # Sensor-backed selects additionally receive push updates for
+        # responsiveness; the poll corrects stale values pushed on reconnect.
+        self._attr_should_poll = True
         self._attr_unique_id = f"{self._ccb.uuid}-{description.key}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._ccb.uuid)},
@@ -209,8 +219,15 @@ class ComfoConnectSelect(SelectEntity):
 
     def _handle_availability_update(self, available: bool) -> None:
         """Handle availability updates."""
+        was_available = self._attr_available
         self._attr_available = available
-        self.schedule_update_ha_state()
+        if available and was_available is False:
+            # After a reconnect the bridge can push stale initial values
+            # (e.g. temperature profile reverting to "normal"); re-read the
+            # authoritative value via the RMI getter to correct it.
+            self.schedule_update_ha_state(force_refresh=True)
+        else:
+            self.schedule_update_ha_state()
 
     def _handle_update(self, value):
         """Handle update callbacks."""
