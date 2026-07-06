@@ -12,13 +12,18 @@ integration in Home Assistant.
 * Control ventilation speed
 * Control ventilation mode (auto / manual)
 * Control ComfoCool mode (auto / off)
+* Control timed boost and away modes
+* Configure sensor based ventilation modes
+* Configure advanced airflow and temperature targets
 * Show various sensors
+* Show extended diagnostic and energy sensors
 
 This integration supports the following additional features over the existing integration:
 
 * Configurable through the UI
 * Support for multiple bridges
 * Allows to modify the balance mode, bypass mode, temperature profile and ventilation mode
+* Allows advanced airflow and temperature target tuning through disabled-by-default number entities
 * Changes to fan speed won't be reverted after 2 hours
 * Support to clear alarms
 * Ignores invalid sensor values at the beginning of a session (Workaround for bridge firmware bug)

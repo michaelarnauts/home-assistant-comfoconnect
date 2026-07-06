@@ -52,6 +52,48 @@ class ComfoconnectSelectEntityDescription(SelectEntityDescription, ComfoconnectS
     sensor_value_fn: Callable[[str], Any] = None
 
 
+TIMER_OFF = "Off"
+TIMER_ACTIVE = "Active"
+TIMEOUT_OPTIONS = ("10 Minutes", "20 Minutes", "30 Minutes", "40 Minutes", "50 Minutes", "60 Minutes")
+TIMER_OPTIONS = (TIMER_OFF, TIMER_ACTIVE, *TIMEOUT_OPTIONS)
+
+
+def _timeout_seconds(option: str) -> int:
+    """Convert a timeout option to seconds."""
+    return int(option.split()[0]) * 60
+
+
+def _timer_option(active: bool) -> str:
+    """Map a timer state to a select option."""
+    return TIMER_ACTIVE if active else TIMER_OFF
+
+
+async def _set_boost_option(ccb: ComfoConnectBridge, option: str) -> None:
+    """Set or cancel boost mode from a select option."""
+    if option == TIMER_OFF:
+        await ccb.set_boost(False)
+    elif option != TIMER_ACTIVE:
+        await ccb.set_boost(True, _timeout_seconds(option))
+
+
+async def _set_away_option(ccb: ComfoConnectBridge, option: str) -> None:
+    """Set or cancel away mode from a select option."""
+    if option == TIMER_OFF:
+        await ccb.set_away(False)
+    elif option != TIMER_ACTIVE:
+        await ccb.set_away(True, _timeout_seconds(option))
+
+
+async def _get_boost_option(ccb: ComfoConnectBridge) -> str:
+    """Return the current boost select option."""
+    return _timer_option(await ccb.get_boost())
+
+
+async def _get_away_option(ccb: ComfoConnectBridge) -> str:
+    """Return the current away select option."""
+    return _timer_option(await ccb.get_away())
+
+
 SELECT_TYPES = (
     ComfoconnectSelectEntityDescription(
         key="select_mode",
@@ -142,9 +184,57 @@ SELECT_TYPES = (
         key="boost_timeout",
         name="Boost Mode",
         icon="mdi:fan-plus",
-        get_value_fn=lambda ccb: cast(Coroutine, ccb.get_boost()),
-        set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_boost(True, int(option.split()[0]) * 60)),
-        options=["10 Minutes", "20 Minutes", "30 Minutes", "40 Minutes", "50 Minutes", "60 Minutes"],
+        get_value_fn=_get_boost_option,
+        set_value_fn=_set_boost_option,
+        options=list(TIMER_OPTIONS),
+    ),
+    ComfoconnectSelectEntityDescription(
+        key="away_timeout",
+        name="Away Mode",
+        icon="mdi:home-export-outline",
+        entity_category=EntityCategory.CONFIG,
+        get_value_fn=_get_away_option,
+        set_value_fn=_set_away_option,
+        options=list(TIMER_OPTIONS),
+    ),
+    ComfoconnectSelectEntityDescription(
+        key="sensor_ventmode_temperature_passive",
+        name="Temperature sensor ventilation",
+        icon="mdi:thermometer-auto",
+        entity_category=EntityCategory.CONFIG,
+        get_value_fn=lambda ccb: cast(Coroutine, ccb.get_sensor_ventmode_temperature_passive()),
+        set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_sensor_ventmode_temperature_passive(option)),
+        options=[
+            VentilationSetting.AUTO,
+            VentilationSetting.ON,
+            VentilationSetting.OFF,
+        ],
+    ),
+    ComfoconnectSelectEntityDescription(
+        key="sensor_ventmode_humidity_comfort",
+        name="Humidity comfort ventilation",
+        icon="mdi:water-percent",
+        entity_category=EntityCategory.CONFIG,
+        get_value_fn=lambda ccb: cast(Coroutine, ccb.get_sensor_ventmode_humidity_comfort()),
+        set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_sensor_ventmode_humidity_comfort(option)),
+        options=[
+            VentilationSetting.AUTO,
+            VentilationSetting.ON,
+            VentilationSetting.OFF,
+        ],
+    ),
+    ComfoconnectSelectEntityDescription(
+        key="sensor_ventmode_humidity_protection",
+        name="Humidity protection ventilation",
+        icon="mdi:water-alert",
+        entity_category=EntityCategory.CONFIG,
+        get_value_fn=lambda ccb: cast(Coroutine, ccb.get_sensor_ventmode_humidity_protection()),
+        set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_sensor_ventmode_humidity_protection(option)),
+        options=[
+            VentilationSetting.AUTO,
+            VentilationSetting.ON,
+            VentilationSetting.OFF,
+        ],
     ),
 )
 
