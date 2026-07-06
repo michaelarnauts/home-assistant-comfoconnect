@@ -19,6 +19,7 @@ from aiocomfoconnect.properties import (
 )
 from aiocomfoconnect.sensors import Sensor
 from aiocomfoconnect.util import version_decode
+from homeassistant.components import persistent_notification
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import CONF_HOST, EVENT_HOMEASSISTANT_STOP, Platform
 from homeassistant.core import HomeAssistant, callback
@@ -45,6 +46,9 @@ PLATFORMS: list[Platform] = [
 _LOGGER = logging.getLogger(__name__)
 
 SIGNAL_COMFOCONNECT_UPDATE_RECEIVED = "comfoconnect_update_{}_{}"
+SIGNAL_COMFOCONNECT_ALARM_RECEIVED = "comfoconnect_alarm_{}"
+EVENT_COMFOCONNECT_ALARM = "comfoconnect_alarm"
+PERSISTENT_NOTIFICATION_ID = "comfoconnect_alarm_{}"
 
 KEEP_ALIVE_INTERVAL = timedelta(seconds=30)
 
@@ -191,6 +195,8 @@ class ComfoConnectBridge(ComfoConnect):
             self.alarm_callback,
         )
         self.hass = hass
+        self.active_alarm_node_id: int | None = None
+        self.active_alarms: dict[int, str] = {}
 
     @callback
     def sensor_callback(self, sensor: Sensor, value):
@@ -203,8 +209,38 @@ class ComfoConnectBridge(ComfoConnect):
 
     @callback
     def alarm_callback(self, node_id, errors):
-        """Print alarm updates."""
+        """Handle alarm updates."""
+        self.active_alarm_node_id = node_id
+        self.active_alarms = errors
+
+        event_data = {
+            "bridge_uuid": self.uuid,
+            "node_id": node_id,
+            "errors": [{"id": error_id, "message": error} for error_id, error in errors.items()],
+        }
+
+        dispatcher_send(
+            self.hass,
+            SIGNAL_COMFOCONNECT_ALARM_RECEIVED.format(self.uuid),
+            node_id,
+            errors,
+        )
+        self.hass.bus.async_fire(EVENT_COMFOCONNECT_ALARM, event_data)
+
+        notification_id = PERSISTENT_NOTIFICATION_ID.format(self.uuid)
+        if not errors:
+            _LOGGER.info("Alarms cleared for Node %s", node_id)
+            persistent_notification.async_dismiss(self.hass, notification_id)
+            return
+
         message = f"Alarm received for Node {node_id}:\n"
         for error_id, error in errors.items():
             message += f"* {error_id}: {error}\n"
+
         _LOGGER.warning(message)
+        persistent_notification.async_create(
+            self.hass,
+            message,
+            title="ComfoConnect alarm",
+            notification_id=notification_id,
+        )

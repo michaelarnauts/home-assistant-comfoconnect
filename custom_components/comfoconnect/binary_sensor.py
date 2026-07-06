@@ -16,6 +16,7 @@ from aiocomfoconnect.sensors import (
     Sensor as AioComfoConnectSensor,
 )
 from homeassistant.components.binary_sensor import (
+    BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
@@ -25,7 +26,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import DOMAIN, SIGNAL_COMFOCONNECT_UPDATE_RECEIVED, ComfoConnectBridge
+from . import DOMAIN, SIGNAL_COMFOCONNECT_ALARM_RECEIVED, SIGNAL_COMFOCONNECT_UPDATE_RECEIVED, ComfoConnectBridge
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -83,6 +84,7 @@ async def async_setup_entry(
     ccb = hass.data[DOMAIN][config_entry.entry_id]
 
     sensors = [ComfoConnectBinarySensor(ccb=ccb, config_entry=config_entry, description=description) for description in SENSOR_TYPES]
+    sensors.append(ComfoConnectAlarmBinarySensor(ccb=ccb))
 
     async_add_entities(sensors, True)
 
@@ -136,3 +138,54 @@ class ComfoConnectBinarySensor(BinarySensorEntity):
 
         self._attr_is_on = True if value else False
         self.schedule_update_ha_state()
+
+
+class ComfoConnectAlarmBinarySensor(BinarySensorEntity):
+    """Representation of active ComfoConnect alarms."""
+
+    _attr_device_class = BinarySensorDeviceClass.PROBLEM
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_has_entity_name = True
+    _attr_name = "Active alarms"
+    _attr_should_poll = False
+
+    def __init__(self, ccb: ComfoConnectBridge) -> None:
+        """Initialize the ComfoConnect alarm sensor."""
+        self._ccb = ccb
+        self._node_id = ccb.active_alarm_node_id
+        self._errors = ccb.active_alarms
+        self._attr_unique_id = f"{self._ccb.uuid}-active_alarms"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, self._ccb.uuid)},
+        )
+        self._update_state()
+
+    async def async_added_to_hass(self) -> None:
+        """Register for alarm updates."""
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
+                SIGNAL_COMFOCONNECT_ALARM_RECEIVED.format(self._ccb.uuid),
+                self._handle_update,
+            )
+        )
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return alarm details."""
+        return {
+            "node_id": self._node_id,
+            "alarm_count": len(self._errors),
+            "alarms": [{"id": error_id, "message": error} for error_id, error in self._errors.items()],
+        }
+
+    def _handle_update(self, node_id: int, errors: dict[int, str]) -> None:
+        """Handle alarm update callbacks."""
+        self._node_id = node_id
+        self._errors = errors
+        self._update_state()
+        self.schedule_update_ha_state()
+
+    def _update_state(self) -> None:
+        """Update the active alarm state."""
+        self._attr_is_on = bool(self._errors)
