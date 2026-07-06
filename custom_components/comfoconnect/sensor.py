@@ -92,7 +92,7 @@ from . import DOMAIN, SIGNAL_COMFOCONNECT_UPDATE_RECEIVED, ComfoConnectBridge
 _LOGGER = logging.getLogger(__name__)
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=10)
-NO_SCHEDULED_CHANGE = -1
+NO_SCHEDULED_CHANGE_VALUES = {-1, 0xFFFFFFFF}
 
 DEVICE_STATE = {
     0: "init",
@@ -122,6 +122,11 @@ COMFORT_CONTROL_STATE = {
     1: "active",
     2: "overruling",
 }
+
+
+def _next_change_value(value: int) -> int | None:
+    """Map the bridge no-change sentinel to an unknown HA duration."""
+    return None if value in NO_SCHEDULED_CHANGE_VALUES else value
 
 
 @dataclass
@@ -370,7 +375,7 @@ SENSOR_TYPES = (
         ccb_sensor=SENSORS.get(SENSOR_NEXT_CHANGE_FAN),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
-        mapping=lambda x: None if x == NO_SCHEDULED_CHANGE else x,
+        mapping=_next_change_value,
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_NEXT_CHANGE_BYPASS,
@@ -381,7 +386,7 @@ SENSOR_TYPES = (
         ccb_sensor=SENSORS.get(SENSOR_NEXT_CHANGE_BYPASS),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
-        mapping=lambda x: None if x == NO_SCHEDULED_CHANGE else x,
+        mapping=_next_change_value,
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_NEXT_CHANGE_FAN_SUPPLY,
@@ -392,7 +397,7 @@ SENSOR_TYPES = (
         ccb_sensor=SENSORS.get(SENSOR_NEXT_CHANGE_FAN_SUPPLY),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
-        mapping=lambda x: None if x == NO_SCHEDULED_CHANGE else x,
+        mapping=_next_change_value,
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_NEXT_CHANGE_FAN_EXHAUST,
@@ -403,7 +408,7 @@ SENSOR_TYPES = (
         ccb_sensor=SENSORS.get(SENSOR_NEXT_CHANGE_FAN_EXHAUST),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
-        mapping=lambda x: None if x == NO_SCHEDULED_CHANGE else x,
+        mapping=_next_change_value,
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_POWER_USAGE,
