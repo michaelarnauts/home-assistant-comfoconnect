@@ -49,6 +49,7 @@ SIGNAL_COMFOCONNECT_UPDATE_RECEIVED = "comfoconnect_update_{}_{}"
 SIGNAL_COMFOCONNECT_ALARM_RECEIVED = "comfoconnect_alarm_{}"
 EVENT_COMFOCONNECT_ALARM = "comfoconnect_alarm"
 PERSISTENT_NOTIFICATION_ID = "comfoconnect_alarm_{}"
+ALARM_RECHECK_ERROR_ID = 100
 
 KEEP_ALIVE_INTERVAL = timedelta(seconds=30)
 
@@ -233,14 +234,30 @@ class ComfoConnectBridge(ComfoConnect):
             persistent_notification.async_dismiss(self.hass, notification_id)
             return
 
-        message = f"Alarm received for Node {node_id}:\n"
-        for error_id, error in errors.items():
-            message += f"* {error_id}: {error}\n"
+        title, message = self._format_alarm_notification(node_id, errors)
 
-        _LOGGER.warning(message)
+        _LOGGER.info(message)
         persistent_notification.async_create(
             self.hass,
             message,
-            title="ComfoConnect alarm",
+            title=title,
             notification_id=notification_id,
         )
+
+    @staticmethod
+    def _format_alarm_notification(node_id: int, errors: dict[int, str]) -> tuple[str, str]:
+        """Format active alarms for Home Assistant notifications."""
+        is_recheck = set(errors) == {ALARM_RECHECK_ERROR_ID}
+        title = "ComfoConnect is checking alarms" if is_recheck else "ComfoConnect needs attention"
+        intro = "The ventilation unit is checking whether alarms are still active." if is_recheck else "The ventilation unit reported active alarms."
+        alarm_lines = [f"- **{error_id}**: {error}" for error_id, error in errors.items()]
+        message = "\n".join(
+            [
+                intro,
+                "",
+                f"Node: {node_id}",
+                "",
+                *alarm_lines,
+            ]
+        )
+        return title, message
