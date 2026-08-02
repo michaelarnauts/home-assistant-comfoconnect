@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 from aiocomfoconnect.const import VentilationMode, VentilationSpeed
-from aiocomfoconnect.exceptions import ComfoConnectNotConnected, ComfoConnectRmiError
+from aiocomfoconnect.exceptions import AioComfoConnectNotConnected, ComfoConnectRmiError
 from aiocomfoconnect.sensors import (
     SENSOR_FAN_SPEED_MODE,
     SENSOR_OPERATING_MODE,
@@ -150,7 +150,7 @@ class ComfoConnectFan(FanEntity):
 
         try:
             await self._ccb.set_speed(speed)
-        except ComfoConnectNotConnected as err:
+        except AioComfoConnectNotConnected as err:
             raise HomeAssistantError(f"Not connected to ComfoConnect bridge: {err}") from err
         except ComfoConnectRmiError as err:
             raise HomeAssistantError(f"Failed to set fan speed: {err}") from err
@@ -163,7 +163,7 @@ class ComfoConnectFan(FanEntity):
         _LOGGER.debug("Changing preset mode to %s", preset_mode)
         try:
             await self._ccb.set_mode(preset_mode)
-        except ComfoConnectNotConnected as err:
+        except AioComfoConnectNotConnected as err:
             raise HomeAssistantError(f"Not connected to ComfoConnect bridge: {err}") from err
         except ComfoConnectRmiError as err:
             raise HomeAssistantError(f"Failed to set preset mode: {err}") from err
