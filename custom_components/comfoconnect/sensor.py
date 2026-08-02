@@ -60,7 +60,7 @@ from homeassistant.const import (
     UnitOfTime,
     UnitOfVolumeFlowRate,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -436,6 +436,7 @@ class ComfoConnectSensor(SensorEntity):
         )
         await self._ccb.register_sensor(self.entity_description.ccb_sensor)
 
+    @callback
     def _handle_update(self, value):
         """Handle update callbacks."""
         _LOGGER.debug(

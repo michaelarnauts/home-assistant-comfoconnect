@@ -26,7 +26,7 @@ from aiocomfoconnect.sensors import (
 )
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -202,6 +202,7 @@ class ComfoConnectSelect(SelectEntity):
         )
         await self._ccb.register_sensor(self.entity_description.sensor)
 
+    @callback
     def _handle_update(self, value):
         """Handle update callbacks."""
         _LOGGER.debug(

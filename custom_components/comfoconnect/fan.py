@@ -14,7 +14,7 @@ from aiocomfoconnect.sensors import (
 )
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo
@@ -94,6 +94,7 @@ class ComfoConnectFan(FanEntity):
         await self._ccb.register_sensor(SENSORS.get(SENSOR_OPERATING_MODE))
         self._attr_preset_mode = await self._ccb.get_mode()
 
+    @callback
     def _handle_speed_update(self, value: int) -> None:
         """Handle update callbacks."""
         _LOGGER.debug("Handle update for fan speed (%d): %s", SENSOR_FAN_SPEED_MODE, value)
@@ -104,6 +105,7 @@ class ComfoConnectFan(FanEntity):
 
         self.async_write_ha_state()
 
+    @callback
     def _handle_mode_update(self, value: int) -> None:
         """Handle update callbacks."""
         _LOGGER.debug(
