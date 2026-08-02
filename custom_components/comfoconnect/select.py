@@ -26,7 +26,7 @@ from aiocomfoconnect.sensors import (
 )
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -202,6 +202,7 @@ class ComfoConnectSelect(SelectEntity):
         )
         await self._ccb.register_sensor(self.entity_description.sensor)
 
+    @callback
     def _handle_update(self, value):
         """Handle update callbacks."""
         _LOGGER.debug(
@@ -212,7 +213,7 @@ class ComfoConnectSelect(SelectEntity):
         )
 
         self._attr_current_option = self.entity_description.sensor_value_fn(value)
-        self.schedule_update_ha_state()
+        self.async_write_ha_state()
 
     async def async_update(self) -> None:
         """Update the state."""
@@ -222,4 +223,4 @@ class ComfoConnectSelect(SelectEntity):
         """Set the selected option."""
         await self.entity_description.set_value_fn(self._ccb, option)
         self._attr_current_option = option
-        self.schedule_update_ha_state()
+        self.async_write_ha_state()
