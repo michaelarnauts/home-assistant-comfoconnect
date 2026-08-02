@@ -2,6 +2,7 @@
   "domain": "comfoconnect",
   "name": "Zehnder ComfoAir Q",
   "config_flow": true,
+  "dependencies": ["network"],
   "documentation": "https://www.home-assistant.io/integrations/comfoconnect",
   "integration_type": "hub",
   "requirements": ["aiocomfoconnect==0.2.0"],

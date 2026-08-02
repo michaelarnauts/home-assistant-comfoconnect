@@ -19,6 +19,7 @@ from aiocomfoconnect.properties import (
 )
 from aiocomfoconnect.sensors import Sensor
 from aiocomfoconnect.util import version_decode
+from homeassistant.components import network
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import CONF_HOST, EVENT_HOMEASSISTANT_STOP, Platform
 from homeassistant.core import HomeAssistant, callback
@@ -84,7 +85,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             entry.data[CONF_HOST],
         )
 
-        bridges = await discover_bridges()
+        broadcast_addresses = await network.async_get_ipv4_broadcast_addresses(hass)
+        bridges = await discover_bridges(broadcast_addresses=broadcast_addresses)
         discovered_bridge = next((b for b in bridges if b.uuid == entry.data[CONF_UUID]), None)
         if not discovered_bridge:
             _LOGGER.warning('Unable to discover bridge "%s". Retrying later.', entry.data[CONF_UUID])
