@@ -152,6 +152,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             # Reconnect when connection has been dropped
             try:
                 await bridge.connect(entry.data[CONF_LOCAL_UUID])
+                bridge.set_available(True)
             except AioComfoConnectTimeout:
                 _LOGGER.debug("Connection timed out. Retrying later...")
 
