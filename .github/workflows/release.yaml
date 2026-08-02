@@ -1,0 +1,34 @@
+name: Release
+
+on:
+  # Create a release when a version tag is pushed.
+  push:
+    tags:
+      - "v*"
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  release:
+    name: Create the GitHub release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out ${{ github.ref_name }} from repository ${{ github.repository }}
+        uses: actions/checkout@v4
+
+      - name: Check that the tag matches the version in the manifest
+        run: |
+          version="$(python3 -c "import json; print(json.load(open('custom_components/comfoconnect/manifest.json'))['version'])")"
+          if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match version ${version} in the manifest, which is the version HACS shows."
+            exit 1
+          fi
+
+      - name: Create the release with generated release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${GITHUB_REF_NAME}" --generate-notes
