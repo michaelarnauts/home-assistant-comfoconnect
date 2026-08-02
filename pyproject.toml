@@ -8,7 +8,7 @@ packages = [{include = "custom_components/comfoconnect"}]
 
 [tool.poetry.dependencies]
 python = ">=3.12,<3.13"
-aiocomfoconnect = "0.1.15"
+aiocomfoconnect = "0.2.0"
 
 [tool.poetry.group.dev.dependencies]
 homeassistant = "^2024.11.0b1"
