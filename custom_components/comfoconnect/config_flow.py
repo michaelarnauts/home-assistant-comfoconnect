@@ -114,31 +114,23 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Generate our own UUID if non is provided
             self.local_uuid = random_uuid_hex()
 
-        # Connect to the bridge
-        await self.bridge._connect(self.local_uuid)
         try:
-            await self.bridge.cmd_start_session(True)
+            # This connects to the bridge, checks if we are registered already by starting a session,
+            # and registers us when we are not.
+            await self.bridge.register(
+                self.local_uuid,
+                "Home Assistant (%s)" % self.hass.config.location_name,
+                pin or DEFAULT_PIN,
+            )
 
         except ComfoConnectNotAllowed:
-            try:
-                # We probably are not registered yet, lets try to register.
-                await self.bridge.cmd_register_app(
-                    self.local_uuid,
-                    "Home Assistant (%s)" % self.hass.config.location_name,
-                    pin or DEFAULT_PIN,
-                )
-
-            except ComfoConnectNotAllowed:
-                # We have tried connecting, but we have an invalid PIN. Ask the user for a new PIN.
-                errors = {"base": "invalid_pin"} if pin is not None else {}
-                return await self.async_step_enter_pin({}, errors)
-
-            # Registration went fine, connect to the bridge again
-            await self.bridge.cmd_start_session(True)
+            # We are not registered yet and the bridge refused the PIN. Ask the user for a new PIN.
+            errors = {"base": "invalid_pin"} if pin is not None else {}
+            return await self.async_step_enter_pin({}, errors)
 
         finally:
             # Disconnect
-            await self.bridge._disconnect()
+            await self.bridge.disconnect()
 
         if self.context.get("source") == config_entries.SOURCE_REAUTH:
             self.hass.async_create_task(self.hass.config_entries.async_reload(self.context["entry_id"]))
