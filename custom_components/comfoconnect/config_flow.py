@@ -41,7 +41,11 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_reauth(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Handle a flow reauth."""
-        self.bridge = Bridge(user_input[CONF_HOST], user_input[CONF_UUID])
+        # Discover the bridge so we know which type it is, since a ComfoConnect Pro needs to be
+        # registered differently than a LAN C. Fall back to the stored data when it doesn't answer.
+        bridges = await aiocomfoconnect.discover_bridges(user_input[CONF_HOST])
+        discovered_bridge = next((bridge for bridge in bridges if bridge.uuid == user_input[CONF_UUID]), None)
+        self.bridge = discovered_bridge or Bridge(user_input[CONF_HOST], user_input[CONF_UUID])
         self.local_uuid = user_input[CONF_LOCAL_UUID]
 
         return await self._register()
