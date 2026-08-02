@@ -220,8 +220,9 @@ class ComfoConnectSelect(SelectEntity):
     def _handle_availability_update(self, available: bool) -> None:
         """Handle bridge availability changes."""
         self._attr_available = available
-        self.schedule_update_ha_state()
+        self.async_write_ha_state()
 
+    @callback
     def _handle_update(self, value):
         """Handle update callbacks."""
         _LOGGER.debug(

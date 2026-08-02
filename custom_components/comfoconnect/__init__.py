@@ -30,7 +30,7 @@ from homeassistant.exceptions import (
     ConfigEntryNotReady,
 )
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.dispatcher import dispatcher_send
+from homeassistant.helpers.dispatcher import async_dispatcher_send, dispatcher_send
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.typing import ConfigType
 
@@ -203,11 +203,7 @@ class ComfoConnectBridge(ComfoConnect):
             return
         self.is_available = available
         _LOGGER.info("Bridge %s availability changed: %s", self.uuid, available)
-        dispatcher_send(
-            self.hass,
-            SIGNAL_COMFOCONNECT_AVAILABILITY.format(self.uuid),
-            available,
-        )
+        async_dispatcher_send(self.hass, SIGNAL_COMFOCONNECT_AVAILABILITY.format(self.uuid), available)
 
     @callback
     def sensor_callback(self, sensor: Sensor, value):
