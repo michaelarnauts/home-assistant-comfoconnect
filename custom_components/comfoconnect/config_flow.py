@@ -10,6 +10,7 @@ import voluptuous as vol
 from aiocomfoconnect import Bridge
 from aiocomfoconnect.exceptions import ComfoConnectNotAllowed
 from homeassistant import config_entries
+from homeassistant.components import network
 from homeassistant.const import CONF_HOST, CONF_PIN
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.typing import ConfigType
@@ -63,8 +64,9 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
                 return await self._register()
 
-        # Find bridges on the network and filter out the ones we already have configured
-        bridges = await aiocomfoconnect.discover_bridges()
+        # Find bridges on the networks that Home Assistant is configured to use, and filter out the ones we already have configured
+        broadcast_addresses = await network.async_get_ipv4_broadcast_addresses(self.hass)
+        bridges = await aiocomfoconnect.discover_bridges(broadcast_addresses=broadcast_addresses)
         self.discovered_bridges = {bridge.uuid: bridge for bridge in bridges if bridge.uuid not in self._async_current_ids(False)}
 
         # Show the bridge selection form
