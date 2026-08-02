@@ -8,6 +8,7 @@ from datetime import timedelta
 from aiocomfoconnect import ComfoConnect, discover_bridges
 from aiocomfoconnect.exceptions import (
     AioComfoConnectNotConnected,
+    AioComfoConnectNotReachable,
     AioComfoConnectTimeout,
     ComfoConnectError,
     ComfoConnectNotAllowed,
@@ -19,6 +20,7 @@ from aiocomfoconnect.properties import (
 )
 from aiocomfoconnect.sensors import Sensor
 from aiocomfoconnect.util import version_decode
+from homeassistant.components import network
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import CONF_HOST, EVENT_HOMEASSISTANT_STOP, Platform
 from homeassistant.core import HomeAssistant, callback
@@ -78,14 +80,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except ComfoConnectError as err:
         raise ConfigEntryError from err
 
-    except AioComfoConnectTimeout as err:
-        # We got a timeout, this can happen when the IP address of the bridge has changed.
+    except (AioComfoConnectTimeout, AioComfoConnectNotReachable) as err:
+        # We can't reach the bridge, this can happen when the IP address of the bridge has changed.
         _LOGGER.warning(
-            'Timeout connecting to bridge "%s", trying discovery again.',
+            'Could not connect to bridge "%s", trying discovery again.',
             entry.data[CONF_HOST],
         )
 
-        bridges = await discover_bridges()
+        broadcast_addresses = await network.async_get_ipv4_broadcast_addresses(hass)
+        bridges = await discover_bridges(broadcast_addresses=broadcast_addresses)
         discovered_bridge = next((b for b in bridges if b.uuid == entry.data[CONF_UUID]), None)
         if not discovered_bridge:
             _LOGGER.warning('Unable to discover bridge "%s". Retrying later.', entry.data[CONF_UUID])
@@ -147,14 +150,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             await bridge.cmd_time_request()
             bridge.set_available(True)
 
-        except (AioComfoConnectNotConnected, AioComfoConnectTimeout):
+        except (AioComfoConnectNotConnected, AioComfoConnectTimeout, AioComfoConnectNotReachable):
             bridge.set_available(False)
             # Reconnect when connection has been dropped
             try:
                 await bridge.connect(entry.data[CONF_LOCAL_UUID])
                 bridge.set_available(True)
-            except AioComfoConnectTimeout:
-                _LOGGER.debug("Connection timed out. Retrying later...")
+            except (AioComfoConnectTimeout, AioComfoConnectNotReachable):
+                _LOGGER.debug("Could not connect to the bridge. Retrying later...")
 
     entry.async_on_unload(async_track_time_interval(hass, send_keepalive, KEEP_ALIVE_INTERVAL))
 

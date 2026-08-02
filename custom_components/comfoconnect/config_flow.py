@@ -10,6 +10,7 @@ import voluptuous as vol
 from aiocomfoconnect import Bridge
 from aiocomfoconnect.exceptions import ComfoConnectNotAllowed
 from homeassistant import config_entries
+from homeassistant.components import network
 from homeassistant.const import CONF_HOST, CONF_PIN
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.typing import ConfigType
@@ -40,7 +41,11 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_reauth(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Handle a flow reauth."""
-        self.bridge = Bridge(user_input[CONF_HOST], user_input[CONF_UUID])
+        # Discover the bridge so we know which type it is, since a ComfoConnect Pro needs to be
+        # registered differently than a LAN C. Fall back to the stored data when it doesn't answer.
+        bridges = await aiocomfoconnect.discover_bridges(user_input[CONF_HOST])
+        discovered_bridge = next((bridge for bridge in bridges if bridge.uuid == user_input[CONF_UUID]), None)
+        self.bridge = discovered_bridge or Bridge(user_input[CONF_HOST], user_input[CONF_UUID])
         self.local_uuid = user_input[CONF_LOCAL_UUID]
 
         return await self._register()
@@ -63,8 +68,9 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
                 return await self._register()
 
-        # Find bridges on the network and filter out the ones we already have configured
-        bridges = await aiocomfoconnect.discover_bridges()
+        # Find bridges on the networks that Home Assistant is configured to use, and filter out the ones we already have configured
+        broadcast_addresses = await network.async_get_ipv4_broadcast_addresses(self.hass)
+        bridges = await aiocomfoconnect.discover_bridges(broadcast_addresses=broadcast_addresses)
         self.discovered_bridges = {bridge.uuid: bridge for bridge in bridges if bridge.uuid not in self._async_current_ids(False)}
 
         # Show the bridge selection form
@@ -112,31 +118,23 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Generate our own UUID if non is provided
             self.local_uuid = random_uuid_hex()
 
-        # Connect to the bridge
-        await self.bridge._connect(self.local_uuid)
         try:
-            await self.bridge.cmd_start_session(True)
+            # This connects to the bridge, checks if we are registered already by starting a session,
+            # and registers us when we are not.
+            await self.bridge.register(
+                self.local_uuid,
+                "Home Assistant (%s)" % self.hass.config.location_name,
+                pin or DEFAULT_PIN,
+            )
 
         except ComfoConnectNotAllowed:
-            try:
-                # We probably are not registered yet, lets try to register.
-                await self.bridge.cmd_register_app(
-                    self.local_uuid,
-                    "Home Assistant (%s)" % self.hass.config.location_name,
-                    pin or DEFAULT_PIN,
-                )
-
-            except ComfoConnectNotAllowed:
-                # We have tried connecting, but we have an invalid PIN. Ask the user for a new PIN.
-                errors = {"base": "invalid_pin"} if pin is not None else {}
-                return await self.async_step_enter_pin({}, errors)
-
-            # Registration went fine, connect to the bridge again
-            await self.bridge.cmd_start_session(True)
+            # We are not registered yet and the bridge refused the PIN. Ask the user for a new PIN.
+            errors = {"base": "invalid_pin"} if pin is not None else {}
+            return await self.async_step_enter_pin({}, errors)
 
         finally:
             # Disconnect
-            await self.bridge._disconnect()
+            await self.bridge.disconnect()
 
         if self.context.get("source") == config_entries.SOURCE_REAUTH:
             self.hass.async_create_task(self.hass.config_entries.async_reload(self.context["entry_id"]))

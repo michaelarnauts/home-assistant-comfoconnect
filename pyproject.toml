@@ -8,11 +8,15 @@ packages = [{include = "custom_components/comfoconnect"}]
 
 [tool.poetry.dependencies]
 python = ">=3.12,<3.13"
-aiocomfoconnect = "0.1.15"
+aiocomfoconnect = "0.2.1"
 
 [tool.poetry.group.dev.dependencies]
 homeassistant = "^2024.11.0b1"
+pytest = "^8.3"
 ruff = "^0.5.2"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [build-system]
 requires = ["poetry-core"]
@@ -71,3 +75,7 @@ extend-select = [
     "T20",
     "W",
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests are allowed to use assert, and don't need to be a package.
+"tests/*" = ["S101", "INP001"]
