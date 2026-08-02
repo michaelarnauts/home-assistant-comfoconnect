@@ -8,6 +8,7 @@ from datetime import timedelta
 from aiocomfoconnect import ComfoConnect, discover_bridges
 from aiocomfoconnect.exceptions import (
     AioComfoConnectNotConnected,
+    AioComfoConnectNotReachable,
     AioComfoConnectTimeout,
     ComfoConnectError,
     ComfoConnectNotAllowed,
@@ -78,10 +79,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except ComfoConnectError as err:
         raise ConfigEntryError from err
 
-    except AioComfoConnectTimeout as err:
-        # We got a timeout, this can happen when the IP address of the bridge has changed.
+    except (AioComfoConnectTimeout, AioComfoConnectNotReachable) as err:
+        # We can't reach the bridge, this can happen when the IP address of the bridge has changed.
         _LOGGER.warning(
-            'Timeout connecting to bridge "%s", trying discovery again.',
+            'Could not connect to bridge "%s", trying discovery again.',
             entry.data[CONF_HOST],
         )
 
@@ -149,12 +150,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
             # TODO: Mark sensors as available
 
-        except (AioComfoConnectNotConnected, AioComfoConnectTimeout):
+        except (AioComfoConnectNotConnected, AioComfoConnectTimeout, AioComfoConnectNotReachable):
             # Reconnect when connection has been dropped
             try:
                 await bridge.connect(entry.data[CONF_LOCAL_UUID])
-            except AioComfoConnectTimeout:
-                _LOGGER.debug("Connection timed out. Retrying later...")
+            except (AioComfoConnectTimeout, AioComfoConnectNotReachable):
+                _LOGGER.debug("Could not connect to the bridge. Retrying later...")
 
                 # TODO: Mark all sensors as unavailable
 
