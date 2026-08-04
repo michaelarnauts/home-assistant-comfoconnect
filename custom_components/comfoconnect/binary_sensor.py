@@ -21,12 +21,18 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntityDescription,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import DOMAIN, SIGNAL_COMFOCONNECT_ALARM_RECEIVED, SIGNAL_COMFOCONNECT_UPDATE_RECEIVED, ComfoConnectBridge
+from . import (
+    DOMAIN,
+    SIGNAL_COMFOCONNECT_ALARM_RECEIVED,
+    SIGNAL_COMFOCONNECT_AVAILABILITY,
+    SIGNAL_COMFOCONNECT_UPDATE_RECEIVED,
+    ComfoConnectBridge,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -107,6 +113,7 @@ class ComfoConnectBinarySensor(BinarySensorEntity):
         self.entity_description = description
         self._attr_name = f"{description.name}"
         self._attr_unique_id = f"{self._ccb.uuid}-{description.key}"
+        self._attr_available = ccb.is_available
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._ccb.uuid)},
         )
@@ -125,8 +132,22 @@ class ComfoConnectBinarySensor(BinarySensorEntity):
                 self._handle_update,
             )
         )
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
+                SIGNAL_COMFOCONNECT_AVAILABILITY.format(self._ccb.uuid),
+                self._handle_availability_update,
+            )
+        )
         await self._ccb.register_sensor(self.entity_description.ccb_sensor)
 
+    @callback
+    def _handle_availability_update(self, available: bool) -> None:
+        """Handle bridge availability changes."""
+        self._attr_available = available
+        self.async_write_ha_state()
+
+    @callback
     def _handle_update(self, value):
         """Handle update callbacks."""
         _LOGGER.debug(
@@ -137,7 +158,7 @@ class ComfoConnectBinarySensor(BinarySensorEntity):
         )
 
         self._attr_is_on = True if value else False
-        self.schedule_update_ha_state()
+        self.async_write_ha_state()
 
 
 class ComfoConnectAlarmBinarySensor(BinarySensorEntity):
@@ -155,6 +176,7 @@ class ComfoConnectAlarmBinarySensor(BinarySensorEntity):
         self._node_id = ccb.active_alarm_node_id
         self._errors = ccb.active_alarms
         self._attr_unique_id = f"{self._ccb.uuid}-active_alarms"
+        self._attr_available = ccb.is_available
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._ccb.uuid)},
         )
@@ -169,6 +191,19 @@ class ComfoConnectAlarmBinarySensor(BinarySensorEntity):
                 self._handle_update,
             )
         )
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
+                SIGNAL_COMFOCONNECT_AVAILABILITY.format(self._ccb.uuid),
+                self._handle_availability_update,
+            )
+        )
+
+    @callback
+    def _handle_availability_update(self, available: bool) -> None:
+        """Handle bridge availability changes."""
+        self._attr_available = available
+        self.async_write_ha_state()
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -184,7 +219,7 @@ class ComfoConnectAlarmBinarySensor(BinarySensorEntity):
         self._node_id = node_id
         self._errors = errors
         self._update_state()
-        self.schedule_update_ha_state()
+        self.async_write_ha_state()
 
     def _update_state(self) -> None:
         """Update the active alarm state."""

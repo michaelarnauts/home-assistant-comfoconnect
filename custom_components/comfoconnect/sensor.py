@@ -60,13 +60,18 @@ from homeassistant.const import (
     UnitOfTime,
     UnitOfVolumeFlowRate,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import Throttle
 
-from . import DOMAIN, SIGNAL_COMFOCONNECT_UPDATE_RECEIVED, ComfoConnectBridge
+from . import (
+    DOMAIN,
+    SIGNAL_COMFOCONNECT_AVAILABILITY,
+    SIGNAL_COMFOCONNECT_UPDATE_RECEIVED,
+    ComfoConnectBridge,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -409,6 +414,7 @@ class ComfoConnectSensor(SensorEntity):
         self._ccb = ccb
         self.entity_description = description
         self._attr_unique_id = f"{self._ccb.uuid}-{description.key}"
+        self._attr_available = ccb.is_available
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._ccb.uuid)},
         )
@@ -434,8 +440,22 @@ class ComfoConnectSensor(SensorEntity):
                 update_handler,
             )
         )
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
+                SIGNAL_COMFOCONNECT_AVAILABILITY.format(self._ccb.uuid),
+                self._handle_availability_update,
+            )
+        )
         await self._ccb.register_sensor(self.entity_description.ccb_sensor)
 
+    @callback
+    def _handle_availability_update(self, available: bool) -> None:
+        """Handle bridge availability changes."""
+        self._attr_available = available
+        self.async_write_ha_state()
+
+    @callback
     def _handle_update(self, value):
         """Handle update callbacks."""
         _LOGGER.debug(
@@ -449,4 +469,4 @@ class ComfoConnectSensor(SensorEntity):
             self._attr_native_value = self.entity_description.mapping(value)
         else:
             self._attr_native_value = value
-        self.schedule_update_ha_state()
+        self.async_write_ha_state()

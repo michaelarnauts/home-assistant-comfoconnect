@@ -2,11 +2,12 @@
   "domain": "comfoconnect",
   "name": "Zehnder ComfoAir Q",
   "config_flow": true,
+  "dependencies": ["network"],
   "documentation": "https://www.home-assistant.io/integrations/comfoconnect",
   "integration_type": "hub",
-  "requirements": ["aiocomfoconnect==0.1.15"],
+  "requirements": ["aiocomfoconnect==0.2.1"],
   "codeowners": ["@michaelarnauts"],
   "iot_class": "local_push",
   "loggers": ["aiocomfoconnect"],
-  "version": "0.4.0"
+  "version": "0.5.0-rc1"
 }
