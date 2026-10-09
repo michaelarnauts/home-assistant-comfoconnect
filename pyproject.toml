@@ -17,6 +17,7 @@ ruff = "^0.5.2"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"
 
 [build-system]
 requires = ["poetry-core"]

@@ -108,13 +108,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         except ComfoConnectError as err:
             raise ConfigEntryNotReady from err
 
-    hass.data[DOMAIN][entry.entry_id] = bridge
+    # Get device information. The session is already running at this point, so close it again
+    # when this fails. Otherwise its reconnect loop keeps running without a reference, takes
+    # the session over from the next setup attempt and is later garbage collected mid-flight.
+    try:
+        bridge_info = await bridge.cmd_version_request()
+        unit_model = await bridge.get_property(PROPERTY_MODEL)
+        unit_firmware = await bridge.get_property(PROPERTY_FIRMWARE_VERSION)
+        unit_name = await bridge.get_property(PROPERTY_NAME)
+    except (ComfoConnectError, AioComfoConnectTimeout, AioComfoConnectNotConnected) as err:
+        await bridge.disconnect()
+        raise ConfigEntryNotReady(f"The bridge did not return the device information: {err}") from err
 
-    # Get device information
-    bridge_info = await bridge.cmd_version_request()
-    unit_model = await bridge.get_property(PROPERTY_MODEL)
-    unit_firmware = await bridge.get_property(PROPERTY_FIRMWARE_VERSION)
-    unit_name = await bridge.get_property(PROPERTY_NAME)
+    hass.data[DOMAIN][entry.entry_id] = bridge
 
     device_registry = dr.async_get(hass)
 
@@ -149,6 +155,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             # Use cmd_time_request as a keepalive since cmd_keepalive doesn't send back a reply we can wait for
             await bridge.cmd_time_request()
             bridge.set_available(True)
+
+        except ComfoConnectNotAllowed:
+            # The connection is still open, but the bridge no longer accepts our session (taken
+            # over by another client, or dropped by the bridge). The read loop doesn't notice
+            # this, so the sensors would keep their last values. Start a new session instead.
+            _LOGGER.warning("The bridge refused the session, starting a new one")
+            bridge.set_available(False)
+            await bridge.disconnect()
+            try:
+                await bridge.connect(entry.data[CONF_LOCAL_UUID])
+                bridge.set_available(True)
+            except ComfoConnectNotAllowed:
+                entry.async_start_reauth(hass)
+            except (AioComfoConnectNotConnected, AioComfoConnectTimeout, AioComfoConnectNotReachable):
+                _LOGGER.debug("Could not connect to the bridge. Retrying later...")
 
         except (AioComfoConnectNotConnected, AioComfoConnectTimeout, AioComfoConnectNotReachable):
             bridge.set_available(False)
