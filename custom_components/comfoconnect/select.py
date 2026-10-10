@@ -151,6 +151,14 @@ SELECT_TYPES = (
         set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_boost(True, int(option.split()[0]) * 60)),
         options=["10 Minutes", "20 Minutes", "30 Minutes", "40 Minutes", "50 Minutes", "60 Minutes"],
     ),
+    ComfoconnectSelectEntityDescription(
+        key="bypass_timeout",
+        name="Timed Bypass",
+        icon="mdi:camera-iris",
+        get_value_fn=lambda ccb: cast(Coroutine, ccb.get_bypass()),
+        set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_bypass(VentilationSetting.ON, timeout=int(option.split()[0]) * 60)),
+        options=["10 Minutes", "20 Minutes", "30 Minutes", "40 Minutes", "50 Minutes", "60 Minutes"],
+    ),
 )
 
 
