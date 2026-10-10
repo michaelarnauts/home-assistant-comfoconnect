@@ -203,6 +203,7 @@ class ComfoConnectBridge(ComfoConnect):
         )
         self.hass = hass
         self.is_available = True
+        self.boost_duration = 3600
 
     @callback
     def set_available(self, available: bool) -> None:

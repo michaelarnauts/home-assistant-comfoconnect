@@ -16,6 +16,7 @@ from aiocomfoconnect.sensors import (
     Sensor as AioComfoConnectSensor,
 )
 from homeassistant.components.binary_sensor import (
+    BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
@@ -89,7 +90,7 @@ async def async_setup_entry(
 
     sensors = [ComfoConnectBinarySensor(ccb=ccb, config_entry=config_entry, description=description) for description in SENSOR_TYPES]
 
-    async_add_entities(sensors, True)
+    async_add_entities([*sensors, ComfoConnectBoostStatus(ccb)], True)
 
 
 class ComfoConnectBinarySensor(BinarySensorEntity):
@@ -156,3 +157,40 @@ class ComfoConnectBinarySensor(BinarySensorEntity):
 
         self._attr_is_on = True if value else False
         self.async_write_ha_state()
+
+
+class ComfoConnectBoostStatus(BinarySensorEntity):
+    """Report boost activity confirmed by the ventilation unit."""
+
+    _attr_has_entity_name = True
+    _attr_should_poll = True
+    _attr_name = "Boost active"
+    _attr_icon = "mdi:fan-plus"
+    _attr_device_class = BinarySensorDeviceClass.RUNNING
+
+    def __init__(self, ccb: ComfoConnectBridge) -> None:
+        """Initialize the boost status sensor."""
+        self._ccb = ccb
+        self._attr_unique_id = f"{ccb.uuid}-boost_active"
+        self._attr_available = ccb.is_available
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, ccb.uuid)})
+
+    async def async_added_to_hass(self) -> None:
+        """Listen for changes in bridge availability."""
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
+                SIGNAL_COMFOCONNECT_AVAILABILITY.format(self._ccb.uuid),
+                self._handle_availability_update,
+            )
+        )
+
+    @callback
+    def _handle_availability_update(self, available: bool) -> None:
+        """Update availability without assuming boost has stopped."""
+        self._attr_available = available
+        self.async_write_ha_state()
+
+    async def async_update(self) -> None:
+        """Read the active state instead of inferring it from a command."""
+        self._attr_is_on = await self._ccb.get_boost()

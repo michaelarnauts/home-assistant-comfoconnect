@@ -30,6 +30,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from . import (
     DOMAIN,
@@ -37,6 +38,7 @@ from . import (
     SIGNAL_COMFOCONNECT_UPDATE_RECEIVED,
     ComfoConnectBridge,
 )
+from .const import BOOST_DURATION_OPTIONS, DEFAULT_BOOST_DURATION
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -59,7 +61,7 @@ class ComfoconnectSelectEntityDescription(SelectEntityDescription, ComfoconnectS
 
 TIMER_OFF = "Off"
 TIMER_ACTIVE = "Active"
-TIMEOUT_OPTIONS = ("10 Minutes", "20 Minutes", "30 Minutes", "40 Minutes", "50 Minutes", "60 Minutes")
+TIMEOUT_OPTIONS = BOOST_DURATION_OPTIONS
 TIMER_OPTIONS = (TIMER_OFF, TIMER_ACTIVE, *TIMEOUT_OPTIONS)
 
 
@@ -176,6 +178,7 @@ SELECT_TYPES = (
     ComfoconnectSelectEntityDescription(
         key="boost_timeout",
         name="Boost Mode",
+        entity_registry_enabled_default=False,
         icon="mdi:fan-plus",
         get_value_fn=_get_boost_option,
         set_value_fn=_set_boost_option,
@@ -233,7 +236,7 @@ async def async_setup_entry(
 
     selects = [ComfoConnectSelect(ccb=ccb, config_entry=config_entry, description=description) for description in SELECT_TYPES]
 
-    async_add_entities(selects, True)
+    async_add_entities([*selects, ComfoConnectBoostDuration(ccb)], True)
 
 
 class ComfoConnectSelect(SelectEntity):
@@ -319,4 +322,34 @@ class ComfoConnectSelect(SelectEntity):
                 self._attr_current_option = TIMER_OFF if option == TIMER_OFF else TIMER_ACTIVE
         else:
             self._attr_current_option = option
+        self.async_write_ha_state()
+
+
+class ComfoConnectBoostDuration(SelectEntity, RestoreEntity):
+    """Store the duration used by Start boost without changing the device."""
+
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+    _attr_name = "Boost duration"
+    _attr_icon = "mdi:timer-outline"
+    _attr_options = list(BOOST_DURATION_OPTIONS)
+
+    def __init__(self, ccb: ComfoConnectBridge) -> None:
+        """Initialize the saved duration preference."""
+        self._ccb = ccb
+        self._attr_unique_id = f"{ccb.uuid}-boost_duration"
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, ccb.uuid)})
+        self._attr_current_option = DEFAULT_BOOST_DURATION
+
+    async def async_added_to_hass(self) -> None:
+        """Restore a valid duration before it is used by Start boost."""
+        await super().async_added_to_hass()
+        if (state := await self.async_get_last_state()) and state.state in self.options:
+            self._attr_current_option = state.state
+        self._ccb.boost_duration = _timeout_seconds(self.current_option)
+
+    async def async_select_option(self, option: str) -> None:
+        """Save the preferred duration; starting boost is a separate action."""
+        self._ccb.boost_duration = _timeout_seconds(option)
+        self._attr_current_option = option
         self.async_write_ha_state()

@@ -39,11 +39,16 @@ BUTTON_TYPES = (
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
     ComfoconnectButtonEntityDescription(
+        key="start_boost",
+        press_fn=lambda ccb, option: cast(Coroutine, ccb.set_boost(True, ccb.boost_duration)),
+        name="Start boost",
+        icon="mdi:fan-plus",
+    ),
+    ComfoconnectButtonEntityDescription(
         key="cancel_boost",
         press_fn=lambda ccb, option: cast(Coroutine, ccb.set_boost(False)),
-        name="Cancel boost",
+        name="Stop boost",
         icon="mdi:fan-off",
-        entity_category=EntityCategory.CONFIG,
     ),
 )
 
