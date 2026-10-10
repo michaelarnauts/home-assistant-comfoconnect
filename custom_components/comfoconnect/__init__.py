@@ -17,6 +17,7 @@ from aiocomfoconnect.properties import (
     PROPERTY_FIRMWARE_VERSION,
     PROPERTY_MODEL,
     PROPERTY_NAME,
+    PROPERTY_SERIAL_NUMBER,
 )
 from aiocomfoconnect.sensors import Sensor
 from aiocomfoconnect.util import version_decode
@@ -41,6 +42,8 @@ PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.BINARY_SENSOR,
     Platform.SELECT,
+    Platform.NUMBER,
+    Platform.SWITCH,
     Platform.BUTTON,
 ]
 
@@ -150,6 +153,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     device_registry.async_update_device(unit_device.id, via_device_id=bridge_device.id)
 
+    # Add the ComfoClime to the device registry, if there is one on the ComfoNet bus
+    if bridge.comfoclime_node_id is not None:
+        try:
+            clime_serial = await bridge.get_property(PROPERTY_SERIAL_NUMBER, node_id=bridge.comfoclime_node_id)
+            clime_name = await bridge.get_property(PROPERTY_NAME, node_id=bridge.comfoclime_node_id)
+            clime_firmware = await bridge.get_property(PROPERTY_FIRMWARE_VERSION, node_id=bridge.comfoclime_node_id)
+        except ComfoConnectError as err:
+            _LOGGER.warning("Found a ComfoClime on the bus, but could not read its device information: %s", err)
+        else:
+            bridge.comfoclime_serial = clime_serial
+            device_registry.async_get_or_create(
+                config_entry_id=entry.entry_id,
+                identifiers={(DOMAIN, clime_serial)},
+                manufacturer="Zehnder",
+                name=clime_name,
+                model="ComfoClime",
+                sw_version=version_decode(clime_firmware),
+                via_device=(DOMAIN, bridge_info.serialNumber),
+            )
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     @callback
@@ -208,6 +231,7 @@ class ComfoConnectBridge(ComfoConnect):
         # Latest alarms per node; a node is missing until it has reported.
         self.active_alarms: dict[int, dict[int, str]] = {}
         self.is_available = True
+        self.comfoclime_serial: str | None = None
 
     @callback
     def set_available(self, available: bool) -> None:

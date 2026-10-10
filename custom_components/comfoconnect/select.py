@@ -8,11 +8,19 @@ from dataclasses import dataclass
 from typing import Any, Callable, cast
 
 from aiocomfoconnect.const import (
+    COMFOCLIME_SEASONS,
+    COMFOCLIME_TEMPERATURE_PROFILES,
     ComfoCoolMode,
     VentilationBalance,
     VentilationMode,
     VentilationSetting,
     VentilationTemperatureProfile,
+)
+from aiocomfoconnect.properties import (
+    PROPERTY_CLIME_AUTO_SEASON,
+    PROPERTY_CLIME_SEASON,
+    PROPERTY_CLIME_TEMPERATURE_PROFILE,
+    Property,
 )
 from aiocomfoconnect.sensors import (
     SENSOR_BYPASS_ACTIVATION_STATE,
@@ -223,6 +231,55 @@ SELECT_TYPES = (
 )
 
 
+def _comfoclime_option_getter(prop: Property, options: dict[int, str]) -> Callable[[ComfoConnectBridge], Awaitable[Any]]:
+    """Build a getter that maps a raw ComfoClime property value to an option."""
+
+    async def get_value(ccb: ComfoConnectBridge) -> str | None:
+        return options.get(await ccb.get_comfoclime_property(prop))
+
+    return get_value
+
+
+def _comfoclime_option_setter(prop: Property, options: dict[int, str]) -> Callable[[ComfoConnectBridge, str], Awaitable[Any]]:
+    """Build a setter that maps an option back to a raw ComfoClime property value."""
+    values = {option: value for value, option in options.items()}
+
+    async def set_value(ccb: ComfoConnectBridge, option: str) -> None:
+        await ccb.set_comfoclime_property(prop, values[option])
+
+    return set_value
+
+
+COMFOCLIME_ON_OFF = {0: VentilationSetting.OFF, 1: VentilationSetting.ON}
+
+COMFOCLIME_SELECT_TYPES = (
+    ComfoconnectSelectEntityDescription(
+        key="comfoclime_season",
+        name="Season",
+        entity_category=EntityCategory.CONFIG,
+        get_value_fn=_comfoclime_option_getter(PROPERTY_CLIME_SEASON, COMFOCLIME_SEASONS),
+        set_value_fn=_comfoclime_option_setter(PROPERTY_CLIME_SEASON, COMFOCLIME_SEASONS),
+        options=list(COMFOCLIME_SEASONS.values()),
+    ),
+    ComfoconnectSelectEntityDescription(
+        key="comfoclime_temperature_profile",
+        name="Temperature profile",
+        entity_category=EntityCategory.CONFIG,
+        get_value_fn=_comfoclime_option_getter(PROPERTY_CLIME_TEMPERATURE_PROFILE, COMFOCLIME_TEMPERATURE_PROFILES),
+        set_value_fn=_comfoclime_option_setter(PROPERTY_CLIME_TEMPERATURE_PROFILE, COMFOCLIME_TEMPERATURE_PROFILES),
+        options=list(COMFOCLIME_TEMPERATURE_PROFILES.values()),
+    ),
+    ComfoconnectSelectEntityDescription(
+        key="comfoclime_automatic_season",
+        name="Automatic season detection",
+        entity_category=EntityCategory.CONFIG,
+        get_value_fn=_comfoclime_option_getter(PROPERTY_CLIME_AUTO_SEASON, COMFOCLIME_ON_OFF),
+        set_value_fn=_comfoclime_option_setter(PROPERTY_CLIME_AUTO_SEASON, COMFOCLIME_ON_OFF),
+        options=list(COMFOCLIME_ON_OFF.values()),
+    ),
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -232,6 +289,12 @@ async def async_setup_entry(
     ccb = hass.data[DOMAIN][config_entry.entry_id]
 
     selects = [ComfoConnectSelect(ccb=ccb, config_entry=config_entry, description=description) for description in SELECT_TYPES]
+
+    if ccb.comfoclime_serial:
+        selects += [
+            ComfoConnectSelect(ccb=ccb, config_entry=config_entry, description=description, device_id=ccb.comfoclime_serial)
+            for description in COMFOCLIME_SELECT_TYPES
+        ]
 
     async_add_entities(selects, True)
 
@@ -247,6 +310,7 @@ class ComfoConnectSelect(SelectEntity):
         ccb: ComfoConnectBridge,
         config_entry: ConfigEntry,
         description: ComfoconnectSelectEntityDescription,
+        device_id: str | None = None,
     ) -> None:
         """Initialize the ComfoConnect select."""
         self._ccb = ccb
@@ -255,7 +319,7 @@ class ComfoConnectSelect(SelectEntity):
         self._attr_unique_id = f"{self._ccb.uuid}-{description.key}"
         self._attr_available = ccb.is_available
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, self._ccb.uuid)},
+            identifiers={(DOMAIN, device_id or self._ccb.uuid)},
         )
 
     async def async_added_to_hass(self) -> None:

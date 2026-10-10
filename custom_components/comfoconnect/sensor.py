@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Callable
 
+from aiocomfoconnect.const import COMFOCLIME_DEVICE_MODES
 from aiocomfoconnect.sensors import (
     SENSOR_AIRFLOW_CONSTRAINTS,
     SENSOR_ANALOG_INPUT_1,
@@ -14,6 +15,18 @@ from aiocomfoconnect.sensors import (
     SENSOR_ANALOG_INPUT_3,
     SENSOR_ANALOG_INPUT_4,
     SENSOR_BYPASS_STATE,
+    SENSOR_COMFOCLIME_COMFORT_TEMPERATURE,
+    SENSOR_COMFOCLIME_DEVICE_MODE,
+    SENSOR_COMFOCLIME_HEATPUMP_DUTY,
+    SENSOR_COMFOCLIME_INDOOR_TEMPERATURE,
+    SENSOR_COMFOCLIME_POWER_USAGE,
+    SENSOR_COMFOCLIME_TARGET_TEMPERATURE,
+    SENSOR_COMFOCLIME_TEMPERATURE_COMPRESSOR,
+    SENSOR_COMFOCLIME_TEMPERATURE_EXHAUST,
+    SENSOR_COMFOCLIME_TEMPERATURE_EXHAUST_COIL,
+    SENSOR_COMFOCLIME_TEMPERATURE_SUPPLY,
+    SENSOR_COMFOCLIME_TEMPERATURE_SUPPLY_COIL,
+    SENSOR_COMFOCLIME_TPMA_TEMPERATURE,
     SENSOR_COMFOCOOL_CONDENSOR_TEMP,
     SENSOR_COMFOFOND_GHE_STATE,
     SENSOR_COMFOFOND_TEMP_GROUND,
@@ -400,6 +413,116 @@ SENSOR_TYPES = (
     ),
 )
 
+COMFOCLIME_SENSOR_TYPES = (
+    ComfoconnectSensorEntityDescription(
+        key=SENSOR_COMFOCLIME_INDOOR_TEMPERATURE,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        name="Indoor temperature",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        ccb_sensor=SENSORS.get(SENSOR_COMFOCLIME_INDOOR_TEMPERATURE),
+    ),
+    ComfoconnectSensorEntityDescription(
+        key=SENSOR_COMFOCLIME_TARGET_TEMPERATURE,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        name="Target temperature",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        ccb_sensor=SENSORS.get(SENSOR_COMFOCLIME_TARGET_TEMPERATURE),
+    ),
+    ComfoconnectSensorEntityDescription(
+        key=SENSOR_COMFOCLIME_COMFORT_TEMPERATURE,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        name="Comfort temperature",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        ccb_sensor=SENSORS.get(SENSOR_COMFOCLIME_COMFORT_TEMPERATURE),
+    ),
+    ComfoconnectSensorEntityDescription(
+        key=SENSOR_COMFOCLIME_DEVICE_MODE,
+        device_class=SensorDeviceClass.ENUM,
+        name="Device mode",
+        options=list(COMFOCLIME_DEVICE_MODES.values()),
+        ccb_sensor=SENSORS.get(SENSOR_COMFOCLIME_DEVICE_MODE),
+        mapping=COMFOCLIME_DEVICE_MODES.get,
+    ),
+    ComfoconnectSensorEntityDescription(
+        key=SENSOR_COMFOCLIME_POWER_USAGE,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        name="Power usage",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        ccb_sensor=SENSORS.get(SENSOR_COMFOCLIME_POWER_USAGE),
+        throttle=True,
+    ),
+    ComfoconnectSensorEntityDescription(
+        key=SENSOR_COMFOCLIME_HEATPUMP_DUTY,
+        state_class=SensorStateClass.MEASUREMENT,
+        name="Heat pump duty",
+        native_unit_of_measurement=PERCENTAGE,
+        ccb_sensor=SENSORS.get(SENSOR_COMFOCLIME_HEATPUMP_DUTY),
+        throttle=True,
+    ),
+    ComfoconnectSensorEntityDescription(
+        key=SENSOR_COMFOCLIME_TEMPERATURE_SUPPLY,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        name="Supply air temperature",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        ccb_sensor=SENSORS.get(SENSOR_COMFOCLIME_TEMPERATURE_SUPPLY),
+    ),
+    ComfoconnectSensorEntityDescription(
+        key=SENSOR_COMFOCLIME_TEMPERATURE_EXHAUST,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        name="Exhaust air temperature",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        ccb_sensor=SENSORS.get(SENSOR_COMFOCLIME_TEMPERATURE_EXHAUST),
+        entity_registry_enabled_default=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    ComfoconnectSensorEntityDescription(
+        key=SENSOR_COMFOCLIME_TPMA_TEMPERATURE,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        name="TPMA temperature",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        ccb_sensor=SENSORS.get(SENSOR_COMFOCLIME_TPMA_TEMPERATURE),
+        entity_registry_enabled_default=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    ComfoconnectSensorEntityDescription(
+        key=SENSOR_COMFOCLIME_TEMPERATURE_SUPPLY_COIL,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        name="Supply coil temperature",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        ccb_sensor=SENSORS.get(SENSOR_COMFOCLIME_TEMPERATURE_SUPPLY_COIL),
+        entity_registry_enabled_default=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    ComfoconnectSensorEntityDescription(
+        key=SENSOR_COMFOCLIME_TEMPERATURE_EXHAUST_COIL,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        name="Exhaust coil temperature",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        ccb_sensor=SENSORS.get(SENSOR_COMFOCLIME_TEMPERATURE_EXHAUST_COIL),
+        entity_registry_enabled_default=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    ComfoconnectSensorEntityDescription(
+        key=SENSOR_COMFOCLIME_TEMPERATURE_COMPRESSOR,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        name="Compressor temperature",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        ccb_sensor=SENSORS.get(SENSOR_COMFOCLIME_TEMPERATURE_COMPRESSOR),
+        entity_registry_enabled_default=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+)
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -410,6 +533,12 @@ async def async_setup_entry(
     ccb = hass.data[DOMAIN][config_entry.entry_id]
 
     sensors = [ComfoConnectSensor(ccb=ccb, config_entry=config_entry, description=description) for description in SENSOR_TYPES]
+
+    if ccb.comfoclime_serial:
+        sensors += [
+            ComfoConnectSensor(ccb=ccb, config_entry=config_entry, description=description, device_id=ccb.comfoclime_serial)
+            for description in COMFOCLIME_SENSOR_TYPES
+        ]
 
     async_add_entities(sensors, True)
 
@@ -426,6 +555,7 @@ class ComfoConnectSensor(SensorEntity):
         ccb: ComfoConnectBridge,
         config_entry: ConfigEntry,
         description: ComfoconnectSensorEntityDescription,
+        device_id: str | None = None,
     ) -> None:
         """Initialize the ComfoConnect sensor."""
         self._ccb = ccb
@@ -433,7 +563,7 @@ class ComfoConnectSensor(SensorEntity):
         self._attr_unique_id = f"{self._ccb.uuid}-{description.key}"
         self._attr_available = ccb.is_available
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, self._ccb.uuid)},
+            identifiers={(DOMAIN, device_id or self._ccb.uuid)},
         )
 
     async def async_added_to_hass(self) -> None:
