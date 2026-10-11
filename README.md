@@ -15,6 +15,7 @@ integration in Home Assistant.
 * Show yearly energy totals and avoided heating/cooling measurements
 * Show an Active alarms diagnostic binary sensor
 * Configure passive-temperature and humidity ventilation controls
+* Show countdowns until the next fan-speed, bypass, supply-fan, and exhaust-fan schedule change
 * Show various sensors
 
 This integration supports the following additional features over the existing integration:
