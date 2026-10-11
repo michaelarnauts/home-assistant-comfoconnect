@@ -167,7 +167,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Disconnect when shutting down
     async def disconnect_bridge(event):
         """Close connection to the bridge."""
-        await bridge.disconnect()
+        await bridge.async_close()
 
     entry.async_on_unload(hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, disconnect_bridge))
 
@@ -178,7 +178,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         bridge = hass.data[DOMAIN][entry.entry_id]
-        await bridge.disconnect()
+        await bridge.async_close()
         hass.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
@@ -201,15 +201,26 @@ class ComfoConnectBridge(ComfoConnect):
         self.active_alarms: dict[int, dict[int, str]] = {}
         self.is_available = True
         self._keepalive_lock = asyncio.Lock()
+        self._closing = False
+
+    async def async_close(self) -> None:
+        """Close the session once a running keepalive has finished."""
+        # A keepalive that is still reconnecting would otherwise finish after the disconnect
+        # and leave a new session open that nothing closes again.
+        self._closing = True
+        async with self._keepalive_lock:
+            await self.disconnect()
 
     async def async_keepalive(self, local_uuid: str) -> None:
-        """Run a keepalive, unless the previous one is still busy."""
+        """Run a keepalive, unless the previous one is still busy or the bridge is closing."""
         # A recovery can take longer than the keepalive interval. Overlapping runs would
         # disconnect each other's reconnect, so skip this one instead.
         if self._keepalive_lock.locked():
             _LOGGER.debug("Previous keepalive is still running, skipping this one")
             return
         async with self._keepalive_lock:
+            if self._closing:
+                return
             await self._async_keepalive(local_uuid)
 
     async def _async_keepalive(self, local_uuid: str) -> None:
@@ -242,7 +253,8 @@ class ComfoConnectBridge(ComfoConnect):
                 await self.disconnect()
                 _LOGGER.debug("The bridge session is still owned by another client. Retrying later...")
                 return
-        self.set_available(True)
+        if not self._closing:
+            self.set_available(True)
 
     @callback
     def set_available(self, available: bool) -> None:
