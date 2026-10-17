@@ -14,6 +14,7 @@ from aiocomfoconnect.const import (
     VentilationSetting,
     VentilationTemperatureProfile,
 )
+from aiocomfoconnect.properties import PROPERTY_TEMPERATURE_PROFILE_MODE
 from aiocomfoconnect.sensors import (
     SENSOR_BYPASS_ACTIVATION_STATE,
     SENSOR_COMFOCOOL_STATE,
@@ -114,6 +115,22 @@ async def _get_bypass_option(ccb: ComfoConnectBridge) -> str:
     return _timer_option(await ccb.get_bypass() == VentilationSetting.ON)
 
 
+# The unit reports a range of 0-1, so the "external setpoint" mode (2) isn't offered.
+TEMPERATURE_PROFILE_MODES = {0: "adaptive", 1: "fixed"}
+
+
+async def _get_temperature_profile_mode(ccb: ComfoConnectBridge) -> str | None:
+    """Return whether the comfort temperature follows the RMOT or the active profile."""
+    return TEMPERATURE_PROFILE_MODES.get(await ccb.get_property(PROPERTY_TEMPERATURE_PROFILE_MODE))
+
+
+async def _set_temperature_profile_mode(ccb: ComfoConnectBridge, option: str) -> None:
+    """Set the temperature profile mode."""
+    value = next(value for value, mode in TEMPERATURE_PROFILE_MODES.items() if mode == option)
+    prop = PROPERTY_TEMPERATURE_PROFILE_MODE
+    await ccb.set_property_typed(prop.unit, prop.subunit, prop.property_id, value, prop.property_type)
+
+
 SELECT_TYPES = (
     ComfoconnectSelectEntityDescription(
         key="select_mode",
@@ -182,6 +199,15 @@ SELECT_TYPES = (
             1: VentilationTemperatureProfile.COOL,
             2: VentilationTemperatureProfile.WARM,
         }.get(value),
+    ),
+    ComfoconnectSelectEntityDescription(
+        key="temperature_profile_mode",
+        name="Temperature Profile Mode",
+        icon="mdi:thermometer-auto",
+        entity_category=EntityCategory.CONFIG,
+        get_value_fn=_get_temperature_profile_mode,
+        set_value_fn=_set_temperature_profile_mode,
+        options=list(TEMPERATURE_PROFILE_MODES.values()),
     ),
     ComfoconnectSelectEntityDescription(
         key="comfocool",
