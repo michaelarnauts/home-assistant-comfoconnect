@@ -83,8 +83,6 @@ class ComfoConnectNumber(NumberEntity):
         self._attr_unique_id = f"{ccb.uuid}-{description.key}"
         self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, ccb.uuid)})
         self._attr_available = False
-        # The limits are fixed for a unit, so they're only read again after the bridge reconnects.
-        self._limits_read = False
 
     async def async_added_to_hass(self) -> None:
         """Subscribe to bridge availability changes."""
@@ -97,7 +95,6 @@ class ComfoConnectNumber(NumberEntity):
         """Wait for a fresh poll when the bridge recovers."""
         if not available:
             self._attr_available = False
-            self._limits_read = False
             self.async_write_ha_state()
         else:
             self.async_schedule_update_ha_state(True)
@@ -108,20 +105,18 @@ class ComfoConnectNumber(NumberEntity):
             self._attr_available = False
             return
         try:
-            if not self._limits_read:
-                limits = await self._read_metadata(0x20)
-                step = await self._read_metadata(0x40)
-                if len(limits) != 2 or len(step) != 1 or limits[0] > limits[1] or step[0] <= 0:
-                    raise ValueError("Invalid RMOT property limits")
-                self._attr_native_min_value, self._attr_native_max_value = (limit / 10 for limit in limits)
-                self._attr_native_step = step[0] / 10
-                self._limits_read = True
-            value = await self._ccb.get_property(self.entity_description.property)
+            # One request returns the value together with the range and step size the unit accepts.
+            constraints = await self._ccb.get_property_constraints(self.entity_description.property)
+            if constraints.minimum > constraints.maximum or constraints.step <= 0:
+                raise ValueError("Invalid RMOT property limits")
         except (ComfoConnectError, AioComfoConnectTimeout, AioComfoConnectNotConnected, AioComfoConnectNotReachable, ValueError) as err:
             self._attr_available = False
             _LOGGER.warning("Could not update %s: %s", self.entity_description.name, err)
             return
-        self._attr_native_value = value / 10
+        self._attr_native_value = constraints.value / 10
+        self._attr_native_min_value = constraints.minimum / 10
+        self._attr_native_max_value = constraints.maximum / 10
+        self._attr_native_step = constraints.step / 10
         self._attr_available = self._ccb.is_available
 
     async def async_set_native_value(self, value: float) -> None:
@@ -132,12 +127,3 @@ class ComfoConnectNumber(NumberEntity):
         except (ComfoConnectError, AioComfoConnectTimeout, AioComfoConnectNotConnected, AioComfoConnectNotReachable) as err:
             raise HomeAssistantError(f"Failed to set {self.entity_description.name}: {err}") from err
         self.async_schedule_update_ha_state(True)
-
-    async def _read_metadata(self, kind: int) -> list[int]:
-        """Read signed 16-bit range or step metadata for this property."""
-        prop = self.entity_description.property
-        response = await self._ccb.cmd_rmi_request(bytes([0x01, prop.unit, prop.subunit, kind, prop.property_id]))
-        data = bytes(response.message)
-        if len(data) % 2:
-            raise ValueError("Invalid RMOT property metadata")
-        return [int.from_bytes(data[index : index + 2], "little", signed=True) for index in range(0, len(data), 2)]
