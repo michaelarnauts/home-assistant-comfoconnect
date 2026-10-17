@@ -249,6 +249,9 @@ SELECT_TYPES = (
         get_value_fn=_get_bypass_option,
         set_value_fn=_set_bypass_option,
         options=list(TIMER_OPTIONS),
+        # The unit pushes 1 while bypass is forced on, also when a timer ends, so this doesn't need polling.
+        sensor=SENSORS.get(SENSOR_BYPASS_ACTIVATION_STATE),
+        sensor_value_fn=lambda value: TIMER_ACTIVE if value == 1 else TIMER_OFF,
     ),
     ComfoconnectSelectEntityDescription(
         key="sensor_ventmode_temperature_passive",

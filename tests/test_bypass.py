@@ -43,3 +43,13 @@ def test_bypass_duration_status_and_cancellation(tmp_path, minutes):
         assert hass.states.get(entity.entity_id).state == "Off"
 
     asyncio.run(scenario())
+
+
+@pytest.mark.parametrize(("value", "expected"), [(0, "Off"), (1, "Active"), (2, "Off")])
+def test_bypass_timer_follows_the_pushed_activation_state(value: int, expected: str) -> None:
+    """PDO 66 is pushed when bypass is forced on and when the timer ends, so the select isn't polled."""
+    description = next(item for item in SELECT_TYPES if item.key == "bypass_timeout")
+    entity = ComfoConnectSelect(SimpleNamespace(uuid="test", is_available=True), SimpleNamespace(), description)
+
+    assert entity.should_poll is False
+    assert description.sensor_value_fn(value) == expected
