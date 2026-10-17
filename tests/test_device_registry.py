@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from aiocomfoconnect.const import GatewayType
 from aiocomfoconnect.properties import PROPERTY_MODEL, PROPERTY_NAME, PROPERTY_SERIAL_NUMBER
 from custom_components.comfoconnect import EVENT_COMFOCONNECT_ALARM
 from custom_components.comfoconnect.const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN
@@ -87,3 +88,37 @@ async def test_unit_is_connected_through_the_bridge(hass: HomeAssistant) -> None
     hass.data[DOMAIN][entry.entry_id].alarm_callback(1, {79: "Replace filters"})
     await hass.async_block_till_done()
     assert events[0]["device_id"] == unit_device.id
+
+
+async def test_comfoconnect_pro_is_shown_as_pro(hass: HomeAssistant) -> None:
+    """A Pro identifies itself when the session starts, so the bridge device is named and modelled after it."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="192.0.2.10",
+        data={CONF_HOST: "192.0.2.10", CONF_UUID: UNIT_UUID, CONF_LOCAL_UUID: "11" * 16},
+    )
+    entry.add_to_hass(hass)
+
+    async def connect_to_a_pro(bridge, uuid):
+        bridge.bridge_type = GatewayType.PRO
+
+    with (
+        patch(f"{BRIDGE}.connect", autospec=True, side_effect=connect_to_a_pro),
+        patch(f"{BRIDGE}.disconnect", new_callable=AsyncMock),
+        patch(
+            f"{BRIDGE}.cmd_version_request",
+            new_callable=AsyncMock,
+            return_value=SimpleNamespace(serialNumber="DEMO0002", gatewayVersion=0),
+        ),
+        patch(f"{BRIDGE}.get_property", new_callable=AsyncMock, side_effect=lambda prop: UNIT_PROPERTIES.get(prop.property_id, 0)),
+        patch("custom_components.comfoconnect.version_decode", return_value="1.0.0"),
+        patch(
+            "homeassistant.config_entries.ConfigEntries.async_forward_entry_setups",
+            new_callable=AsyncMock,
+            return_value=True,
+        ),
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+
+    bridge_device = dr.async_get(hass).async_get_device_by_identifier((DOMAIN, "DEMO0002"), entry.entry_id)
+    assert (bridge_device.name, bridge_device.model) == ("ComfoConnect Pro", "ComfoConnect Pro")
