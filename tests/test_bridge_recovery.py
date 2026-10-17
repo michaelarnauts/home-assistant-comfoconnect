@@ -85,7 +85,7 @@ def test_keepalive_callback_starts_reauth_for_persistent_refusal():
             uuid="bridge",
             connect=AsyncMock(),
             cmd_version_request=AsyncMock(return_value=SimpleNamespace(serialNumber="test", gatewayVersion=1)),
-            get_property=AsyncMock(side_effect=["Q450", 1, "Unit"]),
+            get_property=AsyncMock(side_effect=["Q450", 1, "Unit", "BEA0000000001"]),
             async_keepalive=AsyncMock(side_effect=ComfoConnectNotAllowed("Refused")),
         )
 

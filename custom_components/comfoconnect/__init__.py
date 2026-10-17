@@ -20,6 +20,7 @@ from aiocomfoconnect.properties import (
     PROPERTY_FIRMWARE_VERSION,
     PROPERTY_MODEL,
     PROPERTY_NAME,
+    PROPERTY_SERIAL_NUMBER,
 )
 from aiocomfoconnect.sensors import Sensor
 from aiocomfoconnect.util import version_decode
@@ -141,6 +142,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         unit_model = await bridge.get_property(PROPERTY_MODEL)
         unit_firmware = await bridge.get_property(PROPERTY_FIRMWARE_VERSION)
         unit_name = await bridge.get_property(PROPERTY_NAME)
+        unit_serial_number = await bridge.get_property(PROPERTY_SERIAL_NUMBER)
     except (ComfoConnectError, AioComfoConnectTimeout, AioComfoConnectNotConnected, AioComfoConnectNotReachable) as err:
         await bridge.disconnect()
         raise ConfigEntryNotReady("The bridge did not return its device information") from err
@@ -158,8 +160,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, bridge_info.serialNumber)},
         manufacturer="Zehnder",
-        name=bridge_info.serialNumber,
+        name="ComfoConnect LAN C",
         model="ComfoConnect LAN C",
+        serial_number=bridge_info.serialNumber,
         sw_version=version_decode(bridge_info.gatewayVersion),
     )
 
@@ -172,6 +175,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         manufacturer="Zehnder",
         name=unit_name,
         model=unit_model,
+        serial_number=unit_serial_number,
         sw_version=version_decode(unit_firmware),
     )
     device_registry.async_update_device(unit_device.id, via_device_id=bridge_device.id)
