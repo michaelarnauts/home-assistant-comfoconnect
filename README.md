@@ -14,6 +14,7 @@ integration in Home Assistant.
 * Control ComfoCool mode (auto / off)
 * Show yearly energy totals and avoided heating/cooling measurements
 * Show an Active alarms diagnostic binary sensor
+* Show outside humidity after the preheater as an optional diagnostic sensor
 * Configure passive-temperature and humidity ventilation controls
 * Control timed away mode
 * Show various sensors
