@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from aiocomfoconnect.exceptions import ComfoConnectNotReachable, ComfoConnectRmiError
-from aiocomfoconnect.properties import PROPERTY_RMOT_COOLING_THRESHOLD, PROPERTY_RMOT_HEATING_THRESHOLD
+from aiocomfoconnect.properties import PROPERTY_RMOT_COOLING_THRESHOLD, PROPERTY_RMOT_HEATING_THRESHOLD, PropertyConstraints
 from custom_components.comfoconnect import ComfoConnectBridge
 from custom_components.comfoconnect.const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN
 from homeassistant.components.number import NumberDeviceClass
@@ -46,14 +46,11 @@ def protocol():
     ranges = {heating.property_id: (0, 150), cooling.property_id: (150, 400)}
 
     async def get_property(prop):
-        if prop in (heating, cooling):
-            return values[prop.property_id]
         return "Test unit"
 
-    async def metadata(command):
-        assert command[:3] == bytes([1, heating.unit, heating.subunit])
-        data = ranges[command[4]] if command[3] == 0x20 else (10,)
-        return SimpleNamespace(message=b"".join(value.to_bytes(2, "little", signed=True) for value in data))
+    async def get_property_constraints(prop):
+        assert prop in (heating, cooling)
+        return PropertyConstraints(values[prop.property_id], *ranges[prop.property_id], 10)
 
     async def set_property_typed(unit, subunit, property_id, value, property_type):
         values[property_id] = value
@@ -63,7 +60,7 @@ def protocol():
             stack.enter_context(patch(f"{BRIDGE}.{method}", new_callable=AsyncMock))
         stack.enter_context(patch(f"{BRIDGE}.set_property_typed", new_callable=AsyncMock, side_effect=set_property_typed))
         stack.enter_context(patch(f"{BRIDGE}.get_property", new_callable=AsyncMock, side_effect=get_property))
-        stack.enter_context(patch(f"{BRIDGE}.cmd_rmi_request", new_callable=AsyncMock, side_effect=metadata))
+        stack.enter_context(patch(f"{BRIDGE}.get_property_constraints", new_callable=AsyncMock, side_effect=get_property_constraints))
         stack.enter_context(
             patch(f"{BRIDGE}.cmd_version_request", new_callable=AsyncMock, return_value=SimpleNamespace(serialNumber="DEMO0001", gatewayVersion=0))
         )
@@ -138,18 +135,21 @@ async def test_failed_write_raises_a_home_assistant_error(hass: HomeAssistant, e
         await hass.services.async_call("number", "set_value", {"entity_id": HEATING, "value": 12}, blocking=True)
 
 
-async def test_limits_are_read_once(hass: HomeAssistant, entry: MockConfigEntry, protocol) -> None:
-    """The range and step don't change, so later polls only read the value."""
+async def test_a_poll_reads_the_value_and_limits_in_one_request(hass: HomeAssistant, entry: MockConfigEntry, protocol) -> None:
+    """Every poll refreshes the value and the limits with a single request."""
     enable_numbers(hass, entry)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     bridge = hass.data[DOMAIN][entry.entry_id]
-    reads = bridge.cmd_rmi_request.await_count
+    reads = bridge.get_property_constraints.await_count
 
     protocol[0][PROPERTY_RMOT_HEATING_THRESHOLD.property_id] = 130
+    protocol[1][PROPERTY_RMOT_HEATING_THRESHOLD.property_id] = (50, 200)
     await async_update_entity(hass, HEATING)
-    assert bridge.cmd_rmi_request.await_count == reads
-    assert hass.states.get(HEATING).state == "13.0"
+    assert bridge.get_property_constraints.await_count == reads + 1
+    state = hass.states.get(HEATING)
+    assert state.state == "13.0"
+    assert (state.attributes["min"], state.attributes["max"]) == (5, 20)
 
 
 async def test_unavailable_number_recovers_with_fresh_limits(hass: HomeAssistant, entry: MockConfigEntry, protocol) -> None:
@@ -183,7 +183,7 @@ async def test_invalid_limits_disable_the_control(hass: HomeAssistant, entry: Mo
 async def test_gateway_failure_keeps_numbers_registered_for_recovery(hass: HomeAssistant, entry: MockConfigEntry, protocol) -> None:
     """A reachable gateway's NOT_REACHABLE reply must leave a retryable unavailable entity."""
     enable_numbers(hass, entry)
-    with patch(f"{BRIDGE}.cmd_rmi_request", new_callable=AsyncMock, side_effect=ComfoConnectNotReachable("Unit cannot be reached")):
+    with patch(f"{BRIDGE}.get_property_constraints", new_callable=AsyncMock, side_effect=ComfoConnectNotReachable("Unit cannot be reached")):
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
     state = hass.states.get(HEATING)
@@ -194,12 +194,12 @@ async def test_gateway_failure_keeps_numbers_registered_for_recovery(hass: HomeA
     assert hass.states.get(HEATING).state == "11.0"
 
     bridge = hass.data[DOMAIN][entry.entry_id]
-    normal_reads = bridge.get_property.side_effect
-    bridge.get_property.side_effect = ComfoConnectNotReachable("Unit cannot be reached")
+    normal_reads = bridge.get_property_constraints.side_effect
+    bridge.get_property_constraints.side_effect = ComfoConnectNotReachable("Unit cannot be reached")
     await async_update_entity(hass, HEATING)
     assert hass.states.get(HEATING).state == STATE_UNAVAILABLE
 
-    bridge.get_property.side_effect = normal_reads
+    bridge.get_property_constraints.side_effect = normal_reads
     protocol[0][PROPERTY_RMOT_HEATING_THRESHOLD.property_id] = 130
     await async_update_entity(hass, HEATING)
     assert hass.states.get(HEATING).state == "13.0"
