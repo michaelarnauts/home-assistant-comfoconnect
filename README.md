@@ -15,6 +15,7 @@ integration in Home Assistant.
 * Show yearly energy totals and avoided heating/cooling measurements
 * Show an Active alarms diagnostic binary sensor
 * Configure passive-temperature and humidity ventilation controls
+* Configure heating and cooling RMOT thresholds
 * Control timed away mode
 * Show various sensors
 
@@ -39,6 +40,10 @@ Choose a duration in Boost Mode to start a timer. Choose `Off`, or use Cancel bo
 Choose a duration in Away Mode to start a timer. Choose `Off`, or use Cancel away, to stop it. `Active` reports a running timer; selecting it does not start or extend a timer.
 
 Away Mode offers durations in minutes, 2/8/24 hours, and 7/14 days. Cancel the timer when you return early.
+
+### RMOT thresholds
+
+Enable the Heating RMOT threshold and Cooling RMOT threshold number entities to configure the running mean outdoor temperature limits used for heating and cooling. The entities use the minimum, maximum, and step reported by the unit and are disabled by default.
 
 ## Installation
 
