@@ -52,6 +52,8 @@ SIGNAL_COMFOCONNECT_UPDATE_RECEIVED = "comfoconnect_update_{}_{}"
 SIGNAL_COMFOCONNECT_ALARM_RECEIVED = "comfoconnect_alarm_{}"
 SIGNAL_COMFOCONNECT_AVAILABILITY = "comfoconnect_availability_{}"
 
+EVENT_COMFOCONNECT_ALARM = "comfoconnect_alarm"
+
 KEEP_ALIVE_INTERVAL = timedelta(seconds=30)
 
 
@@ -151,6 +153,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         sw_version=version_decode(unit_firmware),
     )
     device_registry.async_update_device(unit_device.id, via_device_id=bridge_device.id)
+    bridge.device_id = unit_device.id
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -199,6 +202,8 @@ class ComfoConnectBridge(ComfoConnect):
         self.hass = hass
         # Latest alarms per node; a node is missing until it has reported.
         self.active_alarms: dict[int, dict[int, str]] = {}
+        # The ventilation unit's device, known once setup has registered it.
+        self.device_id: str | None = None
         self.is_available = True
         self._keepalive_lock = asyncio.Lock()
         self._closing = False
@@ -277,10 +282,23 @@ class ComfoConnectBridge(ComfoConnect):
     @callback
     def alarm_callback(self, node_id: int, errors: dict[int, str]) -> None:
         """Cache changed alarms and notify the diagnostic sensor."""
-        if self.active_alarms.get(node_id) == errors:
+        previous = self.active_alarms.get(node_id)
+        if previous == errors:
             return
         self.active_alarms[node_id] = dict(errors)
         dispatcher_send(self.hass, SIGNAL_COMFOCONNECT_ALARM_RECEIVED.format(self.uuid))
+
+        # An initial empty report clears nothing; do not emit a clear on every start or reload.
+        if previous is not None or errors:
+            self.hass.bus.async_fire(
+                EVENT_COMFOCONNECT_ALARM,
+                {
+                    "device_id": self.device_id,
+                    "bridge_uuid": self.uuid,
+                    "node_id": node_id,
+                    "errors": [{"id": error_id, "message": error} for error_id, error in errors.items()],
+                },
+            )
 
         message = f"Alarm received for Node {node_id}:\n"
         for error_id, error in errors.items():
