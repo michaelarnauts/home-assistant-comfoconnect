@@ -33,6 +33,7 @@ from . import (
     SIGNAL_COMFOCONNECT_UPDATE_RECEIVED,
     ComfoConnectBridge,
 )
+from .const import SENSOR_POSTHEATER_PRESENT
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -68,6 +69,13 @@ SENSOR_TYPES = (
         key=SENSOR_COMFOFOND_GHE_PRESENT,
         name="ComfoFond GHE present",
         ccb_sensor=SENSORS.get(SENSOR_COMFOFOND_GHE_PRESENT),
+        entity_registry_enabled_default=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    ComfoconnectBinarySensorEntityDescription(
+        key=SENSOR_POSTHEATER_PRESENT,
+        name="Postheater present",
+        ccb_sensor=SENSORS.get(SENSOR_POSTHEATER_PRESENT),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),

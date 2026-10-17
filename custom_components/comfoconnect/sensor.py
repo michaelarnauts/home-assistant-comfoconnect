@@ -81,6 +81,7 @@ from . import (
     SIGNAL_COMFOCONNECT_UPDATE_RECEIVED,
     ComfoConnectBridge,
 )
+from .const import SENSOR_POSTHEATER_STATE, SENSOR_POSTHEATER_TEMP_BEFORE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -484,6 +485,26 @@ SENSOR_TYPES = (
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
         throttle=True,
+    ),
+    ComfoconnectSensorEntityDescription(
+        key=SENSOR_POSTHEATER_STATE,
+        state_class=SensorStateClass.MEASUREMENT,
+        name="Postheater state",
+        native_unit_of_measurement=PERCENTAGE,
+        icon="mdi:radiator",
+        ccb_sensor=SENSORS.get(SENSOR_POSTHEATER_STATE),
+        entity_registry_enabled_default=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    ComfoconnectSensorEntityDescription(
+        key=SENSOR_POSTHEATER_TEMP_BEFORE,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        name="Temperature before postheater",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        ccb_sensor=SENSORS.get(SENSOR_POSTHEATER_TEMP_BEFORE),
+        entity_registry_enabled_default=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_COMFORTCONTROL_MODE,
