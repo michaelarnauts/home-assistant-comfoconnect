@@ -50,6 +50,10 @@ Choose a duration in Away Mode to start a timer. Choose `Off`, or use Cancel awa
 
 Away Mode offers durations in minutes, 2/8/24 hours, and 7/14 days. Cancel the timer when you return early.
 
+### Alarm events
+
+The `comfoconnect_alarm` event reports changed alarms and clears per node. Its payload contains `device_id` (the ventilation unit), `bridge_uuid`, `node_id`, and an `errors` list with `id` and `message` fields. A clear has an empty list. Repeated identical reports and startup reports without alarms do not fire an event. Alarms received before device registration have a null `device_id`.
+
 ## Installation
 
 ### HACS

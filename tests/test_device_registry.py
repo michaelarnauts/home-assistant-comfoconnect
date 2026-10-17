@@ -6,9 +6,10 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from custom_components.comfoconnect import EVENT_COMFOCONNECT_ALARM
 from custom_components.comfoconnect.const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN
 from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
 
 # These tests set up the integration in a real Home Assistant instance. They need
@@ -69,3 +70,10 @@ async def test_unit_is_connected_through_the_bridge(hass: HomeAssistant) -> None
     assert bridge_device is not None
     assert unit_device is not None
     assert unit_device.via_device_id == bridge_device.id
+
+    # Alarm automations must identify the registered unit, rather than the LAN bridge.
+    events = []
+    hass.bus.async_listen(EVENT_COMFOCONNECT_ALARM, callback(lambda event: events.append(event.data)))
+    hass.data[DOMAIN][entry.entry_id].alarm_callback(1, {79: "Replace filters"})
+    await hass.async_block_till_done()
+    assert events[0]["device_id"] == unit_device.id
