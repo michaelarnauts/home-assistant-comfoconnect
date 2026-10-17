@@ -47,6 +47,8 @@ from aiocomfoconnect.sensors import (
     SENSOR_TEMPERATURE_EXTRACT,
     SENSOR_TEMPERATURE_OUTDOOR,
     SENSOR_TEMPERATURE_SUPPLY,
+    SENSOR_UNIT_AIRFLOW,
+    SENSOR_UNIT_TEMPERATURE,
     SENSORS,
 )
 from aiocomfoconnect.sensors import (
@@ -514,6 +516,22 @@ SENSOR_TYPES = (
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
         mapping=lambda x: COMFORT_CONTROL_STATE.get(x, x),
+    ),
+    ComfoconnectSensorEntityDescription(
+        key=SENSOR_UNIT_TEMPERATURE,
+        name="Temperature unit",
+        icon="mdi:thermometer",
+        ccb_sensor=SENSORS.get(SENSOR_UNIT_TEMPERATURE),
+        entity_registry_enabled_default=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    ComfoconnectSensorEntityDescription(
+        key=SENSOR_UNIT_AIRFLOW,
+        name="Airflow unit",
+        icon="mdi:fan",
+        ccb_sensor=SENSORS.get(SENSOR_UNIT_AIRFLOW),
+        entity_registry_enabled_default=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
     ),
 )
 

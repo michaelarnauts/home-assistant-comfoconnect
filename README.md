@@ -16,6 +16,7 @@ integration in Home Assistant.
 * Show an Active alarms diagnostic binary sensor
 * Configure passive-temperature and humidity ventilation controls
 * Control timed away mode
+* Show the unit's configured temperature and airflow units as optional diagnostics
 * Show various sensors
 
 This integration supports the following additional features over the existing integration:
