@@ -142,10 +142,8 @@ SELECT_TYPES = (
         options=[VentilationMode.AUTO, VentilationMode.MANUAL],
         # translation_key="setting",
         sensor=SENSORS.get(SENSOR_OPERATING_MODE),
-        sensor_value_fn=lambda value: {
-            255: VentilationMode.AUTO,
-            1: VentilationMode.MANUAL,
-        }.get(value),
+        # Like the fan, anything but auto (255) is manual: 1 = limited manual, 5 = unlimited manual.
+        sensor_value_fn=lambda value: VentilationMode.AUTO if value == 255 else VentilationMode.MANUAL,
     ),
     ComfoconnectSelectEntityDescription(
         key="bypass_mode",
