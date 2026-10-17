@@ -119,11 +119,14 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self.local_uuid = random_uuid_hex()
 
         try:
+            # LAN C reserves one byte of its 32-byte name buffer for the terminator.
+            device_name = f"Home Assistant ({self.hass.config.location_name})"
+            device_name = device_name.encode("utf-8")[:31].decode("utf-8", errors="ignore")
             # This connects to the bridge, checks if we are registered already by starting a session,
             # and registers us when we are not.
             await self.bridge.register(
                 self.local_uuid,
-                f"Home Assistant ({self.hass.config.location_name})",
+                device_name,
                 pin or DEFAULT_PIN,
             )
 
