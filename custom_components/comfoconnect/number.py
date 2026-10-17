@@ -11,7 +11,14 @@ from aiocomfoconnect.exceptions import (
     AioComfoConnectTimeout,
     ComfoConnectError,
 )
-from aiocomfoconnect.properties import PROPERTY_RMOT_COOLING_THRESHOLD, PROPERTY_RMOT_HEATING_THRESHOLD, Property
+from aiocomfoconnect.properties import (
+    PROPERTY_PROFILE_TEMPERATURE_COOL,
+    PROPERTY_PROFILE_TEMPERATURE_NORMAL,
+    PROPERTY_PROFILE_TEMPERATURE_WARM,
+    PROPERTY_RMOT_COOLING_THRESHOLD,
+    PROPERTY_RMOT_HEATING_THRESHOLD,
+    Property,
+)
 from homeassistant.components.number import NumberDeviceClass, NumberEntity, NumberEntityDescription, NumberMode
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
@@ -55,6 +62,31 @@ NUMBER_TYPES = (
         mode=NumberMode.BOX,
         property=PROPERTY_RMOT_COOLING_THRESHOLD,
     ),
+    # The profile temperatures are only used in the fixed temperature profile mode. The unit also stores them in adaptive mode.
+    ComfoConnectNumberEntityDescription(
+        key="profile_temperature_warm",
+        name="Warm profile temperature",
+        device_class=NumberDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        mode=NumberMode.BOX,
+        property=PROPERTY_PROFILE_TEMPERATURE_WARM,
+    ),
+    ComfoConnectNumberEntityDescription(
+        key="profile_temperature_normal",
+        name="Normal profile temperature",
+        device_class=NumberDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        mode=NumberMode.BOX,
+        property=PROPERTY_PROFILE_TEMPERATURE_NORMAL,
+    ),
+    ComfoConnectNumberEntityDescription(
+        key="profile_temperature_cool",
+        name="Cool profile temperature",
+        device_class=NumberDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        mode=NumberMode.BOX,
+        property=PROPERTY_PROFILE_TEMPERATURE_COOL,
+    ),
 )
 
 
@@ -69,7 +101,7 @@ async def async_setup_entry(
 
 
 class ComfoConnectNumber(NumberEntity):
-    """Representation of a ComfoConnect RMOT threshold."""
+    """Representation of a ComfoConnect temperature setting."""
 
     _attr_entity_category = EntityCategory.CONFIG
     _attr_entity_registry_enabled_default = False
@@ -100,7 +132,7 @@ class ComfoConnectNumber(NumberEntity):
             self.async_schedule_update_ha_state(True)
 
     async def async_update(self) -> None:
-        """Read the threshold and its device-specific limits."""
+        """Read the temperature and its device-specific limits."""
         if not self._ccb.is_available:
             self._attr_available = False
             return
@@ -108,7 +140,7 @@ class ComfoConnectNumber(NumberEntity):
             # One request returns the value together with the range and step size the unit accepts.
             constraints = await self._ccb.get_property_constraints(self.entity_description.property)
             if constraints.minimum > constraints.maximum or constraints.step <= 0:
-                raise ValueError("Invalid RMOT property limits")
+                raise ValueError("Invalid property limits")
         except (ComfoConnectError, AioComfoConnectTimeout, AioComfoConnectNotConnected, AioComfoConnectNotReachable, ValueError) as err:
             self._attr_available = False
             _LOGGER.warning("Could not update %s: %s", self.entity_description.name, err)
@@ -120,7 +152,7 @@ class ComfoConnectNumber(NumberEntity):
         self._attr_available = self._ccb.is_available
 
     async def async_set_native_value(self, value: float) -> None:
-        """Write the threshold in tenths of a degree, then read back what the unit reports."""
+        """Write the temperature in tenths of a degree, then read back what the unit reports."""
         prop = self.entity_description.property
         try:
             await self._ccb.set_property_typed(prop.unit, prop.subunit, prop.property_id, round(value * 10), prop.property_type)
