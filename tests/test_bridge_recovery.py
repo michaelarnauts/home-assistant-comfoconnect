@@ -83,6 +83,7 @@ def test_keepalive_callback_starts_reauth_for_persistent_refusal():
         )
         bridge = SimpleNamespace(
             uuid="bridge",
+            bridge_type=0,
             connect=AsyncMock(),
             cmd_version_request=AsyncMock(return_value=SimpleNamespace(serialNumber="test", gatewayVersion=1)),
             get_property=AsyncMock(side_effect=["Q450", 1, "Unit", "BEA0000000001"]),

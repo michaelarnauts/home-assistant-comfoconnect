@@ -8,6 +8,7 @@ from datetime import timedelta
 
 import voluptuous as vol
 from aiocomfoconnect import ComfoConnect, discover_bridges
+from aiocomfoconnect.const import GatewayType
 from aiocomfoconnect.exceptions import (
     AioComfoConnectNotConnected,
     AioComfoConnectNotReachable,
@@ -155,13 +156,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     device_registry = dr.async_get(hass)
 
+    # The bridge type is known once the session has started: a ComfoConnect Pro identifies itself then.
+    bridge_model = "ComfoConnect Pro" if bridge.bridge_type == GatewayType.PRO else "ComfoConnect LAN C"
+
     # Add Bridge to device registry
     bridge_device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, bridge_info.serialNumber)},
         manufacturer="Zehnder",
-        name="ComfoConnect LAN C",
-        model="ComfoConnect LAN C",
+        name=bridge_model,
+        model=bridge_model,
         serial_number=bridge_info.serialNumber,
         sw_version=version_decode(bridge_info.gatewayVersion),
     )
