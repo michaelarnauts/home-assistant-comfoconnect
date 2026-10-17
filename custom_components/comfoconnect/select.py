@@ -61,6 +61,7 @@ TIMER_OFF = "Off"
 TIMER_ACTIVE = "Active"
 TIMEOUT_OPTIONS = ("10 Minutes", "20 Minutes", "30 Minutes", "40 Minutes", "50 Minutes", "60 Minutes")
 TIMER_OPTIONS = (TIMER_OFF, TIMER_ACTIVE, *TIMEOUT_OPTIONS)
+AWAY_OPTIONS = (*TIMER_OPTIONS, "2 Hours", "8 Hours", "24 Hours", "7 Days", "14 Days")
 
 
 def _timeout_seconds(option: str) -> int:
@@ -82,9 +83,22 @@ async def _set_boost_option(ccb: ComfoConnectBridge, option: str) -> None:
         await ccb.set_boost(True, _timeout_seconds(option))
 
 
+async def _set_away_option(ccb: ComfoConnectBridge, option: str) -> None:
+    """Set or cancel away mode from a select option."""
+    if option == TIMER_OFF:
+        await ccb.set_away(False)
+    elif option != TIMER_ACTIVE:
+        await ccb.set_away(True, _timeout_seconds(option))
+
+
 async def _get_boost_option(ccb: ComfoConnectBridge) -> str:
     """Return the current boost select option."""
     return _timer_option(await ccb.get_boost())
+
+
+async def _get_away_option(ccb: ComfoConnectBridge) -> str:
+    """Return the current away select option."""
+    return _timer_option(await ccb.get_away())
 
 
 SELECT_TYPES = (
@@ -180,6 +194,15 @@ SELECT_TYPES = (
         get_value_fn=_get_boost_option,
         set_value_fn=_set_boost_option,
         options=list(TIMER_OPTIONS),
+    ),
+    ComfoconnectSelectEntityDescription(
+        key="away_timeout",
+        name="Away Mode",
+        icon="mdi:home-export-outline",
+        entity_category=EntityCategory.CONFIG,
+        get_value_fn=_get_away_option,
+        set_value_fn=_set_away_option,
+        options=list(AWAY_OPTIONS),
     ),
     ComfoconnectSelectEntityDescription(
         key="sensor_ventmode_temperature_passive",
