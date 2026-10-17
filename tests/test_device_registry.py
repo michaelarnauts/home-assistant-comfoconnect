@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from aiocomfoconnect.properties import PROPERTY_MODEL, PROPERTY_NAME, PROPERTY_SERIAL_NUMBER
 from custom_components.comfoconnect import EVENT_COMFOCONNECT_ALARM
 from custom_components.comfoconnect.const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN
 from homeassistant.const import CONF_HOST
@@ -20,6 +21,11 @@ MockConfigEntry = pytest.importorskip("pytest_homeassistant_custom_component.com
 
 BRIDGE = "custom_components.comfoconnect.ComfoConnectBridge"
 UNIT_UUID = "00" * 16
+UNIT_PROPERTIES = {
+    PROPERTY_NAME.property_id: "ComfoAirQ",
+    PROPERTY_MODEL.property_id: "ComfoAir Q450",
+    PROPERTY_SERIAL_NUMBER.property_id: "BEA0000000001",
+}
 
 
 @pytest.fixture(autouse=True)
@@ -45,7 +51,7 @@ async def test_unit_is_connected_through_the_bridge(hass: HomeAssistant) -> None
             new_callable=AsyncMock,
             return_value=SimpleNamespace(serialNumber="DEMO0001", gatewayVersion=0),
         ),
-        patch(f"{BRIDGE}.get_property", new_callable=AsyncMock, return_value="ComfoAir Q350"),
+        patch(f"{BRIDGE}.get_property", new_callable=AsyncMock, side_effect=lambda prop: UNIT_PROPERTIES.get(prop.property_id, 0)),
         patch("custom_components.comfoconnect.version_decode", return_value="1.0.0"),
         patch(
             "homeassistant.config_entries.ConfigEntries.async_forward_entry_setups",
@@ -70,6 +76,10 @@ async def test_unit_is_connected_through_the_bridge(hass: HomeAssistant) -> None
     assert bridge_device is not None
     assert unit_device is not None
     assert unit_device.via_device_id == bridge_device.id
+
+    # The bridge is named after its model, and both devices show their serial number.
+    assert (bridge_device.name, bridge_device.model, bridge_device.serial_number) == ("ComfoConnect LAN C", "ComfoConnect LAN C", "DEMO0001")
+    assert (unit_device.name, unit_device.model, unit_device.serial_number) == ("ComfoAirQ", "ComfoAir Q450", "BEA0000000001")
 
     # Alarm automations must identify the registered unit, rather than the LAN bridge.
     events = []
