@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any
 
 from aiocomfoconnect.exceptions import (
     AioComfoConnectNotConnected,
@@ -18,6 +16,7 @@ from homeassistant.components.number import NumberDeviceClass, NumberEntity, Num
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -32,18 +31,11 @@ class ComfoConnectNumberRequiredKeysMixin:
     """Mixin for required number keys."""
 
     property: Property
-    get_value_fn: Callable[[ComfoConnectBridge], Awaitable[int]]
-    set_value_fn: Callable[[ComfoConnectBridge, float], Awaitable[Any]]
 
 
 @dataclass
 class ComfoConnectNumberEntityDescription(NumberEntityDescription, ComfoConnectNumberRequiredKeysMixin):
     """Describe a ComfoConnect numeric setting."""
-
-
-async def _set_threshold(ccb: ComfoConnectBridge, prop: Property, value: float) -> None:
-    """Write a threshold in the unit's tenths of a degree."""
-    await ccb.set_property_typed(prop.unit, prop.subunit, prop.property_id, round(value * 10), prop.property_type)
 
 
 NUMBER_TYPES = (
@@ -54,8 +46,6 @@ NUMBER_TYPES = (
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         mode=NumberMode.BOX,
         property=PROPERTY_RMOT_HEATING_THRESHOLD,
-        get_value_fn=lambda ccb: ccb.get_property(PROPERTY_RMOT_HEATING_THRESHOLD),
-        set_value_fn=lambda ccb, value: _set_threshold(ccb, PROPERTY_RMOT_HEATING_THRESHOLD, value),
     ),
     ComfoConnectNumberEntityDescription(
         key="rmot_cooling",
@@ -64,8 +54,6 @@ NUMBER_TYPES = (
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         mode=NumberMode.BOX,
         property=PROPERTY_RMOT_COOLING_THRESHOLD,
-        get_value_fn=lambda ccb: ccb.get_property(PROPERTY_RMOT_COOLING_THRESHOLD),
-        set_value_fn=lambda ccb, value: _set_threshold(ccb, PROPERTY_RMOT_COOLING_THRESHOLD, value),
     ),
 )
 
@@ -95,6 +83,8 @@ class ComfoConnectNumber(NumberEntity):
         self._attr_unique_id = f"{ccb.uuid}-{description.key}"
         self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, ccb.uuid)})
         self._attr_available = False
+        # The limits are fixed for a unit, so they're only read again after the bridge reconnects.
+        self._limits_read = False
 
     async def async_added_to_hass(self) -> None:
         """Subscribe to bridge availability changes."""
@@ -107,6 +97,7 @@ class ComfoConnectNumber(NumberEntity):
         """Wait for a fresh poll when the bridge recovers."""
         if not available:
             self._attr_available = False
+            self._limits_read = False
             self.async_write_ha_state()
         else:
             self.async_schedule_update_ha_state(True)
@@ -117,23 +108,30 @@ class ComfoConnectNumber(NumberEntity):
             self._attr_available = False
             return
         try:
-            limits = await self._read_metadata(0x20)
-            step = await self._read_metadata(0x40)
-            if len(limits) != 2 or len(step) != 1 or limits[0] > limits[1] or step[0] <= 0:
-                raise ValueError("Invalid RMOT property limits")
-            value = await self.entity_description.get_value_fn(self._ccb)
+            if not self._limits_read:
+                limits = await self._read_metadata(0x20)
+                step = await self._read_metadata(0x40)
+                if len(limits) != 2 or len(step) != 1 or limits[0] > limits[1] or step[0] <= 0:
+                    raise ValueError("Invalid RMOT property limits")
+                self._attr_native_min_value, self._attr_native_max_value = (limit / 10 for limit in limits)
+                self._attr_native_step = step[0] / 10
+                self._limits_read = True
+            value = await self._ccb.get_property(self.entity_description.property)
         except (ComfoConnectError, AioComfoConnectTimeout, AioComfoConnectNotConnected, AioComfoConnectNotReachable, ValueError) as err:
             self._attr_available = False
             _LOGGER.warning("Could not update %s: %s", self.entity_description.name, err)
             return
-        self._attr_native_min_value, self._attr_native_max_value = (limit / 10 for limit in limits)
-        self._attr_native_step = step[0] / 10
         self._attr_native_value = value / 10
         self._attr_available = self._ccb.is_available
 
     async def async_set_native_value(self, value: float) -> None:
-        """Write the threshold; read the reported value on the next update."""
-        await self.entity_description.set_value_fn(self._ccb, value)
+        """Write the threshold in tenths of a degree, then read back what the unit reports."""
+        prop = self.entity_description.property
+        try:
+            await self._ccb.set_property_typed(prop.unit, prop.subunit, prop.property_id, round(value * 10), prop.property_type)
+        except (ComfoConnectError, AioComfoConnectTimeout, AioComfoConnectNotConnected, AioComfoConnectNotReachable) as err:
+            raise HomeAssistantError(f"Failed to set {self.entity_description.name}: {err}") from err
+        self.async_schedule_update_ha_state(True)
 
     async def _read_metadata(self, kind: int) -> list[int]:
         """Read signed 16-bit range or step metadata for this property."""

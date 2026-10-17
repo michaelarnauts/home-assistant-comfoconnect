@@ -5,13 +5,14 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from aiocomfoconnect.exceptions import ComfoConnectNotReachable
+from aiocomfoconnect.exceptions import ComfoConnectNotReachable, ComfoConnectRmiError
 from aiocomfoconnect.properties import PROPERTY_RMOT_COOLING_THRESHOLD, PROPERTY_RMOT_HEATING_THRESHOLD
 from custom_components.comfoconnect import ComfoConnectBridge
 from custom_components.comfoconnect.const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN
 from homeassistant.components.number import NumberDeviceClass
 from homeassistant.const import CONF_HOST, STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_component import async_update_entity
@@ -54,9 +55,13 @@ def protocol():
         data = ranges[command[4]] if command[3] == 0x20 else (10,)
         return SimpleNamespace(message=b"".join(value.to_bytes(2, "little", signed=True) for value in data))
 
+    async def set_property_typed(unit, subunit, property_id, value, property_type):
+        values[property_id] = value
+
     with ExitStack() as stack:
-        for method in ("connect", "disconnect", "set_property_typed"):
+        for method in ("connect", "disconnect"):
             stack.enter_context(patch(f"{BRIDGE}.{method}", new_callable=AsyncMock))
+        stack.enter_context(patch(f"{BRIDGE}.set_property_typed", new_callable=AsyncMock, side_effect=set_property_typed))
         stack.enter_context(patch(f"{BRIDGE}.get_property", new_callable=AsyncMock, side_effect=get_property))
         stack.enter_context(patch(f"{BRIDGE}.cmd_rmi_request", new_callable=AsyncMock, side_effect=metadata))
         stack.enter_context(
@@ -108,23 +113,43 @@ async def test_rmot_numbers_are_disabled_configuration_entities(hass: HomeAssist
 
 
 @pytest.mark.parametrize("entity_id,prop,value", [(HEATING, PROPERTY_RMOT_HEATING_THRESHOLD, 12), (COOLING, PROPERTY_RMOT_COOLING_THRESHOLD, 21)])
-async def test_write_uses_tenths_and_next_poll_reports_the_device(
-    hass: HomeAssistant, entry: MockConfigEntry, protocol, entity_id, prop, value
-) -> None:
-    """A write uses the library property and cannot invent an unreported optimistic value."""
+async def test_write_uses_tenths_and_reads_back_the_device(hass: HomeAssistant, entry: MockConfigEntry, protocol, entity_id, prop, value) -> None:
+    """A write uses the library property, and the state shows what the unit reports right after."""
     enable_numbers(hass, entry)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     bridge = hass.data[DOMAIN][entry.entry_id]
-    before = hass.states.get(entity_id).state
 
     await hass.services.async_call("number", "set_value", {"entity_id": entity_id, "value": value}, blocking=True)
+    await hass.async_block_till_done()
     bridge.set_property_typed.assert_awaited_once_with(prop.unit, prop.subunit, prop.property_id, value * 10, prop.property_type)
-    assert hass.states.get(entity_id).state == before
-
-    protocol[0][prop.property_id] = value * 10
-    await async_update_entity(hass, entity_id)
     assert float(hass.states.get(entity_id).state) == value
+
+
+async def test_failed_write_raises_a_home_assistant_error(hass: HomeAssistant, entry: MockConfigEntry, protocol) -> None:
+    """A write the unit refuses is reported to the user instead of failing with a library exception."""
+    enable_numbers(hass, entry)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    bridge = hass.data[DOMAIN][entry.entry_id]
+    bridge.set_property_typed.side_effect = ComfoConnectRmiError("refused")
+
+    with pytest.raises(HomeAssistantError):
+        await hass.services.async_call("number", "set_value", {"entity_id": HEATING, "value": 12}, blocking=True)
+
+
+async def test_limits_are_read_once(hass: HomeAssistant, entry: MockConfigEntry, protocol) -> None:
+    """The range and step don't change, so later polls only read the value."""
+    enable_numbers(hass, entry)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    bridge = hass.data[DOMAIN][entry.entry_id]
+    reads = bridge.cmd_rmi_request.await_count
+
+    protocol[0][PROPERTY_RMOT_HEATING_THRESHOLD.property_id] = 130
+    await async_update_entity(hass, HEATING)
+    assert bridge.cmd_rmi_request.await_count == reads
+    assert hass.states.get(HEATING).state == "13.0"
 
 
 async def test_unavailable_number_recovers_with_fresh_limits(hass: HomeAssistant, entry: MockConfigEntry, protocol) -> None:
@@ -149,10 +174,9 @@ async def test_unavailable_number_recovers_with_fresh_limits(hass: HomeAssistant
 async def test_invalid_limits_disable_the_control(hass: HomeAssistant, entry: MockConfigEntry, protocol) -> None:
     """A failed metadata read must not leave a writable control with guessed limits."""
     enable_numbers(hass, entry)
+    protocol[1][PROPERTY_RMOT_HEATING_THRESHOLD.property_id] = (200, 50)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
-    protocol[1][PROPERTY_RMOT_HEATING_THRESHOLD.property_id] = (200, 50)
-    await async_update_entity(hass, HEATING)
     assert hass.states.get(HEATING).state == STATE_UNAVAILABLE
 
 
@@ -170,12 +194,12 @@ async def test_gateway_failure_keeps_numbers_registered_for_recovery(hass: HomeA
     assert hass.states.get(HEATING).state == "11.0"
 
     bridge = hass.data[DOMAIN][entry.entry_id]
-    normal_reads = bridge.cmd_rmi_request.side_effect
-    bridge.cmd_rmi_request.side_effect = ComfoConnectNotReachable("Unit cannot be reached")
+    normal_reads = bridge.get_property.side_effect
+    bridge.get_property.side_effect = ComfoConnectNotReachable("Unit cannot be reached")
     await async_update_entity(hass, HEATING)
     assert hass.states.get(HEATING).state == STATE_UNAVAILABLE
 
-    bridge.cmd_rmi_request.side_effect = normal_reads
+    bridge.get_property.side_effect = normal_reads
     protocol[0][PROPERTY_RMOT_HEATING_THRESHOLD.property_id] = 130
     await async_update_entity(hass, HEATING)
     assert hass.states.get(HEATING).state == "13.0"
