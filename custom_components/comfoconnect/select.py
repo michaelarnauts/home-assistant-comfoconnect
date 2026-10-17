@@ -101,6 +101,19 @@ async def _get_away_option(ccb: ComfoConnectBridge) -> str:
     return _timer_option(await ccb.get_away())
 
 
+async def _set_bypass_option(ccb: ComfoConnectBridge, option: str) -> None:
+    """Set a bypass timer or restore automatic control."""
+    if option == TIMER_OFF:
+        await ccb.set_bypass(VentilationSetting.AUTO)
+    elif option != TIMER_ACTIVE:
+        await ccb.set_bypass(VentilationSetting.ON, _timeout_seconds(option))
+
+
+async def _get_bypass_option(ccb: ComfoConnectBridge) -> str:
+    """Return whether bypass is forced on."""
+    return _timer_option(await ccb.get_bypass() == VentilationSetting.ON)
+
+
 SELECT_TYPES = (
     ComfoconnectSelectEntityDescription(
         key="select_mode",
@@ -202,6 +215,14 @@ SELECT_TYPES = (
         get_value_fn=_get_away_option,
         set_value_fn=_set_away_option,
         options=list(AWAY_OPTIONS),
+    ),
+    ComfoconnectSelectEntityDescription(
+        key="bypass_timeout",
+        name="Bypass timer",
+        icon="mdi:camera-iris",
+        get_value_fn=_get_bypass_option,
+        set_value_fn=_set_bypass_option,
+        options=list(TIMER_OPTIONS),
     ),
     ComfoconnectSelectEntityDescription(
         key="sensor_ventmode_temperature_passive",
