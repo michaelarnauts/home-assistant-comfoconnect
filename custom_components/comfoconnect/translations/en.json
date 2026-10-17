@@ -66,5 +66,17 @@
                 }
             }
         }
+    },
+    "services": {
+        "start_boost": {
+            "name": "Start boost",
+            "description": "Starts boost mode for a duration of your choice. Use the Cancel boost button or the Off option of the Boost Mode select to stop it early.",
+            "fields": {
+                "duration": {
+                    "name": "Duration",
+                    "description": "How long boost mode stays on."
+                }
+            }
+        }
     }
 }

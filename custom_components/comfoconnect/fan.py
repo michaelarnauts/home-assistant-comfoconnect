@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 from typing import Any
 
 from aiocomfoconnect.const import VentilationMode, VentilationSpeed
@@ -177,6 +178,16 @@ class ComfoConnectFan(FanEntity):
             raise HomeAssistantError(f"Not connected to ComfoConnect bridge: {err}") from err
         except ComfoConnectRmiError as err:
             raise HomeAssistantError(f"Failed to set fan speed: {err}") from err
+
+    async def async_start_boost(self, duration: timedelta) -> None:
+        """Start boost mode for the given duration."""
+        _LOGGER.debug("Starting boost for %s", duration)
+        try:
+            await self._ccb.set_boost(True, int(duration.total_seconds()))
+        except AioComfoConnectNotConnected as err:
+            raise HomeAssistantError(f"Not connected to ComfoConnect bridge: {err}") from err
+        except ComfoConnectRmiError as err:
+            raise HomeAssistantError(f"Failed to start boost: {err}") from err
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new preset mode."""

@@ -6,6 +6,7 @@ import asyncio
 import logging
 from datetime import timedelta
 
+import voluptuous as vol
 from aiocomfoconnect import ComfoConnect, discover_bridges
 from aiocomfoconnect.exceptions import (
     AioComfoConnectNotConnected,
@@ -23,6 +24,7 @@ from aiocomfoconnect.properties import (
 from aiocomfoconnect.sensors import Sensor
 from aiocomfoconnect.util import version_decode
 from homeassistant.components import network
+from homeassistant.components.fan import DOMAIN as FAN_DOMAIN
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import CONF_HOST, EVENT_HOMEASSISTANT_STOP, Platform
 from homeassistant.core import HomeAssistant, callback
@@ -31,12 +33,14 @@ from homeassistant.exceptions import (
     ConfigEntryError,
     ConfigEntryNotReady,
 )
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import service
 from homeassistant.helpers.dispatcher import async_dispatcher_send, dispatcher_send
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.typing import ConfigType
 
-from .const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN
+from .const import ATTR_DURATION, CONF_LOCAL_UUID, CONF_UUID, DOMAIN, SERVICE_START_BOOST
 
 PLATFORMS: list[Platform] = [
     Platform.FAN,
@@ -54,9 +58,26 @@ SIGNAL_COMFOCONNECT_AVAILABILITY = "comfoconnect_availability_{}"
 
 KEEP_ALIVE_INTERVAL = timedelta(seconds=30)
 
+# The unit takes a timer duration in whole seconds, as a signed 32-bit number.
+MAX_TIMER_DURATION = timedelta(seconds=2**31 - 1)
+
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up Zehnder ComfoConnect integration from yaml."""
+    service.async_register_platform_entity_service(
+        hass,
+        DOMAIN,
+        SERVICE_START_BOOST,
+        entity_domain=FAN_DOMAIN,
+        schema={
+            vol.Required(ATTR_DURATION): vol.All(
+                cv.time_period,
+                vol.Range(min=timedelta(seconds=1), max=MAX_TIMER_DURATION),
+            ),
+        },
+        func="async_start_boost",
+    )
+
     if DOMAIN in config:
         hass.async_create_task(
             hass.config_entries.flow.async_init(
