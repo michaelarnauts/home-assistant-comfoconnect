@@ -17,6 +17,7 @@ integration in Home Assistant.
 * Show outside humidity after the preheater as an optional diagnostic sensor
 * Configure passive-temperature and humidity ventilation controls
 * Configure heating and cooling RMOT thresholds
+* Configure the warm, normal and cool profile temperatures
 * Control timed away mode
 * Show various sensors
 
@@ -63,6 +64,10 @@ The `comfoconnect_alarm` event reports changed alarms and clears per node. Its p
 ### RMOT thresholds
 
 Enable the Heating RMOT threshold and Cooling RMOT threshold number entities to configure the running mean outdoor temperature limits used for heating and cooling. The entities use the minimum, maximum, and step reported by the unit and are disabled by default.
+
+### Profile temperatures
+
+Enable the Warm, Normal and Cool profile temperature number entities to configure the comfort temperature of each temperature profile. The unit only uses them in the fixed temperature profile mode; in adaptive mode it derives the comfort temperature from the RMOT, but it still stores the values. The Target temperature sensor shows the comfort temperature the unit is currently using. Like the RMOT thresholds, they are disabled by default.
 
 ## Installation
 

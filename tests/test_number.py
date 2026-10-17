@@ -6,7 +6,14 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from aiocomfoconnect.exceptions import ComfoConnectNotReachable, ComfoConnectRmiError
-from aiocomfoconnect.properties import PROPERTY_RMOT_COOLING_THRESHOLD, PROPERTY_RMOT_HEATING_THRESHOLD, PropertyConstraints
+from aiocomfoconnect.properties import (
+    PROPERTY_PROFILE_TEMPERATURE_COOL,
+    PROPERTY_PROFILE_TEMPERATURE_NORMAL,
+    PROPERTY_PROFILE_TEMPERATURE_WARM,
+    PROPERTY_RMOT_COOLING_THRESHOLD,
+    PROPERTY_RMOT_HEATING_THRESHOLD,
+    PropertyConstraints,
+)
 from custom_components.comfoconnect import ComfoConnectBridge
 from custom_components.comfoconnect.const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN
 from homeassistant.components.number import NumberDeviceClass
@@ -42,14 +49,18 @@ def protocol():
     """Mock the device boundary; the integration and number platform load normally."""
     heating = PROPERTY_RMOT_HEATING_THRESHOLD
     cooling = PROPERTY_RMOT_COOLING_THRESHOLD
+    profiles = (PROPERTY_PROFILE_TEMPERATURE_WARM, PROPERTY_PROFILE_TEMPERATURE_NORMAL, PROPERTY_PROFILE_TEMPERATURE_COOL)
     values = {heating.property_id: 110, cooling.property_id: 200}
     ranges = {heating.property_id: (0, 150), cooling.property_id: (150, 400)}
+    # The profile temperatures and their ranges as read from a real unit.
+    values |= {prop.property_id: value for prop, value in zip(profiles, (230, 210, 190), strict=True)}
+    ranges |= {prop.property_id: limits for prop, limits in zip(profiles, ((230, 289), (189, 233), (178, 190)), strict=True)}
 
     async def get_property(prop):
         return "Test unit"
 
     async def get_property_constraints(prop):
-        assert prop in (heating, cooling)
+        assert prop in (heating, cooling, *profiles)
         return PropertyConstraints(values[prop.property_id], *ranges[prop.property_id], 10)
 
     async def set_property_typed(unit, subunit, property_id, value, property_type):
@@ -203,3 +214,58 @@ async def test_gateway_failure_keeps_numbers_registered_for_recovery(hass: HomeA
     protocol[0][PROPERTY_RMOT_HEATING_THRESHOLD.property_id] = 130
     await async_update_entity(hass, HEATING)
     assert hass.states.get(HEATING).state == "13.0"
+
+
+PROFILE_TEMPERATURES = {
+    "profile_temperature_warm": ("number.test_unit_warm_profile_temperature", PROPERTY_PROFILE_TEMPERATURE_WARM, "23.0", 23.0, 28.9),
+    "profile_temperature_normal": ("number.test_unit_normal_profile_temperature", PROPERTY_PROFILE_TEMPERATURE_NORMAL, "21.0", 18.9, 23.3),
+    "profile_temperature_cool": ("number.test_unit_cool_profile_temperature", PROPERTY_PROFILE_TEMPERATURE_COOL, "19.0", 17.8, 19.0),
+}
+
+
+def enable_profile_temperatures(hass: HomeAssistant, entry: MockConfigEntry) -> None:
+    """Opt into the profile temperature entities before setup."""
+    registry = er.async_get(hass)
+    for key, (entity_id, *_) in PROFILE_TEMPERATURES.items():
+        registry.async_get_or_create(
+            "number", DOMAIN, f"{UNIT_UUID}-{key}", config_entry=entry, disabled_by=None, suggested_object_id=entity_id.removeprefix("number.")
+        )
+
+
+async def test_profile_temperatures_load_with_device_limits(hass: HomeAssistant, entry: MockConfigEntry, protocol) -> None:
+    """The warm, normal and cool temperatures use the ranges the unit reports."""
+    enable_profile_temperatures(hass, entry)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    for entity_id, _, value, minimum, maximum in PROFILE_TEMPERATURES.values():
+        state = hass.states.get(entity_id)
+        assert state.state == value
+        assert state.attributes["device_class"] == NumberDeviceClass.TEMPERATURE
+        assert (state.attributes["min"], state.attributes["max"], state.attributes["step"]) == (minimum, maximum, 1)
+
+
+async def test_profile_temperatures_are_disabled_configuration_entities(hass: HomeAssistant, entry: MockConfigEntry, protocol) -> None:
+    """Like the RMOT thresholds, the profile temperatures are opt-in."""
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    registry = er.async_get(hass)
+    for key in PROFILE_TEMPERATURES:
+        entity = registry.async_get(registry.async_get_entity_id("number", DOMAIN, f"{UNIT_UUID}-{key}"))
+        assert entity.disabled_by == er.RegistryEntryDisabler.INTEGRATION
+        assert entity.entity_category == EntityCategory.CONFIG
+
+
+async def test_write_a_profile_temperature(hass: HomeAssistant, entry: MockConfigEntry, protocol) -> None:
+    """A profile temperature is written in tenths of a degree to its own property."""
+    enable_profile_temperatures(hass, entry)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    bridge = hass.data[DOMAIN][entry.entry_id]
+    entity_id, prop, *_ = PROFILE_TEMPERATURES["profile_temperature_normal"]
+
+    await hass.services.async_call("number", "set_value", {"entity_id": entity_id, "value": 22}, blocking=True)
+    await hass.async_block_till_done()
+
+    bridge.set_property_typed.assert_awaited_once_with(prop.unit, prop.subunit, prop.property_id, 220, prop.property_type)
+    assert hass.states.get(entity_id).state == "22.0"
