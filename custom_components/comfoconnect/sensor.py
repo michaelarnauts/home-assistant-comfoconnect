@@ -32,6 +32,7 @@ from aiocomfoconnect.sensors import (
     SENSOR_FAN_SUPPLY_DUTY,
     SENSOR_FAN_SUPPLY_FLOW,
     SENSOR_FAN_SUPPLY_SPEED,
+    SENSOR_HUMIDITY_AFTER_PREHEATER,
     SENSOR_HUMIDITY_EXHAUST,
     SENSOR_HUMIDITY_EXTRACT,
     SENSOR_HUMIDITY_OUTDOOR,
@@ -112,6 +113,16 @@ class ComfoconnectSensorEntityDescription(SensorEntityDescription, ComfoconnectR
 
 
 SENSOR_TYPES = (
+    ComfoconnectSensorEntityDescription(
+        key=SENSOR_HUMIDITY_AFTER_PREHEATER,
+        device_class=SensorDeviceClass.HUMIDITY,
+        state_class=SensorStateClass.MEASUREMENT,
+        name="Outside humidity after preheater",
+        native_unit_of_measurement=PERCENTAGE,
+        ccb_sensor=SENSORS.get(SENSOR_HUMIDITY_AFTER_PREHEATER),
+        entity_registry_enabled_default=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_TEMPERATURE_EXTRACT,
         device_class=SensorDeviceClass.TEMPERATURE,
