@@ -199,7 +199,6 @@ SELECT_TYPES = (
         key="away_timeout",
         name="Away Mode",
         icon="mdi:home-export-outline",
-        entity_category=EntityCategory.CONFIG,
         get_value_fn=_get_away_option,
         set_value_fn=_set_away_option,
         options=list(AWAY_OPTIONS),
