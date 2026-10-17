@@ -34,6 +34,16 @@ This integration supports the following additional features over the existing in
 
 Choose a duration in Boost Mode to start a timer. Choose `Off`, or use Cancel boost, to stop it. `Active` reports a running timer; selecting it does not start or extend a timer.
 
+For another duration, use the `comfoconnect.start_boost` action on the fan entity. The unit counts down to the second.
+
+```yaml
+action: comfoconnect.start_boost
+target:
+  entity_id: fan.comfoairq
+data:
+  duration: "02:30:00"
+```
+
 ### Away mode
 
 Choose a duration in Away Mode to start a timer. Choose `Off`, or use Cancel away, to stop it. `Active` reports a running timer; selecting it does not start or extend a timer.
