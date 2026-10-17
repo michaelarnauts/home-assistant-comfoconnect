@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import logging
+import time
 from collections.abc import Awaitable, Callable, Coroutine
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Any, cast
 
 from aiocomfoconnect.const import (
@@ -56,7 +58,12 @@ class ComfoconnectSelectEntityDescription(SelectEntityDescription, ComfoconnectS
 
     sensor: AioComfoConnectSensor = None
     sensor_value_fn: Callable[[str], Any] = None
+    # Poll less often than the platform's scan interval, for settings that hardly ever change.
+    update_interval: timedelta | None = None
 
+
+# Settings that are normally only changed during installation don't need to be polled every 30 seconds.
+SETTING_UPDATE_INTERVAL = timedelta(minutes=5)
 
 TIMER_OFF = "Off"
 TIMER_ACTIVE = "Active"
@@ -170,6 +177,8 @@ SELECT_TYPES = (
     ComfoconnectSelectEntityDescription(
         key="balance_mode",
         name="Balance Mode",
+        entity_registry_enabled_default=False,
+        update_interval=SETTING_UPDATE_INTERVAL,
         entity_category=EntityCategory.CONFIG,
         get_value_fn=lambda ccb: cast(Coroutine, ccb.get_balance_mode()),
         set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_balance_mode(option)),
@@ -204,6 +213,8 @@ SELECT_TYPES = (
         key="temperature_profile_mode",
         name="Temperature Profile Mode",
         icon="mdi:thermometer-auto",
+        entity_registry_enabled_default=False,
+        update_interval=SETTING_UPDATE_INTERVAL,
         entity_category=EntityCategory.CONFIG,
         get_value_fn=_get_temperature_profile_mode,
         set_value_fn=_set_temperature_profile_mode,
@@ -254,6 +265,8 @@ SELECT_TYPES = (
         key="sensor_ventmode_temperature_passive",
         name="Temperature sensor ventilation",
         icon="mdi:thermometer-auto",
+        entity_registry_enabled_default=False,
+        update_interval=SETTING_UPDATE_INTERVAL,
         entity_category=EntityCategory.CONFIG,
         get_value_fn=lambda ccb: cast(Coroutine, ccb.get_sensor_ventmode_temperature_passive()),
         set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_sensor_ventmode_temperature_passive(option)),
@@ -267,6 +280,8 @@ SELECT_TYPES = (
         key="sensor_ventmode_humidity_comfort",
         name="Humidity comfort ventilation",
         icon="mdi:water-percent",
+        entity_registry_enabled_default=False,
+        update_interval=SETTING_UPDATE_INTERVAL,
         entity_category=EntityCategory.CONFIG,
         get_value_fn=lambda ccb: cast(Coroutine, ccb.get_sensor_ventmode_humidity_comfort()),
         set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_sensor_ventmode_humidity_comfort(option)),
@@ -280,6 +295,8 @@ SELECT_TYPES = (
         key="sensor_ventmode_humidity_protection",
         name="Humidity protection ventilation",
         icon="mdi:water-alert",
+        entity_registry_enabled_default=False,
+        update_interval=SETTING_UPDATE_INTERVAL,
         entity_category=EntityCategory.CONFIG,
         get_value_fn=lambda ccb: cast(Coroutine, ccb.get_sensor_ventmode_humidity_protection()),
         set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_sensor_ventmode_humidity_protection(option)),
@@ -326,6 +343,7 @@ class ComfoConnectSelect(SelectEntity):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._ccb.uuid)},
         )
+        self._last_update: float | None = None
 
     async def async_added_to_hass(self) -> None:
         """Register for sensor updates and availability changes."""
@@ -375,7 +393,11 @@ class ComfoConnectSelect(SelectEntity):
 
     async def async_update(self) -> None:
         """Update the state."""
+        interval = self.entity_description.update_interval
+        if interval and self._last_update is not None and time.monotonic() - self._last_update < interval.total_seconds():
+            return
         self._attr_current_option = await self.entity_description.get_value_fn(self._ccb)
+        self._last_update = time.monotonic()
 
     async def async_select_option(self, option: str) -> None:
         """Set the selected option."""
