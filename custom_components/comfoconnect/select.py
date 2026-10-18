@@ -38,16 +38,15 @@ from homeassistant.components.select import SelectEntity, SelectEntityDescriptio
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import DeviceInfo, EntityCategory
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import (
-    DOMAIN,
-    SIGNAL_COMFOCONNECT_AVAILABILITY,
     SIGNAL_COMFOCONNECT_UPDATE_RECEIVED,
     ComfoConnectBridge,
     ComfoConnectConfigEntry,
 )
+from .entity import ComfoConnectEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -337,10 +336,9 @@ async def async_setup_entry(
     async_add_entities(selects, True)
 
 
-class ComfoConnectSelect(SelectEntity):
+class ComfoConnectSelect(ComfoConnectEntity, SelectEntity):
     """Representation of a ComfoConnect select."""
 
-    _attr_has_entity_name = True
     entity_description: ComfoconnectSelectEntityDescription
 
     def __init__(
@@ -350,25 +348,15 @@ class ComfoConnectSelect(SelectEntity):
         description: ComfoconnectSelectEntityDescription,
     ) -> None:
         """Initialize the ComfoConnect select."""
-        self._ccb = ccb
+        super().__init__(ccb)
         self.entity_description = description
         self._attr_should_poll = not description.sensor
         self._attr_unique_id = f"{self._ccb.uuid}-{description.key}"
-        self._attr_available = ccb.is_available
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, self._ccb.uuid)},
-        )
         self._last_update: float | None = None
 
     async def async_added_to_hass(self) -> None:
         """Register for sensor updates and availability changes."""
-        self.async_on_remove(
-            async_dispatcher_connect(
-                self.hass,
-                SIGNAL_COMFOCONNECT_AVAILABILITY.format(self._ccb.uuid),
-                self._handle_availability_update,
-            )
-        )
+        await super().async_added_to_hass()
 
         if not self.entity_description.sensor:
             return
@@ -386,12 +374,6 @@ class ComfoConnectSelect(SelectEntity):
             )
         )
         await self._ccb.register_sensor(self.entity_description.sensor)
-
-    @callback
-    def _handle_availability_update(self, available: bool) -> None:
-        """Handle bridge availability changes."""
-        self._attr_available = available
-        self.async_write_ha_state()
 
     @callback
     def _handle_update(self, value):
