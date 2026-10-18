@@ -8,7 +8,7 @@ from typing import Any
 import aiocomfoconnect
 import voluptuous as vol
 from aiocomfoconnect import Bridge
-from aiocomfoconnect.exceptions import ComfoConnectNotAllowed
+from aiocomfoconnect.exceptions import AioComfoConnectError, ComfoConnectNotAllowed
 from homeassistant import config_entries
 from homeassistant.components import network
 from homeassistant.config_entries import ConfigFlowResult
@@ -37,6 +37,7 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_import(self, import_config: ConfigType | None) -> ConfigFlowResult:
         """Import a config entry from configuration.yaml."""
         self.local_uuid = import_config.get("token")
+        # Without a form to return to, an import that can't reach the bridge aborts in the manual step.
         return await self.async_step_manual({CONF_HOST: import_config[CONF_HOST]})
 
     async def async_step_reauth(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
@@ -48,11 +49,14 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self.bridge = discovered_bridge or Bridge(user_input[CONF_HOST], user_input[CONF_UUID])
         self.local_uuid = user_input[CONF_LOCAL_UUID]
 
-        return await self._register()
+        try:
+            return await self._register()
+        except AioComfoConnectError:
+            return self.async_abort(reason="cannot_connect")
 
     async def async_step_user(self, user_input: ConfigType | None = None) -> ConfigFlowResult:
         """Handle a flow initiated by the user."""
-
+        errors = {}
         if user_input is not None:
             # User has chosen to manually enter a bridge
             if user_input[CONF_UUID] == COMFOCONNECT_MANUAL_BRIDGE_ID:
@@ -66,7 +70,10 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 await self.async_set_unique_id(self.bridge.uuid, raise_on_progress=False)
                 self._abort_if_unique_id_configured()
 
-                return await self._register()
+                try:
+                    return await self._register()
+                except AioComfoConnectError:
+                    errors = {"base": "cannot_connect"}
 
         # Find bridges on the networks that Home Assistant is configured to use, and filter out the ones we already have configured
         broadcast_addresses = await network.async_get_ipv4_broadcast_addresses(self.hass)
@@ -76,6 +83,7 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # Show the bridge selection form
         return self.async_show_form(
             step_id="user",
+            errors=errors,
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_UUID): vol.In(
@@ -103,16 +111,21 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 await self.async_set_unique_id(self.bridge.uuid, raise_on_progress=False)
                 self._abort_if_unique_id_configured()
 
-                return await self._register()
+                try:
+                    return await self._register()
+                except AioComfoConnectError:
+                    if self.source == config_entries.SOURCE_IMPORT:
+                        return self.async_abort(reason="cannot_connect")
+                    errors = {"base": "cannot_connect"}
 
         return self.async_show_form(
             step_id="manual",
             errors=errors,
-            data_schema=vol.Schema({vol.Required(CONF_HOST): str}),
+            data_schema=self.add_suggested_values_to_schema(vol.Schema({vol.Required(CONF_HOST): str}), user_input),
         )
 
     async def _register(self, pin: int | None = None) -> ConfigFlowResult:
-        """Register on the bridge."""
+        """Register on the bridge, raising AioComfoConnectError so the calling step can show its own error."""
 
         if self.local_uuid is None:
             # Generate our own UUID if non is provided
@@ -159,7 +172,10 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Handle the PIN entry step."""
         if user_input and CONF_PIN in user_input:
-            return await self._register(user_input[CONF_PIN])
+            try:
+                return await self._register(user_input[CONF_PIN])
+            except AioComfoConnectError:
+                errors = {"base": "cannot_connect"}
 
         return self.async_show_form(
             step_id="enter_pin",
