@@ -66,6 +66,7 @@ class ComfoConnectFan(ComfoConnectEntity, FanEntity):
     _attr_supported_features = FanEntityFeature.SET_SPEED | FanEntityFeature.PRESET_MODE | FanEntityFeature.TURN_ON | FanEntityFeature.TURN_OFF
     _attr_speed_count = len(FAN_SPEEDS)
     _attr_name = None
+    _attr_translation_key = "ventilation"
 
     def __init__(self, ccb: ComfoConnectBridge, config_entry: ComfoConnectConfigEntry) -> None:
         """Initialize the ComfoConnect fan."""

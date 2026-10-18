@@ -22,6 +22,6 @@ async def test_preheater_humidity_measurement(hass: HomeAssistant) -> None:
     assert state.attributes["device_class"] == SensorDeviceClass.HUMIDITY
     assert state.attributes["state_class"] == SensorStateClass.MEASUREMENT
     assert state.attributes["unit_of_measurement"] == "%"
-    assert entity.name == "Outside humidity after preheater"
+    assert entity.translation_key == "outside_humidity_after_preheater"
     assert entity.entity_category == EntityCategory.DIAGNOSTIC
     assert not entity.entity_registry_enabled_default

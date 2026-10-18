@@ -36,7 +36,7 @@ This integration supports the following additional features over the existing in
 
 ### Boost mode
 
-Choose a duration in Boost Mode to start a timer. Choose `Off`, or use Cancel boost, to stop it. `Active` reports a running timer; selecting it does not start or extend a timer.
+Choose a duration in Boost Mode to start a timer. Choose Off, or use Cancel boost, to stop it. Active reports a running timer; selecting it does not start or extend a timer. In automations, the options are `off`, `active` and the duration in minutes (`10` to `60`).
 
 For another duration, use the `comfoconnect.start_boost` action on the fan entity. The unit counts down to the second.
 
@@ -50,13 +50,13 @@ data:
 
 ### Away mode
 
-Choose a duration in Away Mode to start a timer. Choose `Off`, or use Cancel away, to stop it. `Active` reports a running timer; selecting it does not start or extend a timer.
+Choose a duration in Away Mode to start a timer. Choose Off, or use Cancel away, to stop it. Active reports a running timer; selecting it does not start or extend a timer.
 
-Away Mode offers durations in minutes, 2/8/24 hours, and 7/14 days. Cancel the timer when you return early.
+Away Mode offers durations in minutes, 2/8/24 hours, and 7/14 days. Cancel the timer when you return early. In automations, the durations are in minutes too, e.g. `120` for 2 hours and `10080` for 7 days.
 
 ### Bypass timer
 
-Choose a duration in Bypass timer to force bypass on for 10–60 minutes. Choose `Off` to restore automatic control. `Active` means bypass is forced on, including through Bypass Mode; selecting it only refreshes status.
+Choose a duration in Bypass timer to force bypass on for 10–60 minutes. Choose Off (`off`) to restore automatic control. Active (`active`) means bypass is forced on, including through Bypass Mode; selecting it only refreshes status.
 
 ### Alarm events
 

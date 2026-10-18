@@ -39,19 +39,19 @@ BUTTON_TYPES = (
     ComfoconnectButtonEntityDescription(
         key="reset_errors",
         press_fn=lambda ccb, option: cast(Coroutine, ccb.clear_errors()),
-        name="Reset errors",
+        translation_key="reset_errors",
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
     ComfoconnectButtonEntityDescription(
         key="cancel_boost",
         press_fn=lambda ccb, option: cast(Coroutine, ccb.set_boost(False)),
-        name="Cancel boost",
+        translation_key="cancel_boost",
         icon="mdi:fan-off",
     ),
     ComfoconnectButtonEntityDescription(
         key="cancel_away",
         press_fn=lambda ccb, option: cast(Coroutine, ccb.set_away(False)),
-        name="Cancel away",
+        translation_key="cancel_away",
         icon="mdi:home-import-outline",
     ),
 )
@@ -84,7 +84,6 @@ class ComfoConnectButton(ComfoConnectEntity, ButtonEntity):
         """Initialize the ComfoConnect sensor."""
         super().__init__(ccb)
         self.entity_description = description
-        self._attr_name = f"{description.name}"
         self._attr_unique_id = f"{self._ccb.uuid}-{description.key}"
 
     async def async_press(self) -> None:
@@ -92,4 +91,4 @@ class ComfoConnectButton(ComfoConnectEntity, ButtonEntity):
         try:
             await self.entity_description.press_fn(self._ccb, self._attr_unique_id)
         except AioComfoConnectError as err:
-            raise HomeAssistantError(f"Failed to press {self.entity_description.name}: {err}") from err
+            raise HomeAssistantError(f"Failed to press {self.name}: {err}") from err

@@ -55,35 +55,35 @@ class ComfoconnectBinarySensorEntityDescription(BinarySensorEntityDescription, C
 SENSOR_TYPES = (
     ComfoconnectBinarySensorEntityDescription(
         key=SENSOR_SEASON_HEATING_ACTIVE,
-        name="Heating Season Active",
+        translation_key="heating_season_active",
         ccb_sensor=SENSORS.get(SENSOR_SEASON_HEATING_ACTIVE),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
     ComfoconnectBinarySensorEntityDescription(
         key=SENSOR_SEASON_COOLING_ACTIVE,
-        name="Cooling Season Active",
+        translation_key="cooling_season_active",
         ccb_sensor=SENSORS.get(SENSOR_SEASON_COOLING_ACTIVE),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
     ComfoconnectBinarySensorEntityDescription(
         key=SENSOR_COMFOFOND_GHE_PRESENT,
-        name="ComfoFond GHE present",
+        translation_key="comfofond_ghe_present",
         ccb_sensor=SENSORS.get(SENSOR_COMFOFOND_GHE_PRESENT),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
     ComfoconnectBinarySensorEntityDescription(
         key=SENSOR_POSTHEATER_PRESENT,
-        name="Postheater present",
+        translation_key="postheater_present",
         ccb_sensor=SENSORS.get(SENSOR_POSTHEATER_PRESENT),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
     ComfoconnectBinarySensorEntityDescription(
         key=SENSOR_COMFOCOOL_STATE,
-        name="ComfoCool state",
+        translation_key="comfocool_state",
         ccb_sensor=SENSORS.get(SENSOR_COMFOCOOL_STATE),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -120,7 +120,6 @@ class ComfoConnectBinarySensor(ComfoConnectEntity, BinarySensorEntity):
         """Initialize the ComfoConnect sensor."""
         super().__init__(ccb)
         self.entity_description = description
-        self._attr_name = f"{description.name}"
         self._attr_unique_id = f"{self._ccb.uuid}-{description.key}"
 
     async def async_added_to_hass(self) -> None:
@@ -128,7 +127,7 @@ class ComfoConnectBinarySensor(ComfoConnectEntity, BinarySensorEntity):
         await super().async_added_to_hass()
         _LOGGER.debug(
             "Registering for sensor %s (%d)",
-            self.entity_description.name,
+            self.entity_id,
             self.entity_description.key,
         )
         self.async_on_remove(
@@ -145,7 +144,7 @@ class ComfoConnectBinarySensor(ComfoConnectEntity, BinarySensorEntity):
         """Handle update callbacks."""
         _LOGGER.debug(
             "Handle update for sensor %s (%d): %s",
-            self.entity_description.name,
+            self.entity_id,
             self.entity_description.key,
             value,
         )
@@ -159,7 +158,7 @@ class ComfoConnectAlarmBinarySensor(ComfoConnectEntity, BinarySensorEntity):
 
     _attr_device_class = BinarySensorDeviceClass.PROBLEM
     _attr_entity_category = EntityCategory.DIAGNOSTIC
-    _attr_name = "Active alarms"
+    _attr_translation_key = "active_alarms"
     _attr_should_poll = False
 
     def __init__(self, ccb: ComfoConnectBridge) -> None:

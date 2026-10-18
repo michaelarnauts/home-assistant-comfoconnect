@@ -23,29 +23,29 @@ def test_bypass_duration_status_and_cancellation(tmp_path, minutes):
         entity = ComfoConnectSelect(bridge, SimpleNamespace(), description)
         entity.hass = hass
         entity.entity_id = "select.bypass_timer"
-        await entity.async_select_option("Active")
+        await entity.async_select_option("active")
         bridge.set_bypass.assert_not_awaited()
-        assert hass.states.get(entity.entity_id).state == "Off"
-        await entity.async_select_option(f"{minutes} Minutes")
+        assert hass.states.get(entity.entity_id).state == "off"
+        await entity.async_select_option(f"{minutes}")
         bridge.set_bypass.assert_awaited_once_with(VentilationSetting.ON, minutes * 60)
-        assert hass.states.get(entity.entity_id).state == "Active"
-        for mode, expected in ((VentilationSetting.ON, "Active"), (VentilationSetting.AUTO, "Off"), (VentilationSetting.OFF, "Off")):
+        assert hass.states.get(entity.entity_id).state == "active"
+        for mode, expected in ((VentilationSetting.ON, "active"), (VentilationSetting.AUTO, "off"), (VentilationSetting.OFF, "off")):
             bridge.get_bypass.return_value = mode
             await entity.async_update()
             assert entity.current_option == expected
             assert entity.current_option in entity.options
         bridge.get_bypass.return_value = VentilationSetting.ON
-        await entity.async_select_option("Active")
+        await entity.async_select_option("active")
         assert bridge.set_bypass.await_count == 1
-        assert hass.states.get(entity.entity_id).state == "Active"
-        await entity.async_select_option("Off")
+        assert hass.states.get(entity.entity_id).state == "active"
+        await entity.async_select_option("off")
         assert bridge.set_bypass.await_args.args == (VentilationSetting.AUTO,)
-        assert hass.states.get(entity.entity_id).state == "Off"
+        assert hass.states.get(entity.entity_id).state == "off"
 
     asyncio.run(scenario())
 
 
-@pytest.mark.parametrize(("value", "expected"), [(0, "Off"), (1, "Active"), (2, "Off")])
+@pytest.mark.parametrize(("value", "expected"), [(0, "off"), (1, "active"), (2, "off")])
 def test_bypass_timer_follows_the_pushed_activation_state(value: int, expected: str) -> None:
     """PDO 66 is pushed when bypass is forced on and when the timer ends, so the select isn't polled."""
     description = next(item for item in SELECT_TYPES if item.key == "bypass_timeout")

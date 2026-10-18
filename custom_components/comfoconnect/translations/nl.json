@@ -1,0 +1,365 @@
+{
+    "config": {
+        "error": {
+            "invalid_pin": "Ongeldige pincode",
+            "invalid_host": "Geen ComfoConnect-gateway gevonden op dit adres",
+            "cannot_connect": "Kan geen verbinding maken met de gateway. Controleer of die aan staat en bereikbaar is, en of de officiële app hem niet gebruikt."
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "host": "Host"
+                },
+                "title": "ComfoConnect LAN C-gateway toevoegen",
+                "description": "Kies de ComfoConnect LAN C-gateway uit de lijst hieronder."
+            },
+            "manual": {
+                "data": {
+                    "host": "Host"
+                },
+                "title": "ComfoConnect LAN C-gateway handmatig toevoegen",
+                "description": "Vul hieronder de hostnaam of het IP-adres van een ComfoConnect LAN C-gateway in."
+            },
+            "enter_pin": {
+                "title": "Pincode invoeren",
+                "description": "De gekozen ComfoConnect LAN C-gateway gebruikt niet de standaardpincode. Vul de juiste pincode in."
+            },
+            "confirm": {
+                "description": "Wil je beginnen met instellen?"
+            }
+        },
+        "create_entry": {
+            "default": "Sommige sensoren zijn standaard uitgeschakeld. Je kunt ze na het instellen van de integratie inschakelen in het entiteitenregister."
+        },
+        "abort": {
+            "no_devices_found": "Geen apparaten gevonden op het netwerk",
+            "reauth_successful": "Opnieuw authenticeren is gelukt",
+            "cannot_connect": "Kan geen verbinding maken met de gateway. Controleer of die aan staat en bereikbaar is, en of de officiële app hem niet gebruikt."
+        }
+    },
+    "entity": {
+        "binary_sensor": {
+            "heating_season_active": {
+                "name": "Stookseizoen actief"
+            },
+            "cooling_season_active": {
+                "name": "Koelseizoen actief"
+            },
+            "comfofond_ghe_present": {
+                "name": "ComfoFond-aardwarmtewisselaar aanwezig"
+            },
+            "postheater_present": {
+                "name": "Naverwarmer aanwezig"
+            },
+            "comfocool_state": {
+                "name": "ComfoCool-status"
+            },
+            "active_alarms": {
+                "name": "Huidige fouten"
+            }
+        },
+        "button": {
+            "reset_errors": {
+                "name": "Fouten resetten"
+            },
+            "cancel_boost": {
+                "name": "Boost annuleren"
+            },
+            "cancel_away": {
+                "name": "Afwezig annuleren"
+            }
+        },
+        "fan": {
+            "ventilation": {
+                "state_attributes": {
+                    "preset_mode": {
+                        "state": {
+                            "auto": "Auto",
+                            "manual": "Manueel"
+                        }
+                    }
+                }
+            }
+        },
+        "number": {
+            "rmot_heating": {
+                "name": "Verwarmingslimiet RMOT"
+            },
+            "rmot_cooling": {
+                "name": "Koellimiet RMOT"
+            },
+            "profile_temperature_warm": {
+                "name": "Temperatuur profiel warm"
+            },
+            "profile_temperature_normal": {
+                "name": "Temperatuur profiel normaal"
+            },
+            "profile_temperature_cool": {
+                "name": "Temperatuur profiel koel"
+            }
+        },
+        "select": {
+            "select_mode": {
+                "name": "Ventilatiemodus",
+                "state": {
+                    "auto": "Auto",
+                    "manual": "Manueel"
+                }
+            },
+            "bypass_mode": {
+                "name": "Bypassmodus",
+                "state": {
+                    "auto": "Auto",
+                    "on": "Aan",
+                    "off": "Uit"
+                }
+            },
+            "balance_mode": {
+                "name": "Balansmodus",
+                "state": {
+                    "balance": "Balans",
+                    "supply_only": "Alleen toevoer",
+                    "exhaust_only": "Alleen afvoer"
+                }
+            },
+            "temperature_profile": {
+                "name": "Temperatuurprofiel",
+                "state": {
+                    "warm": "Warm",
+                    "normal": "Normaal",
+                    "cool": "Koel"
+                }
+            },
+            "temperature_profile_mode": {
+                "name": "Temperatuurprofielmodus",
+                "state": {
+                    "adaptive": "Adaptief",
+                    "fixed": "Vast"
+                }
+            },
+            "comfocool": {
+                "name": "ComfoCool-modus",
+                "state": {
+                    "auto": "Auto",
+                    "off": "Uit"
+                }
+            },
+            "boost_timeout": {
+                "name": "Boostmodus",
+                "state": {
+                    "off": "Uit",
+                    "active": "Actief",
+                    "10": "10 minuten",
+                    "20": "20 minuten",
+                    "30": "30 minuten",
+                    "40": "40 minuten",
+                    "50": "50 minuten",
+                    "60": "60 minuten"
+                }
+            },
+            "away_timeout": {
+                "name": "Afwezig-modus",
+                "state": {
+                    "off": "Uit",
+                    "active": "Actief",
+                    "10": "10 minuten",
+                    "20": "20 minuten",
+                    "30": "30 minuten",
+                    "40": "40 minuten",
+                    "50": "50 minuten",
+                    "60": "60 minuten",
+                    "120": "2 uur",
+                    "480": "8 uur",
+                    "1440": "24 uur",
+                    "10080": "7 dagen",
+                    "20160": "14 dagen"
+                }
+            },
+            "bypass_timeout": {
+                "name": "Bypasstimer",
+                "state": {
+                    "off": "Uit",
+                    "active": "Actief",
+                    "10": "10 minuten",
+                    "20": "20 minuten",
+                    "30": "30 minuten",
+                    "40": "40 minuten",
+                    "50": "50 minuten",
+                    "60": "60 minuten"
+                }
+            },
+            "sensor_ventmode_temperature_passive": {
+                "name": "Sensorventilatie temperatuur passief",
+                "state": {
+                    "auto": "Auto",
+                    "on": "Aan",
+                    "off": "Uit"
+                }
+            },
+            "sensor_ventmode_humidity_comfort": {
+                "name": "Sensorventilatie comfort vocht",
+                "state": {
+                    "auto": "Auto",
+                    "on": "Aan",
+                    "off": "Uit"
+                }
+            },
+            "sensor_ventmode_humidity_protection": {
+                "name": "Sensorventilatie bescherming tegen vocht",
+                "state": {
+                    "auto": "Auto",
+                    "on": "Aan",
+                    "off": "Uit"
+                }
+            }
+        },
+        "sensor": {
+            "outside_humidity_after_preheater": {
+                "name": "Buitenluchtvochtigheid na voorverwarmer"
+            },
+            "inside_temperature": {
+                "name": "Binnentemperatuur"
+            },
+            "inside_humidity": {
+                "name": "Binnenluchtvochtigheid"
+            },
+            "current_rmot": {
+                "name": "Huidige RMOT"
+            },
+            "target_temperature": {
+                "name": "Doeltemperatuur"
+            },
+            "outside_temperature": {
+                "name": "Buitentemperatuur"
+            },
+            "outside_humidity": {
+                "name": "Buitenluchtvochtigheid"
+            },
+            "supply_temperature": {
+                "name": "Toevoertemperatuur"
+            },
+            "supply_humidity": {
+                "name": "Toevoerluchtvochtigheid"
+            },
+            "supply_fan_speed": {
+                "name": "Toerental toevoerventilator"
+            },
+            "supply_fan_duty": {
+                "name": "Last toevoerventilator"
+            },
+            "exhaust_fan_speed": {
+                "name": "Toerental afvoerventilator"
+            },
+            "exhaust_fan_duty": {
+                "name": "Last afvoerventilator"
+            },
+            "exhaust_temperature": {
+                "name": "Afvoertemperatuur"
+            },
+            "exhaust_humidity": {
+                "name": "Afvoerluchtvochtigheid"
+            },
+            "supply_airflow": {
+                "name": "Luchtdebiet toevoerventilator"
+            },
+            "exhaust_airflow": {
+                "name": "Luchtdebiet afvoerventilator"
+            },
+            "bypass_state": {
+                "name": "Bypassstand"
+            },
+            "days_to_replace_filter": {
+                "name": "Resterende dagen filter"
+            },
+            "ventilation_current_power_usage": {
+                "name": "Huidig stroomverbruik ventilatie"
+            },
+            "ventilation_total_energy_usage": {
+                "name": "Totaal energieverbruik ventilatie"
+            },
+            "preheater_current_power_usage": {
+                "name": "Huidig stroomverbruik voorverwarmer"
+            },
+            "preheater_total_energy_usage": {
+                "name": "Totaal energieverbruik voorverwarmer"
+            },
+            "analog_input_1": {
+                "name": "Analoge input 1"
+            },
+            "analog_input_2": {
+                "name": "Analoge input 2"
+            },
+            "analog_input_3": {
+                "name": "Analoge input 3"
+            },
+            "analog_input_4": {
+                "name": "Analoge input 4"
+            },
+            "airflow_constraint": {
+                "name": "Debietbeperking"
+            },
+            "comfofond_ghe_state": {
+                "name": "Stand ComfoFond-aardwarmtewisselaar"
+            },
+            "comfofond_ground_temperature": {
+                "name": "ComfoFond-grondtemperatuur"
+            },
+            "comfofond_outdoor_air_temperature": {
+                "name": "ComfoFond-buitenluchttemperatuur"
+            },
+            "comfocool_condensor_temperature": {
+                "name": "ComfoCool-condensortemperatuur"
+            },
+            "ventilation_year_energy_usage": {
+                "name": "Energieverbruik ventilatie dit jaar"
+            },
+            "preheater_year_energy_usage": {
+                "name": "Energieverbruik voorverwarmer dit jaar"
+            },
+            "avoided_heating_power": {
+                "name": "Actueel vermeden verwarming"
+            },
+            "avoided_heating_year_energy": {
+                "name": "Vermeden verwarming jaar tot op heden"
+            },
+            "avoided_heating_total_energy": {
+                "name": "Totaal vermeden verwarming"
+            },
+            "avoided_cooling_power": {
+                "name": "Actueel vermeden koeling"
+            },
+            "avoided_cooling_year_energy": {
+                "name": "Vermeden koeling jaar tot op heden"
+            },
+            "avoided_cooling_total_energy": {
+                "name": "Totaal vermeden koeling"
+            },
+            "postheater_state": {
+                "name": "Stand naverwarmer"
+            },
+            "temperature_before_postheater": {
+                "name": "Temperatuur voor naverwarmer"
+            },
+            "sensor_based_ventilation_state": {
+                "name": "Status sensorventilatie",
+                "state": {
+                    "disabled": "Uitgeschakeld",
+                    "active": "Actief",
+                    "overruling": "Heeft voorrang"
+                }
+            }
+        }
+    },
+    "services": {
+        "start_boost": {
+            "name": "Boost starten",
+            "description": "Start de boostmodus voor een zelfgekozen duur. Gebruik de knop Boost annuleren of de optie Uit van Boostmodus om hem eerder te stoppen.",
+            "fields": {
+                "duration": {
+                    "name": "Duur",
+                    "description": "Hoe lang de boostmodus aan blijft."
+                }
+            }
+        }
+    }
+}
