@@ -64,6 +64,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
+    CONCENTRATION_PARTS_PER_MILLION,
     PERCENTAGE,
     REVOLUTIONS_PER_MINUTE,
     UnitOfElectricPotential,
@@ -84,6 +85,7 @@ from . import (
     SIGNAL_COMFOCONNECT_AVAILABILITY,
     SIGNAL_COMFOCONNECT_UPDATE_RECEIVED,
     ComfoConnectBridge,
+    co2_sensor_identifier,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -554,6 +556,7 @@ async def async_setup_entry(
     ccb = hass.data[DOMAIN][config_entry.entry_id]
 
     sensors = [ComfoConnectSensor(ccb=ccb, config_entry=config_entry, description=description) for description in SENSOR_TYPES]
+    sensors += [ComfoConnectCO2Sensor(ccb, config_entry, node_id, sensor_id) for node_id, sensor_id in ccb.co2_sensors]
 
     async_add_entities(sensors, True)
 
@@ -631,3 +634,25 @@ class ComfoConnectSensor(SensorEntity):
         else:
             self._attr_native_value = value
         self.async_write_ha_state()
+
+
+class ComfoConnectCO2Sensor(ComfoConnectSensor):
+    """The CO2 level of a ComfoNet CO2 sensor, on the sensor's own device."""
+
+    def __init__(self, ccb: ComfoConnectBridge, config_entry: ConfigEntry, node_id: int, sensor_id: int) -> None:
+        """Initialize the CO2 sensor of a node."""
+        super().__init__(
+            ccb,
+            config_entry,
+            ComfoconnectSensorEntityDescription(
+                key=sensor_id,
+                name=None,
+                device_class=SensorDeviceClass.CO2,
+                state_class=SensorStateClass.MEASUREMENT,
+                native_unit_of_measurement=CONCENTRATION_PARTS_PER_MILLION,
+                ccb_sensor=SENSORS[sensor_id],
+            ),
+        )
+        # Follow the node, since its sensor id shifts when a sensor with a lower node id is removed.
+        self._attr_unique_id = f"{ccb.uuid}-co2-{node_id}"
+        self._attr_device_info = DeviceInfo(identifiers={co2_sensor_identifier(ccb, node_id)})
