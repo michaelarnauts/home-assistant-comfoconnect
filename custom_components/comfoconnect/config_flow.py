@@ -11,8 +11,8 @@ from aiocomfoconnect import Bridge
 from aiocomfoconnect.exceptions import ComfoConnectNotAllowed
 from homeassistant import config_entries
 from homeassistant.components import network
+from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.const import CONF_HOST, CONF_PIN
-from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.util.uuid import random_uuid_hex
 
@@ -29,17 +29,17 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     def __init__(self) -> None:
-        """Initialize the Hue flow."""
+        """Initialize the ComfoConnect config flow."""
         self.bridge: Bridge | None = None
         self.local_uuid: str | None = None
         self.discovered_bridges: dict[str, Bridge] | None = None
 
-    async def async_step_import(self, import_config: ConfigType | None) -> FlowResult:
+    async def async_step_import(self, import_config: ConfigType | None) -> ConfigFlowResult:
         """Import a config entry from configuration.yaml."""
         self.local_uuid = import_config.get("token")
         return await self.async_step_manual({CONF_HOST: import_config[CONF_HOST]})
 
-    async def async_step_reauth(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_reauth(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle a flow reauth."""
         # Discover the bridge so we know which type it is, since a ComfoConnect Pro needs to be
         # registered differently than a LAN C. Fall back to the stored data when it doesn't answer.
@@ -50,7 +50,7 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return await self._register()
 
-    async def async_step_user(self, user_input: ConfigType | None = None) -> FlowResult:
+    async def async_step_user(self, user_input: ConfigType | None = None) -> ConfigFlowResult:
         """Handle a flow initiated by the user."""
 
         if user_input is not None:
@@ -88,7 +88,7 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             ),
         )
 
-    async def async_step_manual(self, user_input: ConfigType | None = None) -> FlowResult:
+    async def async_step_manual(self, user_input: ConfigType | None = None) -> ConfigFlowResult:
         """Handle manual bridge setup."""
         errors = {}
         if user_input is not None and user_input[CONF_HOST] is not None:
@@ -111,7 +111,7 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema({vol.Required(CONF_HOST): str}),
         )
 
-    async def _register(self, pin: int | None = None) -> FlowResult:
+    async def _register(self, pin: int | None = None) -> ConfigFlowResult:
         """Register on the bridge."""
 
         if self.local_uuid is None:
@@ -156,7 +156,7 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self,
         user_input: dict[str, Any] | None = None,
         errors: dict[str, str] | None = None,
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Handle the PIN entry step."""
         if user_input and CONF_PIN in user_input:
             return await self._register(user_input[CONF_PIN])

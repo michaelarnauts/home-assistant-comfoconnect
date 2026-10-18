@@ -95,7 +95,7 @@ def test_identical_alarms_do_not_repeat_dispatch(tmp_path):
     async def scenario():
         hass = HomeAssistant(str(tmp_path))
         bridge = ComfoConnectBridge(hass, Mock(data={CONF_UUID: "test-bridge"}), "127.0.0.1")
-        with patch("custom_components.comfoconnect.dispatcher_send", new=Mock()) as send:
+        with patch("custom_components.comfoconnect.async_dispatcher_send", new=Mock()) as send:
             bridge.alarm_callback(1, {79: "Replace filters"})
             bridge.alarm_callback(1, {79: "Replace filters"})
             assert send.call_count == 1
