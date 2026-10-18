@@ -75,10 +75,10 @@ from homeassistant.const import (
     UnitOfVolumeFlowRate,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.util import Throttle
 
 from . import (
     DOMAIN,
@@ -588,6 +588,7 @@ class ComfoConnectSensor(SensorEntity):
         self.entity_description = description
         self._attr_unique_id = f"{self._ccb.uuid}-{description.key}"
         self._attr_available = ccb.is_available
+        self._debouncer: Debouncer | None = None
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._ccb.uuid)},
         )
@@ -600,17 +601,22 @@ class ComfoConnectSensor(SensorEntity):
             self.entity_description.key,
         )
 
-        # If the sensor should be throttled, pass it through the Throttle utility
+        # A throttled sensor writes its first update at once, then at most once per cooldown, and always ends with its latest value.
         if self.entity_description.throttle:
-            update_handler = Throttle(MIN_TIME_BETWEEN_UPDATES)(self._handle_update)
-        else:
-            update_handler = self._handle_update
+            self._debouncer = Debouncer(
+                self.hass,
+                _LOGGER,
+                cooldown=MIN_TIME_BETWEEN_UPDATES.total_seconds(),
+                immediate=True,
+                function=self.async_write_ha_state,
+            )
+            self.async_on_remove(self._debouncer.async_shutdown)
 
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
                 SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(self._ccb.uuid, self.entity_description.key),
-                update_handler,
+                self._handle_update,
             )
         )
         self.async_on_remove(
@@ -642,7 +648,10 @@ class ComfoConnectSensor(SensorEntity):
             self._attr_native_value = self.entity_description.mapping(value)
         else:
             self._attr_native_value = value
-        self.async_write_ha_state()
+        if self._debouncer:
+            self._debouncer.async_schedule_call()
+        else:
+            self.async_write_ha_state()
 
 
 class ComfoConnectCO2Sensor(ComfoConnectSensor):
