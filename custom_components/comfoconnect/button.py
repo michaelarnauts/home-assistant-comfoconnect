@@ -9,14 +9,13 @@ from typing import Any, cast
 
 from aiocomfoconnect.exceptions import AioComfoConnectError
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import DOMAIN, SIGNAL_COMFOCONNECT_AVAILABILITY, ComfoConnectBridge
+from . import DOMAIN, SIGNAL_COMFOCONNECT_AVAILABILITY, ComfoConnectBridge, ComfoConnectConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -60,11 +59,11 @@ BUTTON_TYPES = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: ComfoConnectConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the ComfoConnect binary sensors."""
-    ccb = hass.data[DOMAIN][config_entry.entry_id]
+    ccb = config_entry.runtime_data
 
     sensors = [ComfoConnectButton(ccb=ccb, config_entry=config_entry, description=description) for description in BUTTON_TYPES]
 
@@ -80,7 +79,7 @@ class ComfoConnectButton(ButtonEntity):
     def __init__(
         self,
         ccb: ComfoConnectBridge,
-        config_entry: ConfigEntry,
+        config_entry: ComfoConnectConfigEntry,
         description: ComfoconnectButtonEntityDescription,
     ) -> None:
         """Initialize the ComfoConnect sensor."""

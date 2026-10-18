@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, Mock
 from aiocomfoconnect.const import ConnectionState
 from aiocomfoconnect.exceptions import AioComfoConnectTimeout
 from custom_components.comfoconnect import SIGNAL_COMFOCONNECT_AVAILABILITY, ComfoConnectBridge, async_unload_entry
-from custom_components.comfoconnect.const import CONF_UUID, DOMAIN
+from custom_components.comfoconnect.const import CONF_UUID
 from custom_components.comfoconnect.select import SELECT_TYPES, ComfoConnectSelect
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
@@ -38,11 +38,9 @@ async def test_refused_session_starts_reauth(hass: HomeAssistant) -> None:
 async def test_unload_entry_disconnects_the_bridge(hass: HomeAssistant) -> None:
     """Unloading stops the library's session and its reconnects."""
     bridge = SimpleNamespace(disconnect=AsyncMock())
-    hass.data[DOMAIN] = {"entry": bridge}
     hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
-    assert await async_unload_entry(hass, SimpleNamespace(entry_id="entry"))
+    assert await async_unload_entry(hass, SimpleNamespace(runtime_data=bridge))
     bridge.disconnect.assert_awaited_once()
-    assert "entry" not in hass.data[DOMAIN]
 
 
 async def test_polled_select_waits_for_the_session(hass: HomeAssistant) -> None:

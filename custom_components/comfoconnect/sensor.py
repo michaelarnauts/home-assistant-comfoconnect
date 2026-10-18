@@ -62,7 +62,6 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     PERCENTAGE,
     REVOLUTIONS_PER_MINUTE,
@@ -85,6 +84,7 @@ from . import (
     SIGNAL_COMFOCONNECT_AVAILABILITY,
     SIGNAL_COMFOCONNECT_UPDATE_RECEIVED,
     ComfoConnectBridge,
+    ComfoConnectConfigEntry,
     co2_sensor_identifier,
 )
 
@@ -558,11 +558,11 @@ SENSOR_TYPES = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: ComfoConnectConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the ComfoConnect sensors."""
-    ccb = hass.data[DOMAIN][config_entry.entry_id]
+    ccb = config_entry.runtime_data
 
     sensors = [ComfoConnectSensor(ccb=ccb, config_entry=config_entry, description=description) for description in SENSOR_TYPES]
     sensors += [ComfoConnectCO2Sensor(ccb, config_entry, node_id, sensor_id) for node_id, sensor_id in ccb.co2_sensors]
@@ -580,7 +580,7 @@ class ComfoConnectSensor(SensorEntity):
     def __init__(
         self,
         ccb: ComfoConnectBridge,
-        config_entry: ConfigEntry,
+        config_entry: ComfoConnectConfigEntry,
         description: ComfoconnectSensorEntityDescription,
     ) -> None:
         """Initialize the ComfoConnect sensor."""
@@ -657,7 +657,7 @@ class ComfoConnectSensor(SensorEntity):
 class ComfoConnectCO2Sensor(ComfoConnectSensor):
     """The CO2 level of a ComfoNet CO2 sensor, on the sensor's own device."""
 
-    def __init__(self, ccb: ComfoConnectBridge, config_entry: ConfigEntry, node_id: int, sensor_id: int) -> None:
+    def __init__(self, ccb: ComfoConnectBridge, config_entry: ComfoConnectConfigEntry, node_id: int, sensor_id: int) -> None:
         """Initialize the CO2 sensor of a node."""
         super().__init__(
             ccb,

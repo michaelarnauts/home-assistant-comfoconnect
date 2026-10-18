@@ -14,7 +14,6 @@ from aiocomfoconnect.sensors import (
     SENSORS,
 )
 from homeassistant.components.fan import FanEntity, FanEntityFeature
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
@@ -30,6 +29,7 @@ from . import (
     SIGNAL_COMFOCONNECT_AVAILABILITY,
     SIGNAL_COMFOCONNECT_UPDATE_RECEIVED,
     ComfoConnectBridge,
+    ComfoConnectConfigEntry,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -50,11 +50,11 @@ FAN_SPEED_MAPPING = {
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: ComfoConnectConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the ComfoConnect fan."""
-    ccb = hass.data[DOMAIN][config_entry.entry_id]
+    ccb = config_entry.runtime_data
 
     async_add_entities([ComfoConnectFan(ccb=ccb, config_entry=config_entry)])
 
@@ -70,7 +70,7 @@ class ComfoConnectFan(FanEntity):
     _attr_has_entity_name = True
     _attr_name = None
 
-    def __init__(self, ccb: ComfoConnectBridge, config_entry: ConfigEntry) -> None:
+    def __init__(self, ccb: ComfoConnectBridge, config_entry: ComfoConnectConfigEntry) -> None:
         """Initialize the ComfoConnect fan."""
         self._ccb = ccb
         self._attr_unique_id = self._ccb.uuid

@@ -15,7 +15,6 @@ from aiocomfoconnect.properties import (
     Property,
 )
 from homeassistant.components.number import NumberDeviceClass, NumberEntity, NumberEntityDescription, NumberMode
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
@@ -23,7 +22,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import DOMAIN, SIGNAL_COMFOCONNECT_AVAILABILITY, ComfoConnectBridge
+from . import DOMAIN, SIGNAL_COMFOCONNECT_AVAILABILITY, ComfoConnectBridge, ComfoConnectConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -90,11 +89,11 @@ NUMBER_TYPES = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: ComfoConnectConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the ComfoConnect numbers."""
-    ccb = hass.data[DOMAIN][config_entry.entry_id]
+    ccb = config_entry.runtime_data
     async_add_entities([ComfoConnectNumber(ccb, description) for description in NUMBER_TYPES], True)
 
 

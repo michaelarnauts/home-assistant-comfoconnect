@@ -84,7 +84,7 @@ async def test_unit_is_connected_through_the_bridge(hass: HomeAssistant) -> None
     # Alarm automations must identify the registered unit, rather than the LAN bridge.
     events = []
     hass.bus.async_listen(EVENT_COMFOCONNECT_ALARM, callback(lambda event: events.append(event.data)))
-    hass.data[DOMAIN][entry.entry_id].alarm_callback(1, {79: "Replace filters"})
+    entry.runtime_data.alarm_callback(1, {79: "Replace filters"})
     await hass.async_block_till_done()
     assert events[0]["device_id"] == unit_device.id
 

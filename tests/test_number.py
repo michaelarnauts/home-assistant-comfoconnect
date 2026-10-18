@@ -126,7 +126,7 @@ async def test_write_uses_degrees_and_reads_back_the_device(hass: HomeAssistant,
     enable_numbers(hass, entry)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
-    bridge = hass.data[DOMAIN][entry.entry_id]
+    bridge = entry.runtime_data
 
     await hass.services.async_call("number", "set_value", {"entity_id": entity_id, "value": value}, blocking=True)
     await hass.async_block_till_done()
@@ -139,7 +139,7 @@ async def test_failed_write_raises_a_home_assistant_error(hass: HomeAssistant, e
     enable_numbers(hass, entry)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
-    bridge = hass.data[DOMAIN][entry.entry_id]
+    bridge = entry.runtime_data
     bridge.set_property.side_effect = ComfoConnectRmiError("refused")
 
     with pytest.raises(HomeAssistantError):
@@ -151,7 +151,7 @@ async def test_a_poll_reads_the_value_and_limits_in_one_request(hass: HomeAssist
     enable_numbers(hass, entry)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
-    bridge = hass.data[DOMAIN][entry.entry_id]
+    bridge = entry.runtime_data
     reads = bridge.get_property_constraints.await_count
 
     protocol[0][PROPERTY_RMOT_HEATING_THRESHOLD.property_id] = 13.0
@@ -168,7 +168,7 @@ async def test_unavailable_number_recovers_with_fresh_limits(hass: HomeAssistant
     enable_numbers(hass, entry)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
-    bridge: ComfoConnectBridge = hass.data[DOMAIN][entry.entry_id]
+    bridge: ComfoConnectBridge = entry.runtime_data
     bridge.set_available(False)
     await hass.async_block_till_done()
     assert hass.states.get(HEATING).state == STATE_UNAVAILABLE
@@ -204,7 +204,7 @@ async def test_gateway_failure_keeps_numbers_registered_for_recovery(hass: HomeA
     await async_update_entity(hass, HEATING)
     assert hass.states.get(HEATING).state == "11.0"
 
-    bridge = hass.data[DOMAIN][entry.entry_id]
+    bridge = entry.runtime_data
     normal_reads = bridge.get_property_constraints.side_effect
     bridge.get_property_constraints.side_effect = ComfoConnectNotReachable("Unit cannot be reached")
     await async_update_entity(hass, HEATING)
@@ -261,7 +261,7 @@ async def test_write_a_profile_temperature(hass: HomeAssistant, entry: MockConfi
     enable_profile_temperatures(hass, entry)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
-    bridge = hass.data[DOMAIN][entry.entry_id]
+    bridge = entry.runtime_data
     entity_id, prop, *_ = PROFILE_TEMPERATURES["profile_temperature_normal"]
 
     await hass.services.async_call("number", "set_value", {"entity_id": entity_id, "value": 22}, blocking=True)
