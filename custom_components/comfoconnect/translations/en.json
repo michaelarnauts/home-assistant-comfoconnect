@@ -2,14 +2,16 @@
     "config": {
         "abort": {
             "no_devices_found": "No devices found on the network",
-            "reauth_successful": "Re-authentication was successful"
+            "reauth_successful": "Re-authentication was successful",
+            "cannot_connect": "Could not connect to the bridge. Check that it is on and reachable, and that the official app isn't using it."
         },
         "create_entry": {
             "default": "Some sensors are not enabled by default. You can enable them in the entity registry after the integration configuration."
         },
         "error": {
             "invalid_host": "Could not find a ComfoConnect bridge at this address",
-            "invalid_pin": "Invalid PIN"
+            "invalid_pin": "Invalid PIN",
+            "cannot_connect": "Could not connect to the bridge. Check that it is on and reachable, and that the official app isn't using it."
         },
         "step": {
             "confirm": {

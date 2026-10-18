@@ -34,7 +34,8 @@
   "config": {
     "error": {
       "invalid_pin": "Invalid PIN",
-      "invalid_host": "Could not find a ComfoConnect bridge at this address"
+      "invalid_host": "Could not find a ComfoConnect bridge at this address",
+      "cannot_connect": "Could not connect to the bridge. Check that it is on and reachable, and that the official app isn't using it."
     },
     "step": {
       "user": {
@@ -64,7 +65,8 @@
     },
     "abort": {
       "no_devices_found": "[%key:common::config_flow::abort::no_devices_found%]",
-      "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]"
+      "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]",
+      "cannot_connect": "Could not connect to the bridge. Check that it is on and reachable, and that the official app isn't using it."
     }
   },
   "services": {
