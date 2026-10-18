@@ -16,7 +16,7 @@ from custom_components.comfoconnect.const import CONF_LOCAL_UUID, CONF_UUID, DOM
 from custom_components.comfoconnect.sensor import ComfoConnectCO2Sensor
 from custom_components.comfoconnect.sensor import async_setup_entry as async_setup_sensors
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
-from homeassistant.const import CONCENTRATION_PARTS_PER_MILLION, CONF_HOST
+from homeassistant.const import CONF_HOST, UnitOfRatio
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 
@@ -131,5 +131,5 @@ async def test_co2_sensor_devices_and_entities(hass: HomeAssistant, nodes: list[
         assert entity.device_info["identifiers"] == device.identifiers
         assert entity.device_class == SensorDeviceClass.CO2
         assert entity.state_class == SensorStateClass.MEASUREMENT
-        assert entity.native_unit_of_measurement == CONCENTRATION_PARTS_PER_MILLION
+        assert entity.native_unit_of_measurement == UnitOfRatio.PARTS_PER_MILLION
         assert entity.entity_registry_enabled_default is True

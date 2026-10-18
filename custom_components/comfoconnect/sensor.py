@@ -64,7 +64,6 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
-    CONCENTRATION_PARTS_PER_MILLION,
     PERCENTAGE,
     REVOLUTIONS_PER_MINUTE,
     UnitOfElectricPotential,
@@ -87,6 +86,14 @@ from . import (
     ComfoConnectBridge,
     co2_sensor_identifier,
 )
+
+try:
+    from homeassistant.const import UnitOfRatio
+
+    PARTS_PER_MILLION = UnitOfRatio.PARTS_PER_MILLION
+except ImportError:
+    # UnitOfRatio only exists since Home Assistant 2026.7, which deprecates CONCENTRATION_PARTS_PER_MILLION.
+    from homeassistant.const import CONCENTRATION_PARTS_PER_MILLION as PARTS_PER_MILLION
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -649,7 +656,7 @@ class ComfoConnectCO2Sensor(ComfoConnectSensor):
                 name=None,
                 device_class=SensorDeviceClass.CO2,
                 state_class=SensorStateClass.MEASUREMENT,
-                native_unit_of_measurement=CONCENTRATION_PARTS_PER_MILLION,
+                native_unit_of_measurement=PARTS_PER_MILLION,
                 ccb_sensor=SENSORS[sensor_id],
             ),
         )
