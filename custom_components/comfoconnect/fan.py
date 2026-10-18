@@ -7,7 +7,7 @@ from datetime import timedelta
 from typing import Any
 
 from aiocomfoconnect.const import VentilationMode, VentilationSpeed
-from aiocomfoconnect.exceptions import AioComfoConnectNotConnected, ComfoConnectRmiError
+from aiocomfoconnect.exceptions import AioComfoConnectError
 from aiocomfoconnect.sensors import (
     SENSOR_FAN_SPEED_MODE,
     SENSOR_OPERATING_MODE,
@@ -174,9 +174,7 @@ class ComfoConnectFan(FanEntity):
 
         try:
             await self._ccb.set_speed(speed)
-        except AioComfoConnectNotConnected as err:
-            raise HomeAssistantError(f"Not connected to ComfoConnect bridge: {err}") from err
-        except ComfoConnectRmiError as err:
+        except AioComfoConnectError as err:
             raise HomeAssistantError(f"Failed to set fan speed: {err}") from err
 
     async def async_start_boost(self, duration: timedelta) -> None:
@@ -184,9 +182,7 @@ class ComfoConnectFan(FanEntity):
         _LOGGER.debug("Starting boost for %s", duration)
         try:
             await self._ccb.set_boost(True, int(duration.total_seconds()))
-        except AioComfoConnectNotConnected as err:
-            raise HomeAssistantError(f"Not connected to ComfoConnect bridge: {err}") from err
-        except ComfoConnectRmiError as err:
+        except AioComfoConnectError as err:
             raise HomeAssistantError(f"Failed to start boost: {err}") from err
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
@@ -197,7 +193,5 @@ class ComfoConnectFan(FanEntity):
         _LOGGER.debug("Changing preset mode to %s", preset_mode)
         try:
             await self._ccb.set_mode(preset_mode)
-        except AioComfoConnectNotConnected as err:
-            raise HomeAssistantError(f"Not connected to ComfoConnect bridge: {err}") from err
-        except ComfoConnectRmiError as err:
+        except AioComfoConnectError as err:
             raise HomeAssistantError(f"Failed to set preset mode: {err}") from err

@@ -16,6 +16,7 @@ from aiocomfoconnect.const import (
     VentilationSetting,
     VentilationTemperatureProfile,
 )
+from aiocomfoconnect.exceptions import AioComfoConnectError
 from aiocomfoconnect.properties import (
     PROPERTY_SENSOR_VENTILATION_HUMIDITY_COMFORT,
     PROPERTY_SENSOR_VENTILATION_HUMIDITY_PROTECTION,
@@ -396,7 +397,14 @@ class ComfoConnectSelect(SelectEntity):
         interval = self.entity_description.update_interval
         if interval and self._last_update is not None and time.monotonic() - self._last_update < interval.total_seconds():
             return
-        self._attr_current_option = await self.entity_description.get_value_fn(self._ccb)
+        # The bridge is reconnecting; the availability signal updates the entity.
+        if not self._ccb.is_available:
+            return
+        try:
+            self._attr_current_option = await self.entity_description.get_value_fn(self._ccb)
+        except AioComfoConnectError as err:
+            _LOGGER.warning("Could not update %s: %s", self.entity_description.name, err)
+            return
         self._last_update = time.monotonic()
 
     async def async_select_option(self, option: str) -> None:

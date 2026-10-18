@@ -5,12 +5,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
-from aiocomfoconnect.exceptions import (
-    AioComfoConnectNotConnected,
-    AioComfoConnectNotReachable,
-    AioComfoConnectTimeout,
-    ComfoConnectError,
-)
+from aiocomfoconnect.exceptions import AioComfoConnectError
 from aiocomfoconnect.properties import (
     PROPERTY_PROFILE_TEMPERATURE_COOL,
     PROPERTY_PROFILE_TEMPERATURE_NORMAL,
@@ -141,7 +136,7 @@ class ComfoConnectNumber(NumberEntity):
             constraints = await self._ccb.get_property_constraints(self.entity_description.property)
             if constraints.minimum > constraints.maximum or constraints.step <= 0:
                 raise ValueError("Invalid property limits")
-        except (ComfoConnectError, AioComfoConnectTimeout, AioComfoConnectNotConnected, AioComfoConnectNotReachable, ValueError) as err:
+        except (AioComfoConnectError, ValueError) as err:
             self._attr_available = False
             _LOGGER.warning("Could not update %s: %s", self.entity_description.name, err)
             return
@@ -155,6 +150,6 @@ class ComfoConnectNumber(NumberEntity):
         """Write the temperature, then read back what the unit reports."""
         try:
             await self._ccb.set_property(self.entity_description.property, value)
-        except (ComfoConnectError, AioComfoConnectTimeout, AioComfoConnectNotConnected, AioComfoConnectNotReachable) as err:
+        except AioComfoConnectError as err:
             raise HomeAssistantError(f"Failed to set {self.entity_description.name}: {err}") from err
         self.async_schedule_update_ha_state(True)
