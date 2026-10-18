@@ -8,9 +8,11 @@ from unittest.mock import AsyncMock, patch
 import pytest
 import voluptuous as vol
 from aiocomfoconnect.comfoconnect import NodeInfo
+from aiocomfoconnect.exceptions import AioComfoConnectTimeout
 from custom_components.comfoconnect.const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN, SERVICE_START_BOOST
 from homeassistant.const import CONF_HOST, Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 
 MockConfigEntry = pytest.importorskip("pytest_homeassistant_custom_component.common").MockConfigEntry
@@ -88,3 +90,14 @@ async def test_start_boost_rejects_durations_the_unit_cannot_take(hass: HomeAssi
         )
 
     set_boost.assert_not_awaited()
+
+
+async def test_start_boost_failure_is_translated(hass: HomeAssistant, fan_entity_id: str) -> None:
+    """A boost the unit doesn't answer is reported with the translated message."""
+    error = AioComfoConnectTimeout("No answer")
+    with patch(f"{BRIDGE}.set_boost", new_callable=AsyncMock, side_effect=error), pytest.raises(HomeAssistantError) as failure:
+        await hass.services.async_call(DOMAIN, SERVICE_START_BOOST, {"entity_id": fan_entity_id, "duration": "00:10:00"}, blocking=True)
+
+    assert failure.value.translation_key == "start_boost_failed"
+    assert str(failure.value) == "Failed to start boost: No answer"
+    assert failure.value.__cause__ is error

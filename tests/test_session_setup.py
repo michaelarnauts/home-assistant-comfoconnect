@@ -47,8 +47,9 @@ def test_refused_connect_starts_reauth():
         hass = SimpleNamespace(data={})
         entry = SimpleNamespace(entry_id="entry", data={"host": "127.0.0.1", CONF_UUID: "bridge", CONF_LOCAL_UUID: "local"})
         bridge = SimpleNamespace(connect=AsyncMock(side_effect=ComfoConnectNotAllowed("Not registered")))
-        with patch("custom_components.comfoconnect.ComfoConnectBridge", return_value=bridge), pytest.raises(ConfigEntryAuthFailed):
+        with patch("custom_components.comfoconnect.ComfoConnectBridge", return_value=bridge), pytest.raises(ConfigEntryAuthFailed) as failure:
             await async_setup_entry(hass, entry)
+        assert failure.value.translation_key == "access_denied"
 
     asyncio.run(scenario())
 
@@ -69,6 +70,7 @@ def test_failed_device_read_closes_session_and_requests_retry(error):
         with patch("custom_components.comfoconnect.ComfoConnectBridge", return_value=bridge), pytest.raises(ConfigEntryNotReady) as failure:
             await async_setup_entry(hass, entry)
         assert failure.value.__cause__ is error
+        assert failure.value.translation_key == "device_info_failed"
         bridge.disconnect.assert_awaited_once()
         assert not hasattr(entry, "runtime_data")
 

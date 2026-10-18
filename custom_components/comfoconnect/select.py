@@ -46,6 +46,7 @@ from . import (
     ComfoConnectBridge,
     ComfoConnectConfigEntry,
 )
+from .const import DOMAIN
 from .entity import ComfoConnectEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -397,6 +398,8 @@ class ComfoConnectSelect(ComfoConnectEntity, SelectEntity):
             else:
                 current_option = option
         except AioComfoConnectError as err:
-            raise HomeAssistantError(f"Failed to set {self.name}: {err}") from err
+            raise HomeAssistantError(
+                translation_domain=DOMAIN, translation_key="set_failed", translation_placeholders={"entity": self.name, "error": str(err)}
+            ) from err
         self._attr_current_option = current_option
         self.async_write_ha_state()

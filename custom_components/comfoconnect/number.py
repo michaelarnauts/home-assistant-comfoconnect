@@ -22,6 +22,7 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import ComfoConnectBridge, ComfoConnectConfigEntry
+from .const import DOMAIN
 from .entity import ComfoConnectEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -146,5 +147,7 @@ class ComfoConnectNumber(ComfoConnectEntity, NumberEntity):
         try:
             await self._ccb.set_property(self.entity_description.property, value)
         except AioComfoConnectError as err:
-            raise HomeAssistantError(f"Failed to set {self.name}: {err}") from err
+            raise HomeAssistantError(
+                translation_domain=DOMAIN, translation_key="set_failed", translation_placeholders={"entity": self.name, "error": str(err)}
+            ) from err
         self.async_schedule_update_ha_state(True)

@@ -15,6 +15,7 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import ComfoConnectBridge, ComfoConnectConfigEntry
+from .const import DOMAIN
 from .entity import ComfoConnectEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -89,4 +90,6 @@ class ComfoConnectButton(ComfoConnectEntity, ButtonEntity):
         try:
             await self.entity_description.press_fn(self._ccb, self._attr_unique_id)
         except AioComfoConnectError as err:
-            raise HomeAssistantError(f"Failed to press {self.name}: {err}") from err
+            raise HomeAssistantError(
+                translation_domain=DOMAIN, translation_key="press_failed", translation_placeholders={"entity": self.name, "error": str(err)}
+            ) from err

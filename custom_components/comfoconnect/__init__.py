@@ -133,7 +133,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ComfoConnectConfigEntry)
         await bridge.connect(entry.data[CONF_LOCAL_UUID])
 
     except ComfoConnectNotAllowed:
-        raise ConfigEntryAuthFailed("Access denied")
+        raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="access_denied")
 
     except (AioComfoConnectTimeout, AioComfoConnectNotReachable) as err:
         # We can't reach the bridge, this can happen when the IP address of the bridge has changed.
@@ -158,7 +158,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ComfoConnectConfigEntry)
             hass.config_entries.async_update_entry(entry, data={**entry.data, CONF_HOST: discovered_bridge.host})
 
         except ComfoConnectNotAllowed:
-            raise ConfigEntryAuthFailed("Access denied")
+            raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="access_denied")
 
         except AioComfoConnectError as err:
             raise ConfigEntryNotReady from err
@@ -175,7 +175,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ComfoConnectConfigEntry)
         co2_sensor_info = {node_id: await read_co2_sensor_info(bridge, node_id) for node_id, _sensor_id in bridge.co2_sensors}
     except AioComfoConnectError as err:
         await bridge.disconnect()
-        raise ConfigEntryNotReady("The bridge did not return its device information") from err
+        raise ConfigEntryNotReady(translation_domain=DOMAIN, translation_key="device_info_failed") from err
     except BaseException:
         # Cancellation or an unexpected read failure also releases the session.
         await bridge.disconnect()
