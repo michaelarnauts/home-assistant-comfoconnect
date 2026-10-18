@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 import voluptuous as vol
+from aiocomfoconnect.comfoconnect import NodeInfo
 from custom_components.comfoconnect.const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN, SERVICE_START_BOOST
 from homeassistant.const import CONF_HOST, Platform
 from homeassistant.core import HomeAssistant
@@ -43,7 +44,7 @@ async def fan_entity_id(hass: HomeAssistant):
             new_callable=AsyncMock,
             return_value=SimpleNamespace(serialNumber="DEMO0001", gatewayVersion=0),
         ),
-        patch(f"{BRIDGE}.get_property", new_callable=AsyncMock, return_value="ComfoAir Q350"),
+        patch(f"{BRIDGE}.get_node_info", new_callable=AsyncMock, return_value=NodeInfo("ComfoAirQ", "ComfoAir Q350", None, None, None, None)),
         patch(f"{BRIDGE}.register_sensor", new_callable=AsyncMock),
         patch(f"{BRIDGE}.get_mode", new_callable=AsyncMock, return_value="auto"),
         patch("custom_components.comfoconnect.version_decode", return_value="1.0.0"),

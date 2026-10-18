@@ -6,8 +6,8 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from aiocomfoconnect.comfoconnect import NodeInfo
 from aiocomfoconnect.const import GatewayType
-from aiocomfoconnect.properties import PROPERTY_FIRMWARE_VERSION, PROPERTY_MODEL, PROPERTY_NAME, PROPERTY_SERIAL_NUMBER
 from custom_components.comfoconnect import EVENT_COMFOCONNECT_ALARM
 from custom_components.comfoconnect.const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN
 from homeassistant.const import CONF_HOST
@@ -22,12 +22,7 @@ MockConfigEntry = pytest.importorskip("pytest_homeassistant_custom_component.com
 
 BRIDGE = "custom_components.comfoconnect.ComfoConnectBridge"
 UNIT_UUID = "00" * 16
-UNIT_PROPERTIES = {
-    PROPERTY_NAME.property_id: "ComfoAirQ",
-    PROPERTY_MODEL.property_id: "ComfoAir Q450",
-    PROPERTY_SERIAL_NUMBER.property_id: "BEA0000000001",
-    PROPERTY_FIRMWARE_VERSION.property_id: "R1.4.0",
-}
+UNIT_INFO = NodeInfo("ComfoAirQ", "ComfoAir Q450", "DEMO-ART-Q", "BEA0000000001", "R1.4.0", 3)
 
 
 @pytest.fixture(autouse=True)
@@ -53,7 +48,7 @@ async def test_unit_is_connected_through_the_bridge(hass: HomeAssistant) -> None
             new_callable=AsyncMock,
             return_value=SimpleNamespace(serialNumber="DEMO0001", gatewayVersion=0),
         ),
-        patch(f"{BRIDGE}.get_property", new_callable=AsyncMock, side_effect=lambda prop: UNIT_PROPERTIES.get(prop.property_id, 0)),
+        patch(f"{BRIDGE}.get_node_info", new_callable=AsyncMock, return_value=UNIT_INFO),
         patch("custom_components.comfoconnect.version_decode", return_value="1.0.0"),
         patch(
             "homeassistant.config_entries.ConfigEntries.async_forward_entry_setups",
@@ -84,6 +79,7 @@ async def test_unit_is_connected_through_the_bridge(hass: HomeAssistant) -> None
     assert (unit_device.name, unit_device.model, unit_device.serial_number) == ("ComfoAirQ", "ComfoAir Q450", "BEA0000000001")
     # The library decodes the unit's firmware version; only the bridge's version is decoded here.
     assert (bridge_device.sw_version, unit_device.sw_version) == ("1.0.0", "R1.4.0")
+    assert (unit_device.model_id, unit_device.hw_version) == ("DEMO-ART-Q", "3")
 
     # Alarm automations must identify the registered unit, rather than the LAN bridge.
     events = []
@@ -113,7 +109,7 @@ async def test_comfoconnect_pro_is_shown_as_pro(hass: HomeAssistant) -> None:
             new_callable=AsyncMock,
             return_value=SimpleNamespace(serialNumber="DEMO0002", gatewayVersion=0),
         ),
-        patch(f"{BRIDGE}.get_property", new_callable=AsyncMock, side_effect=lambda prop: UNIT_PROPERTIES.get(prop.property_id, 0)),
+        patch(f"{BRIDGE}.get_node_info", new_callable=AsyncMock, return_value=UNIT_INFO),
         patch("custom_components.comfoconnect.version_decode", return_value="1.0.0"),
         patch(
             "homeassistant.config_entries.ConfigEntries.async_forward_entry_setups",

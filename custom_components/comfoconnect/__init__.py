@@ -7,20 +7,15 @@ from datetime import timedelta
 
 import voluptuous as vol
 from aiocomfoconnect import ComfoConnect, discover_bridges
-from aiocomfoconnect.const import ConnectionState, GatewayType
+from aiocomfoconnect.comfoconnect import NodeInfo
+from aiocomfoconnect.const import ConnectionState, GatewayType, ProductId
 from aiocomfoconnect.exceptions import (
     AioComfoConnectError,
     AioComfoConnectNotReachable,
     AioComfoConnectTimeout,
     ComfoConnectNotAllowed,
 )
-from aiocomfoconnect.properties import (
-    PROPERTY_FIRMWARE_VERSION,
-    PROPERTY_MODEL,
-    PROPERTY_NAME,
-    PROPERTY_SERIAL_NUMBER,
-)
-from aiocomfoconnect.sensors import Sensor
+from aiocomfoconnect.sensors import SENSOR_CO2_1, SENSOR_CO2_8, Sensor
 from aiocomfoconnect.util import version_decode
 from homeassistant.components import network
 from homeassistant.components.fan import DOMAIN as FAN_DOMAIN
@@ -53,6 +48,9 @@ SIGNAL_COMFOCONNECT_AVAILABILITY = "comfoconnect_availability_{}"
 
 EVENT_COMFOCONNECT_ALARM = "comfoconnect_alarm"
 
+# The ComfoNet CO2 sensors in zone 1 report on SENSOR_CO2_1 to SENSOR_CO2_8, ordered by node id.
+CO2_SENSOR_IDS = range(SENSOR_CO2_1, SENSOR_CO2_8 + 1)
+
 # The unit takes a timer duration in whole seconds, as a signed 32-bit number.
 MAX_TIMER_DURATION = timedelta(seconds=2**31 - 1)
 
@@ -82,6 +80,47 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             )
         )
     return True
+
+
+def co2_sensor_identifier(bridge: ComfoConnectBridge, node_id: int) -> tuple[str, str]:
+    """Return the device identifier of the CO2 sensor on a node."""
+    return (DOMAIN, f"{bridge.uuid}-{node_id}")
+
+
+def find_co2_sensors(bridge: ComfoConnectBridge) -> list[tuple[int, int]]:
+    """Return the node id and sensor id of each ComfoNet CO2 sensor in zone 1."""
+    node_ids = []
+    for node in sorted(bridge.nodes.values(), key=lambda node: node.node_id):
+        if node.product_id != ProductId.CO2SENSOR:
+            continue
+        if node.zone_id != 1:
+            _LOGGER.debug("Skipping CO2 sensor on node %s in zone %s, only zone 1 is supported", node.node_id, node.zone_id)
+            continue
+        node_ids.append(node.node_id)
+    if len(node_ids) > len(CO2_SENSOR_IDS):
+        _LOGGER.debug("Skipping CO2 sensors on nodes %s, only %d are supported", node_ids[len(CO2_SENSOR_IDS) :], len(CO2_SENSOR_IDS))
+    return list(zip(node_ids, CO2_SENSOR_IDS, strict=False))
+
+
+def node_device_info(info: NodeInfo) -> dict[str, str | None]:
+    """Return the device registry fields for what a node tells about itself."""
+    return {
+        "name": info.name,
+        "model": info.model,
+        "model_id": info.article_number,
+        "serial_number": info.serial_number,
+        "sw_version": info.firmware,
+        "hw_version": None if info.hardware_version is None else str(info.hardware_version),
+    }
+
+
+async def read_co2_sensor_info(bridge: ComfoConnectBridge, node_id: int) -> dict[str, str | None]:
+    """Read the device info of a CO2 sensor; when that fails, the device is added without it."""
+    try:
+        return node_device_info(await bridge.get_node_info(node_id))
+    except AioComfoConnectError as err:
+        _LOGGER.debug("Could not read the device info of the CO2 sensor on node %s: %s", node_id, err)
+        return {}
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -131,10 +170,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # A failed read must not leave a reconnecting session behind the failed entry.
     try:
         bridge_info = await bridge.cmd_version_request()
-        unit_model = await bridge.get_property(PROPERTY_MODEL)
-        unit_firmware = await bridge.get_property(PROPERTY_FIRMWARE_VERSION)
-        unit_name = await bridge.get_property(PROPERTY_NAME)
-        unit_serial_number = await bridge.get_property(PROPERTY_SERIAL_NUMBER)
+        unit_info = node_device_info(await bridge.get_node_info())
+        bridge.co2_sensors = find_co2_sensors(bridge)
+        co2_sensor_info = {node_id: await read_co2_sensor_info(bridge, node_id) for node_id, _sensor_id in bridge.co2_sensors}
     except AioComfoConnectError as err:
         await bridge.disconnect()
         raise ConfigEntryNotReady("The bridge did not return its device information") from err
@@ -168,13 +206,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, bridge.uuid)},
         manufacturer="Zehnder",
-        name=unit_name,
-        model=unit_model,
-        serial_number=unit_serial_number,
-        sw_version=unit_firmware,
+        **unit_info,
     )
     device_registry.async_update_device(unit_device.id, via_device_id=bridge_device.id)
     bridge.device_id = unit_device.id
+
+    # Add the ComfoNet CO2 sensors, connected through the bridge like the unit.
+    for index, (node_id, _sensor_id) in enumerate(bridge.co2_sensors, start=1):
+        info = co2_sensor_info[node_id]
+        co2_device = device_registry.async_get_or_create(
+            config_entry_id=entry.entry_id,
+            identifiers={co2_sensor_identifier(bridge, node_id)},
+            manufacturer="Zehnder",
+            **{**info, "name": info.get("name") or f"CO2 sensor {index}"},
+        )
+        device_registry.async_update_device(co2_device.id, via_device_id=bridge_device.id)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -216,6 +262,8 @@ class ComfoConnectBridge(ComfoConnect):
         self.active_alarms: dict[int, dict[int, str]] = {}
         # The ventilation unit's device, known once setup has registered it.
         self.device_id: str | None = None
+        # The node id and sensor id of each CO2 sensor, known once setup has registered them.
+        self.co2_sensors: list[tuple[int, int]] = []
         self.is_available = True
 
     @callback
