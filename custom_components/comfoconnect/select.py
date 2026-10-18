@@ -46,6 +46,7 @@ from . import (
     SIGNAL_COMFOCONNECT_UPDATE_RECEIVED,
     ComfoConnectBridge,
 )
+from .const import SENSOR_PRESET_TIMERS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -76,6 +77,10 @@ TIMER_ACTIVE = "Active"
 TIMEOUT_OPTIONS = ("10 Minutes", "20 Minutes", "30 Minutes", "40 Minutes", "50 Minutes", "60 Minutes")
 TIMER_OPTIONS = (TIMER_OFF, TIMER_ACTIVE, *TIMEOUT_OPTIONS)
 AWAY_OPTIONS = (*TIMER_OPTIONS, "2 Hours", "8 Hours", "24 Hours", "7 Days", "14 Days")
+
+# Bits of the running timers in SENSOR_PRESET_TIMERS.
+BOOST_TIMER_BIT = 1 << 6
+AWAY_TIMER_BIT = 1 << 11
 
 
 def _timeout_seconds(option: str) -> int:
@@ -242,6 +247,9 @@ SELECT_TYPES = (
         get_value_fn=_get_boost_option,
         set_value_fn=_set_boost_option,
         options=list(TIMER_OPTIONS),
+        # The unit pushes the running timers when one starts or ends, so this doesn't need polling.
+        sensor=SENSORS.get(SENSOR_PRESET_TIMERS),
+        sensor_value_fn=lambda value: _timer_option(bool(value & BOOST_TIMER_BIT)),
     ),
     ComfoconnectSelectEntityDescription(
         key="away_timeout",
@@ -250,6 +258,8 @@ SELECT_TYPES = (
         get_value_fn=_get_away_option,
         set_value_fn=_set_away_option,
         options=list(AWAY_OPTIONS),
+        sensor=SENSORS.get(SENSOR_PRESET_TIMERS),
+        sensor_value_fn=lambda value: _timer_option(bool(value & AWAY_TIMER_BIT)),
     ),
     ComfoconnectSelectEntityDescription(
         key="bypass_timeout",
