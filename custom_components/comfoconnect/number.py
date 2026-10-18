@@ -18,11 +18,11 @@ from homeassistant.components.number import NumberDeviceClass, NumberEntity, Num
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import DeviceInfo, EntityCategory
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import DOMAIN, SIGNAL_COMFOCONNECT_AVAILABILITY, ComfoConnectBridge, ComfoConnectConfigEntry
+from . import ComfoConnectBridge, ComfoConnectConfigEntry
+from .entity import ComfoConnectEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -97,30 +97,23 @@ async def async_setup_entry(
     async_add_entities([ComfoConnectNumber(ccb, description) for description in NUMBER_TYPES], True)
 
 
-class ComfoConnectNumber(NumberEntity):
+class ComfoConnectNumber(ComfoConnectEntity, NumberEntity):
     """Representation of a ComfoConnect temperature setting."""
 
     _attr_entity_category = EntityCategory.CONFIG
     _attr_entity_registry_enabled_default = False
-    _attr_has_entity_name = True
     entity_description: ComfoConnectNumberEntityDescription
 
     def __init__(self, ccb: ComfoConnectBridge, description: ComfoConnectNumberEntityDescription) -> None:
         """Initialize the number."""
-        self._ccb = ccb
+        super().__init__(ccb)
         self.entity_description = description
         self._attr_unique_id = f"{ccb.uuid}-{description.key}"
-        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, ccb.uuid)})
+        # Unavailable until the first poll has read the value and its limits.
         self._attr_available = False
 
-    async def async_added_to_hass(self) -> None:
-        """Subscribe to bridge availability changes."""
-        self.async_on_remove(
-            async_dispatcher_connect(self.hass, SIGNAL_COMFOCONNECT_AVAILABILITY.format(self._ccb.uuid), self._handle_availability_update)
-        )
-
     @callback
-    def _handle_availability_update(self, available: bool) -> None:
+    def _handle_availability(self, available: bool) -> None:
         """Wait for a fresh poll when the bridge recovers."""
         if not available:
             self._attr_available = False

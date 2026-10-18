@@ -17,7 +17,6 @@ from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util.percentage import (
     ordered_list_item_to_percentage,
@@ -25,12 +24,11 @@ from homeassistant.util.percentage import (
 )
 
 from . import (
-    DOMAIN,
-    SIGNAL_COMFOCONNECT_AVAILABILITY,
     SIGNAL_COMFOCONNECT_UPDATE_RECEIVED,
     ComfoConnectBridge,
     ComfoConnectConfigEntry,
 )
+from .entity import ComfoConnectEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -59,7 +57,7 @@ async def async_setup_entry(
     async_add_entities([ComfoConnectFan(ccb=ccb, config_entry=config_entry)])
 
 
-class ComfoConnectFan(FanEntity):
+class ComfoConnectFan(ComfoConnectEntity, FanEntity):
     """Representation of the ComfoConnect fan platform."""
 
     _attr_enable_turn_on_off_backwards_compatibility = False
@@ -67,22 +65,18 @@ class ComfoConnectFan(FanEntity):
     _attr_should_poll = False
     _attr_supported_features = FanEntityFeature.SET_SPEED | FanEntityFeature.PRESET_MODE | FanEntityFeature.TURN_ON | FanEntityFeature.TURN_OFF
     _attr_speed_count = len(FAN_SPEEDS)
-    _attr_has_entity_name = True
     _attr_name = None
 
     def __init__(self, ccb: ComfoConnectBridge, config_entry: ComfoConnectConfigEntry) -> None:
         """Initialize the ComfoConnect fan."""
-        self._ccb = ccb
+        super().__init__(ccb)
         self._attr_unique_id = self._ccb.uuid
         self._attr_preset_mode = None
         self._attr_preset_modes = list(PRESET_MODES)
-        self._attr_available = ccb.is_available
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, self._ccb.uuid)},
-        )
 
     async def async_added_to_hass(self) -> None:
         """Register for sensor updates."""
+        await super().async_added_to_hass()
         _LOGGER.debug("Registering for fan speed")
         self.async_on_remove(
             async_dispatcher_connect(
@@ -103,20 +97,6 @@ class ComfoConnectFan(FanEntity):
         )
         await self._ccb.register_sensor(SENSORS.get(SENSOR_OPERATING_MODE))
         self._attr_preset_mode = await self._ccb.get_mode()
-
-        self.async_on_remove(
-            async_dispatcher_connect(
-                self.hass,
-                SIGNAL_COMFOCONNECT_AVAILABILITY.format(self._ccb.uuid),
-                self._handle_availability_update,
-            )
-        )
-
-    @callback
-    def _handle_availability_update(self, available: bool) -> None:
-        """Handle bridge availability changes."""
-        self._attr_available = available
-        self.async_write_ha_state()
 
     @callback
     def _handle_speed_update(self, value: int) -> None:
