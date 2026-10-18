@@ -53,15 +53,14 @@ def test_unsigned_energy_counter_reaches_ha_state(tmp_path):
         entity.entity_id = "sensor.unsigned_energy"
         await entity.async_added_to_hass()
         try:
-            bridge._reader = asyncio.StreamReader()
             packet = Message(
                 zehnder_pb2.GatewayOperation(type=zehnder_pb2.GatewayOperation.CnRpdoNotificationType),
                 zehnder_pb2.CnRpdoNotification(pdid=SENSOR_AVOIDED_HEATING_TOTAL, data=b"\x00\x80"),
                 uuid,
                 uuid,
             ).encode()
-            bridge._reader.feed_data(packet)
-            await bridge._process_message()
+            # Skip the length prefix, which the read loop strips.
+            bridge._process_packet(packet[4:])
             await hass.async_block_till_done()
             state = hass.states.get(entity.entity_id)
             assert state.state == "32768"

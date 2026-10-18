@@ -16,7 +16,12 @@ from aiocomfoconnect.const import (
     VentilationSetting,
     VentilationTemperatureProfile,
 )
-from aiocomfoconnect.properties import PROPERTY_TEMPERATURE_PROFILE_MODE
+from aiocomfoconnect.properties import (
+    PROPERTY_SENSOR_VENTILATION_HUMIDITY_COMFORT,
+    PROPERTY_SENSOR_VENTILATION_HUMIDITY_PROTECTION,
+    PROPERTY_SENSOR_VENTILATION_TEMP_PASSIVE,
+    PROPERTY_TEMPERATURE_PROFILE_MODE,
+)
 from aiocomfoconnect.sensors import (
     SENSOR_BYPASS_ACTIVATION_STATE,
     SENSOR_COMFOCOOL_STATE,
@@ -122,20 +127,12 @@ async def _get_bypass_option(ccb: ComfoConnectBridge) -> str:
     return _timer_option(await ccb.get_bypass() == VentilationSetting.ON)
 
 
-# The unit reports a range of 0-1, so the "external setpoint" mode (2) isn't offered.
-TEMPERATURE_PROFILE_MODES = {0: "adaptive", 1: "fixed"}
-
-
 async def _get_temperature_profile_mode(ccb: ComfoConnectBridge) -> str | None:
-    """Return whether the comfort temperature follows the RMOT or the active profile."""
-    return TEMPERATURE_PROFILE_MODES.get(await ccb.get_property(PROPERTY_TEMPERATURE_PROFILE_MODE))
-
-
-async def _set_temperature_profile_mode(ccb: ComfoConnectBridge, option: str) -> None:
-    """Set the temperature profile mode."""
-    value = next(value for value, mode in TEMPERATURE_PROFILE_MODES.items() if mode == option)
-    prop = PROPERTY_TEMPERATURE_PROFILE_MODE
-    await ccb.set_property_typed(prop.unit, prop.subunit, prop.property_id, value, prop.property_type)
+    """Return the temperature profile mode, or None for a mode that isn't offered, like external setpoint (2)."""
+    try:
+        return await ccb.get_property(PROPERTY_TEMPERATURE_PROFILE_MODE)
+    except ValueError:
+        return None
 
 
 SELECT_TYPES = (
@@ -217,8 +214,8 @@ SELECT_TYPES = (
         update_interval=SETTING_UPDATE_INTERVAL,
         entity_category=EntityCategory.CONFIG,
         get_value_fn=_get_temperature_profile_mode,
-        set_value_fn=_set_temperature_profile_mode,
-        options=list(TEMPERATURE_PROFILE_MODES.values()),
+        set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_property(PROPERTY_TEMPERATURE_PROFILE_MODE, option)),
+        options=list(PROPERTY_TEMPERATURE_PROFILE_MODE.options.values()),
     ),
     ComfoconnectSelectEntityDescription(
         key="comfocool",
@@ -271,8 +268,8 @@ SELECT_TYPES = (
         entity_registry_enabled_default=False,
         update_interval=SETTING_UPDATE_INTERVAL,
         entity_category=EntityCategory.CONFIG,
-        get_value_fn=lambda ccb: cast(Coroutine, ccb.get_sensor_ventmode_temperature_passive()),
-        set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_sensor_ventmode_temperature_passive(option)),
+        get_value_fn=lambda ccb: cast(Coroutine, ccb.get_property(PROPERTY_SENSOR_VENTILATION_TEMP_PASSIVE)),
+        set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_property(PROPERTY_SENSOR_VENTILATION_TEMP_PASSIVE, option)),
         options=[
             VentilationSetting.AUTO,
             VentilationSetting.ON,
@@ -286,8 +283,8 @@ SELECT_TYPES = (
         entity_registry_enabled_default=False,
         update_interval=SETTING_UPDATE_INTERVAL,
         entity_category=EntityCategory.CONFIG,
-        get_value_fn=lambda ccb: cast(Coroutine, ccb.get_sensor_ventmode_humidity_comfort()),
-        set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_sensor_ventmode_humidity_comfort(option)),
+        get_value_fn=lambda ccb: cast(Coroutine, ccb.get_property(PROPERTY_SENSOR_VENTILATION_HUMIDITY_COMFORT)),
+        set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_property(PROPERTY_SENSOR_VENTILATION_HUMIDITY_COMFORT, option)),
         options=[
             VentilationSetting.AUTO,
             VentilationSetting.ON,
@@ -301,8 +298,8 @@ SELECT_TYPES = (
         entity_registry_enabled_default=False,
         update_interval=SETTING_UPDATE_INTERVAL,
         entity_category=EntityCategory.CONFIG,
-        get_value_fn=lambda ccb: cast(Coroutine, ccb.get_sensor_ventmode_humidity_protection()),
-        set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_sensor_ventmode_humidity_protection(option)),
+        get_value_fn=lambda ccb: cast(Coroutine, ccb.get_property(PROPERTY_SENSOR_VENTILATION_HUMIDITY_PROTECTION)),
+        set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_property(PROPERTY_SENSOR_VENTILATION_HUMIDITY_PROTECTION, option)),
         options=[
             VentilationSetting.AUTO,
             VentilationSetting.ON,

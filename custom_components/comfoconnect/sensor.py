@@ -37,6 +37,8 @@ from aiocomfoconnect.sensors import (
     SENSOR_HUMIDITY_EXTRACT,
     SENSOR_HUMIDITY_OUTDOOR,
     SENSOR_HUMIDITY_SUPPLY,
+    SENSOR_POSTHEATER_STATE,
+    SENSOR_POSTHEATER_TEMPERATURE_BEFORE,
     SENSOR_POWER_USAGE,
     SENSOR_POWER_USAGE_TOTAL,
     SENSOR_POWER_USAGE_TOTAL_YEAR,
@@ -83,7 +85,6 @@ from . import (
     SIGNAL_COMFOCONNECT_UPDATE_RECEIVED,
     ComfoConnectBridge,
 )
-from .const import SENSOR_POSTHEATER_STATE, SENSOR_POSTHEATER_TEMP_BEFORE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -523,12 +524,12 @@ SENSOR_TYPES = (
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
     ComfoconnectSensorEntityDescription(
-        key=SENSOR_POSTHEATER_TEMP_BEFORE,
+        key=SENSOR_POSTHEATER_TEMPERATURE_BEFORE,
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
         name="Temperature before postheater",
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-        ccb_sensor=SENSORS.get(SENSOR_POSTHEATER_TEMP_BEFORE),
+        ccb_sensor=SENSORS.get(SENSOR_POSTHEATER_TEMPERATURE_BEFORE),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),

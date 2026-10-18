@@ -10,10 +10,10 @@ import voluptuous as vol
 from aiocomfoconnect import ComfoConnect, discover_bridges
 from aiocomfoconnect.const import GatewayType
 from aiocomfoconnect.exceptions import (
+    AioComfoConnectError,
     AioComfoConnectNotConnected,
     AioComfoConnectNotReachable,
     AioComfoConnectTimeout,
-    ComfoConnectError,
     ComfoConnectNotAllowed,
     ComfoConnectOtherSession,
 )
@@ -30,11 +30,7 @@ from homeassistant.components.fan import DOMAIN as FAN_DOMAIN
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import CONF_HOST, EVENT_HOMEASSISTANT_STOP, Platform
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import (
-    ConfigEntryAuthFailed,
-    ConfigEntryError,
-    ConfigEntryNotReady,
-)
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import service
@@ -106,9 +102,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except ComfoConnectNotAllowed:
         raise ConfigEntryAuthFailed("Access denied")
 
-    except ComfoConnectError as err:
-        raise ConfigEntryError from err
-
     except (AioComfoConnectTimeout, AioComfoConnectNotReachable) as err:
         # We can't reach the bridge, this can happen when the IP address of the bridge has changed.
         _LOGGER.warning(
@@ -134,8 +127,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         except ComfoConnectNotAllowed:
             raise ConfigEntryAuthFailed("Access denied")
 
-        except ComfoConnectError as err:
+        except AioComfoConnectError as err:
             raise ConfigEntryNotReady from err
+
+    except AioComfoConnectError as err:
+        # E.g. no ventilation unit on the bus yet, or an old bridge whose only session is taken by the app.
+        raise ConfigEntryNotReady from err
 
     # A failed read must not leave a reconnecting session behind the failed entry.
     try:
@@ -144,7 +141,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         unit_firmware = await bridge.get_property(PROPERTY_FIRMWARE_VERSION)
         unit_name = await bridge.get_property(PROPERTY_NAME)
         unit_serial_number = await bridge.get_property(PROPERTY_SERIAL_NUMBER)
-    except (ComfoConnectError, AioComfoConnectTimeout, AioComfoConnectNotConnected, AioComfoConnectNotReachable) as err:
+    except AioComfoConnectError as err:
         await bridge.disconnect()
         raise ConfigEntryNotReady("The bridge did not return its device information") from err
     except BaseException:
@@ -180,7 +177,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         name=unit_name,
         model=unit_model,
         serial_number=unit_serial_number,
-        sw_version=version_decode(unit_firmware),
+        sw_version=unit_firmware,
     )
     device_registry.async_update_device(unit_device.id, via_device_id=bridge_device.id)
     bridge.device_id = unit_device.id
@@ -222,13 +219,7 @@ class ComfoConnectBridge(ComfoConnect):
 
     def __init__(self, hass: HomeAssistant, host: str, uuid: str):
         """Initialize the ComfoConnect bridge."""
-        super().__init__(
-            host,
-            uuid,
-            hass.loop,
-            self.sensor_callback,
-            self.alarm_callback,
-        )
+        super().__init__(host, uuid, sensor_callback=self.sensor_callback, alarm_callback=self.alarm_callback)
         self.hass = hass
         # Latest alarms per node; a node is missing until it has reported.
         self.active_alarms: dict[int, dict[int, str]] = {}

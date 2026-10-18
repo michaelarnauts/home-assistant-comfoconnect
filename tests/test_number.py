@@ -50,26 +50,26 @@ def protocol():
     heating = PROPERTY_RMOT_HEATING_THRESHOLD
     cooling = PROPERTY_RMOT_COOLING_THRESHOLD
     profiles = (PROPERTY_PROFILE_TEMPERATURE_WARM, PROPERTY_PROFILE_TEMPERATURE_NORMAL, PROPERTY_PROFILE_TEMPERATURE_COOL)
-    values = {heating.property_id: 110, cooling.property_id: 200}
-    ranges = {heating.property_id: (0, 150), cooling.property_id: (150, 400)}
+    values = {heating.property_id: 11.0, cooling.property_id: 20.0}
+    ranges = {heating.property_id: (0.0, 15.0), cooling.property_id: (15.0, 40.0)}
     # The profile temperatures and their ranges as read from a real unit.
-    values |= {prop.property_id: value for prop, value in zip(profiles, (230, 210, 190), strict=True)}
-    ranges |= {prop.property_id: limits for prop, limits in zip(profiles, ((230, 289), (189, 233), (178, 190)), strict=True)}
+    values |= {prop.property_id: value for prop, value in zip(profiles, (23.0, 21.0, 19.0), strict=True)}
+    ranges |= {prop.property_id: limits for prop, limits in zip(profiles, ((23.0, 28.9), (18.9, 23.3), (17.8, 19.0)), strict=True)}
 
     async def get_property(prop):
         return "Test unit"
 
     async def get_property_constraints(prop):
         assert prop in (heating, cooling, *profiles)
-        return PropertyConstraints(values[prop.property_id], *ranges[prop.property_id], 10)
+        return PropertyConstraints(values[prop.property_id], *ranges[prop.property_id], 1.0)
 
-    async def set_property_typed(unit, subunit, property_id, value, property_type):
-        values[property_id] = value
+    async def set_property(prop, value):
+        values[prop.property_id] = value
 
     with ExitStack() as stack:
         for method in ("connect", "disconnect"):
             stack.enter_context(patch(f"{BRIDGE}.{method}", new_callable=AsyncMock))
-        stack.enter_context(patch(f"{BRIDGE}.set_property_typed", new_callable=AsyncMock, side_effect=set_property_typed))
+        stack.enter_context(patch(f"{BRIDGE}.set_property", new_callable=AsyncMock, side_effect=set_property))
         stack.enter_context(patch(f"{BRIDGE}.get_property", new_callable=AsyncMock, side_effect=get_property))
         stack.enter_context(patch(f"{BRIDGE}.get_property_constraints", new_callable=AsyncMock, side_effect=get_property_constraints))
         stack.enter_context(
@@ -121,7 +121,7 @@ async def test_rmot_numbers_are_disabled_configuration_entities(hass: HomeAssist
 
 
 @pytest.mark.parametrize("entity_id,prop,value", [(HEATING, PROPERTY_RMOT_HEATING_THRESHOLD, 12), (COOLING, PROPERTY_RMOT_COOLING_THRESHOLD, 21)])
-async def test_write_uses_tenths_and_reads_back_the_device(hass: HomeAssistant, entry: MockConfigEntry, protocol, entity_id, prop, value) -> None:
+async def test_write_uses_degrees_and_reads_back_the_device(hass: HomeAssistant, entry: MockConfigEntry, protocol, entity_id, prop, value) -> None:
     """A write uses the library property, and the state shows what the unit reports right after."""
     enable_numbers(hass, entry)
     assert await hass.config_entries.async_setup(entry.entry_id)
@@ -130,7 +130,7 @@ async def test_write_uses_tenths_and_reads_back_the_device(hass: HomeAssistant, 
 
     await hass.services.async_call("number", "set_value", {"entity_id": entity_id, "value": value}, blocking=True)
     await hass.async_block_till_done()
-    bridge.set_property_typed.assert_awaited_once_with(prop.unit, prop.subunit, prop.property_id, value * 10, prop.property_type)
+    bridge.set_property.assert_awaited_once_with(prop, value)
     assert float(hass.states.get(entity_id).state) == value
 
 
@@ -140,7 +140,7 @@ async def test_failed_write_raises_a_home_assistant_error(hass: HomeAssistant, e
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     bridge = hass.data[DOMAIN][entry.entry_id]
-    bridge.set_property_typed.side_effect = ComfoConnectRmiError("refused")
+    bridge.set_property.side_effect = ComfoConnectRmiError("refused")
 
     with pytest.raises(HomeAssistantError):
         await hass.services.async_call("number", "set_value", {"entity_id": HEATING, "value": 12}, blocking=True)
@@ -154,8 +154,8 @@ async def test_a_poll_reads_the_value_and_limits_in_one_request(hass: HomeAssist
     bridge = hass.data[DOMAIN][entry.entry_id]
     reads = bridge.get_property_constraints.await_count
 
-    protocol[0][PROPERTY_RMOT_HEATING_THRESHOLD.property_id] = 130
-    protocol[1][PROPERTY_RMOT_HEATING_THRESHOLD.property_id] = (50, 200)
+    protocol[0][PROPERTY_RMOT_HEATING_THRESHOLD.property_id] = 13.0
+    protocol[1][PROPERTY_RMOT_HEATING_THRESHOLD.property_id] = (5.0, 20.0)
     await async_update_entity(hass, HEATING)
     assert bridge.get_property_constraints.await_count == reads + 1
     state = hass.states.get(HEATING)
@@ -173,8 +173,8 @@ async def test_unavailable_number_recovers_with_fresh_limits(hass: HomeAssistant
     await hass.async_block_till_done()
     assert hass.states.get(HEATING).state == STATE_UNAVAILABLE
 
-    protocol[1][PROPERTY_RMOT_HEATING_THRESHOLD.property_id] = (50, 200)
-    protocol[0][PROPERTY_RMOT_HEATING_THRESHOLD.property_id] = 130
+    protocol[1][PROPERTY_RMOT_HEATING_THRESHOLD.property_id] = (5.0, 20.0)
+    protocol[0][PROPERTY_RMOT_HEATING_THRESHOLD.property_id] = 13.0
     bridge.set_available(True)
     await hass.async_block_till_done()
     state = hass.states.get(HEATING)
@@ -185,7 +185,7 @@ async def test_unavailable_number_recovers_with_fresh_limits(hass: HomeAssistant
 async def test_invalid_limits_disable_the_control(hass: HomeAssistant, entry: MockConfigEntry, protocol) -> None:
     """A failed metadata read must not leave a writable control with guessed limits."""
     enable_numbers(hass, entry)
-    protocol[1][PROPERTY_RMOT_HEATING_THRESHOLD.property_id] = (200, 50)
+    protocol[1][PROPERTY_RMOT_HEATING_THRESHOLD.property_id] = (20.0, 5.0)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     assert hass.states.get(HEATING).state == STATE_UNAVAILABLE
@@ -211,7 +211,7 @@ async def test_gateway_failure_keeps_numbers_registered_for_recovery(hass: HomeA
     assert hass.states.get(HEATING).state == STATE_UNAVAILABLE
 
     bridge.get_property_constraints.side_effect = normal_reads
-    protocol[0][PROPERTY_RMOT_HEATING_THRESHOLD.property_id] = 130
+    protocol[0][PROPERTY_RMOT_HEATING_THRESHOLD.property_id] = 13.0
     await async_update_entity(hass, HEATING)
     assert hass.states.get(HEATING).state == "13.0"
 
@@ -257,7 +257,7 @@ async def test_profile_temperatures_are_disabled_configuration_entities(hass: Ho
 
 
 async def test_write_a_profile_temperature(hass: HomeAssistant, entry: MockConfigEntry, protocol) -> None:
-    """A profile temperature is written in tenths of a degree to its own property."""
+    """A profile temperature is written in degrees to its own property."""
     enable_profile_temperatures(hass, entry)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
@@ -267,5 +267,5 @@ async def test_write_a_profile_temperature(hass: HomeAssistant, entry: MockConfi
     await hass.services.async_call("number", "set_value", {"entity_id": entity_id, "value": 22}, blocking=True)
     await hass.async_block_till_done()
 
-    bridge.set_property_typed.assert_awaited_once_with(prop.unit, prop.subunit, prop.property_id, 220, prop.property_type)
+    bridge.set_property.assert_awaited_once_with(prop, 22)
     assert hass.states.get(entity_id).state == "22.0"
