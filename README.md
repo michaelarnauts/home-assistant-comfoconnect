@@ -58,6 +58,18 @@ Away Mode offers durations in minutes, 2/8/24 hours, and 7/14 days. Cancel the t
 
 Choose a duration in Bypass timer to force bypass on for 10–60 minutes. Choose Off (`off`) to restore automatic control. Active (`active`) means bypass is forced on, including through Bypass Mode; selecting it only refreshes status.
 
+### Native alarm notifications
+
+Open **Settings → Devices & services → Zehnder ComfoAir Q → Configure** and choose **Native notifications**:
+
+* **Off** (default): no built-in notifications. Alarm sensors and events still work.
+* **Faults only**: notify about alarms other than filter maintenance reminders.
+* **Faults and maintenance**: also include filter ordering, cleaning, and replacement reminders. Maintenance appears separately and uses a maintenance title when no faults are active.
+
+Notifications are opt-in for both existing and new installations. Changes apply immediately without reconnecting the bridge. Each unit has one notification combining its nodes. Repeated reports do not reopen a dismissed notice; a change to the selected alarms can notify again. Dismissal and known node alarms survive an integration reload. A Home Assistant restart starts a fresh alarm session. Alarm rechecks do not create notices or confirm a clear; a confirmed clear removes the notice when no selected alarms remain.
+
+Blueprints and automations remain optional for phone delivery, quiet hours, or escalation using the Active alarms sensor or the event below. Choose **Off** if an automation already provides the same native notifications.
+
 ### Alarm events
 
 The `comfoconnect_alarm` event reports changed alarms and clears per node. Its payload contains `device_id` (the ventilation unit), `bridge_uuid`, `node_id`, and an `errors` list with `id` and `message` fields. A clear has an empty list. Repeated identical reports and startup reports without alarms do not fire an event. Alarms received before device registration have a null `device_id`.

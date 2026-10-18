@@ -8,6 +8,7 @@ import pytest
 from aiocomfoconnect.exceptions import AioComfoConnectTimeout, ComfoConnectNotAllowed, ComfoConnectOtherSession
 from custom_components.comfoconnect.config_flow import COMFOCONNECT_MANUAL_BRIDGE_ID, DEFAULT_PIN
 from custom_components.comfoconnect.const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN
+from custom_components.comfoconnect.notifications import CONF_ALARM_NOTIFICATIONS, AlarmNotificationMode
 from homeassistant.config_entries import SOURCE_IMPORT, SOURCE_USER
 from homeassistant.const import CONF_HOST, CONF_PIN
 from homeassistant.core import HomeAssistant
@@ -40,6 +41,8 @@ def assert_entry_created(result, local_uuid: str | None = None) -> None:
     assert result["data"] == {CONF_HOST: HOST, CONF_UUID: BRIDGE_UUID, CONF_LOCAL_UUID: local_uuid or result["data"][CONF_LOCAL_UUID]}
     assert len(result["data"][CONF_LOCAL_UUID]) == 32
     assert result["result"].unique_id == BRIDGE_UUID
+    assert result["result"].options == {CONF_ALARM_NOTIFICATIONS: AlarmNotificationMode.OFF}
+    assert result["result"].minor_version == 1
 
 
 async def start_flow(hass: HomeAssistant, step: str = "user"):

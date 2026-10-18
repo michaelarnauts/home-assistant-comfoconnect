@@ -370,6 +370,13 @@
             "options": {
                 "manual": "Enter the address of a bridge"
             }
+        },
+        "alarm_notifications": {
+            "options": {
+                "off": "Off",
+                "faults": "Faults only",
+                "faults_and_maintenance": "Faults and maintenance"
+            }
         }
     },
     "services": {
@@ -405,6 +412,17 @@
         },
         "start_boost_failed": {
             "message": "Failed to start boost: {error}"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Alarm notifications",
+                "description": "Choose which alarms appear in Home Assistant's notification panel. Filter reminders are maintenance. Alarm sensors and events remain available with any choice. Changes apply immediately.",
+                "data": {
+                    "alarm_notifications": "Native notifications"
+                }
+            }
         }
     }
 }
