@@ -13,7 +13,7 @@ from homeassistant.loader import async_setup as setup_loader
 
 @pytest.mark.parametrize(
     ("value", "boost", "away"),
-    [(0, "Off", "Off"), (64, "Active", "Off"), (2048, "Off", "Active"), (2112, "Active", "Active")],
+    [(0, "off", "off"), (64, "active", "off"), (2048, "off", "active"), (2112, "active", "active")],
 )
 def test_boost_and_away_follow_the_pushed_timers(tmp_path, value: int, boost: str, away: str) -> None:
     """Bit 6 of PDO 337 is the boost timer and bit 11 the away timer."""

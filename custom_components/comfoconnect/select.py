@@ -75,21 +75,17 @@ class ComfoconnectSelectEntityDescription(SelectEntityDescription, ComfoconnectS
 # Settings that are normally only changed during installation don't need to be polled every 30 seconds.
 SETTING_UPDATE_INTERVAL = timedelta(minutes=5)
 
-TIMER_OFF = "Off"
-TIMER_ACTIVE = "Active"
-TIMEOUT_OPTIONS = ("10 Minutes", "20 Minutes", "30 Minutes", "40 Minutes", "50 Minutes", "60 Minutes")
+TIMER_OFF = "off"
+TIMER_ACTIVE = "active"
+# A timer option is its duration in minutes.
+TIMEOUT_OPTIONS = ("10", "20", "30", "40", "50", "60")
 TIMER_OPTIONS = (TIMER_OFF, TIMER_ACTIVE, *TIMEOUT_OPTIONS)
-AWAY_OPTIONS = (*TIMER_OPTIONS, "2 Hours", "8 Hours", "24 Hours", "7 Days", "14 Days")
+# Away also offers 2, 8 and 24 hours, and 7 and 14 days.
+AWAY_OPTIONS = (*TIMER_OPTIONS, "120", "480", "1440", "10080", "20160")
 
 # Bits of the running timers in SENSOR_PRESET_TIMERS.
 BOOST_TIMER_BIT = 1 << 6
 AWAY_TIMER_BIT = 1 << 11
-
-
-def _timeout_seconds(option: str) -> int:
-    """Convert a timeout option to seconds."""
-    duration, unit = option.split()
-    return int(duration) * {"Minutes": 60, "Hours": 3600, "Days": 86400}[unit]
 
 
 def _timer_option(active: bool) -> str:
@@ -102,7 +98,7 @@ async def _set_boost_option(ccb: ComfoConnectBridge, option: str) -> None:
     if option == TIMER_OFF:
         await ccb.set_boost(False)
     elif option != TIMER_ACTIVE:
-        await ccb.set_boost(True, _timeout_seconds(option))
+        await ccb.set_boost(True, int(option) * 60)
 
 
 async def _set_away_option(ccb: ComfoConnectBridge, option: str) -> None:
@@ -110,7 +106,7 @@ async def _set_away_option(ccb: ComfoConnectBridge, option: str) -> None:
     if option == TIMER_OFF:
         await ccb.set_away(False)
     elif option != TIMER_ACTIVE:
-        await ccb.set_away(True, _timeout_seconds(option))
+        await ccb.set_away(True, int(option) * 60)
 
 
 async def _get_boost_option(ccb: ComfoConnectBridge) -> str:
@@ -128,7 +124,7 @@ async def _set_bypass_option(ccb: ComfoConnectBridge, option: str) -> None:
     if option == TIMER_OFF:
         await ccb.set_bypass(VentilationSetting.AUTO)
     elif option != TIMER_ACTIVE:
-        await ccb.set_bypass(VentilationSetting.ON, _timeout_seconds(option))
+        await ccb.set_bypass(VentilationSetting.ON, int(option) * 60)
 
 
 async def _get_bypass_option(ccb: ComfoConnectBridge) -> str:
@@ -147,13 +143,12 @@ async def _get_temperature_profile_mode(ccb: ComfoConnectBridge) -> str | None:
 SELECT_TYPES = (
     ComfoconnectSelectEntityDescription(
         key="select_mode",
-        name="Ventilation Mode",
+        translation_key="select_mode",
         icon="mdi:fan-auto",
         entity_category=EntityCategory.CONFIG,
         get_value_fn=lambda ccb: cast(Coroutine, ccb.get_mode()),
         set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_mode(option)),
         options=[VentilationMode.AUTO, VentilationMode.MANUAL],
-        # translation_key="setting",
         sensor=SENSORS.get(SENSOR_OPERATING_MODE),
         sensor_value_fn=lambda value: {
             255: VentilationMode.AUTO,
@@ -162,7 +157,7 @@ SELECT_TYPES = (
     ),
     ComfoconnectSelectEntityDescription(
         key="bypass_mode",
-        name="Bypass Mode",
+        translation_key="bypass_mode",
         icon="mdi:camera-iris",
         entity_category=EntityCategory.CONFIG,
         get_value_fn=lambda ccb: cast(Coroutine, ccb.get_bypass()),
@@ -172,7 +167,6 @@ SELECT_TYPES = (
             VentilationSetting.ON,
             VentilationSetting.OFF,
         ],
-        # translation_key="setting",
         sensor=SENSORS.get(SENSOR_BYPASS_ACTIVATION_STATE),
         sensor_value_fn=lambda value: {
             0: VentilationSetting.AUTO,
@@ -182,7 +176,7 @@ SELECT_TYPES = (
     ),
     ComfoconnectSelectEntityDescription(
         key="balance_mode",
-        name="Balance Mode",
+        translation_key="balance_mode",
         entity_registry_enabled_default=False,
         update_interval=SETTING_UPDATE_INTERVAL,
         entity_category=EntityCategory.CONFIG,
@@ -193,11 +187,10 @@ SELECT_TYPES = (
             VentilationBalance.SUPPLY_ONLY,
             VentilationBalance.EXHAUST_ONLY,
         ],
-        # translation_key="balance",
     ),
     ComfoconnectSelectEntityDescription(
         key="temperature_profile",
-        name="Temperature Profile",
+        translation_key="temperature_profile",
         icon="mdi:thermometer-auto",
         entity_category=EntityCategory.CONFIG,
         get_value_fn=lambda ccb: cast(Coroutine, ccb.get_temperature_profile()),
@@ -207,7 +200,6 @@ SELECT_TYPES = (
             VentilationTemperatureProfile.NORMAL,
             VentilationTemperatureProfile.COOL,
         ],
-        # translation_key="temperature_profile",
         sensor=SENSORS.get(SENSOR_PROFILE_TEMPERATURE),
         sensor_value_fn=lambda value: {
             0: VentilationTemperatureProfile.NORMAL,
@@ -217,7 +209,7 @@ SELECT_TYPES = (
     ),
     ComfoconnectSelectEntityDescription(
         key="temperature_profile_mode",
-        name="Temperature Profile Mode",
+        translation_key="temperature_profile_mode",
         icon="mdi:thermometer-auto",
         entity_registry_enabled_default=False,
         update_interval=SETTING_UPDATE_INTERVAL,
@@ -228,7 +220,7 @@ SELECT_TYPES = (
     ),
     ComfoconnectSelectEntityDescription(
         key="comfocool",
-        name="ComfoCool Mode",
+        translation_key="comfocool",
         entity_category=EntityCategory.CONFIG,
         get_value_fn=lambda ccb: cast(Coroutine, ccb.get_comfocool_mode()),
         set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_comfocool_mode(option)),
@@ -236,7 +228,6 @@ SELECT_TYPES = (
             ComfoCoolMode.AUTO,
             ComfoCoolMode.OFF,
         ],
-        # translation_key="comfocool",
         sensor=SENSORS.get(SENSOR_COMFOCOOL_STATE),
         sensor_value_fn=lambda value: {
             0: ComfoCoolMode.OFF,
@@ -245,7 +236,7 @@ SELECT_TYPES = (
     ),
     ComfoconnectSelectEntityDescription(
         key="boost_timeout",
-        name="Boost Mode",
+        translation_key="boost_timeout",
         icon="mdi:fan-plus",
         get_value_fn=_get_boost_option,
         set_value_fn=_set_boost_option,
@@ -256,7 +247,7 @@ SELECT_TYPES = (
     ),
     ComfoconnectSelectEntityDescription(
         key="away_timeout",
-        name="Away Mode",
+        translation_key="away_timeout",
         icon="mdi:home-export-outline",
         get_value_fn=_get_away_option,
         set_value_fn=_set_away_option,
@@ -266,7 +257,7 @@ SELECT_TYPES = (
     ),
     ComfoconnectSelectEntityDescription(
         key="bypass_timeout",
-        name="Bypass timer",
+        translation_key="bypass_timeout",
         icon="mdi:camera-iris",
         get_value_fn=_get_bypass_option,
         set_value_fn=_set_bypass_option,
@@ -277,7 +268,7 @@ SELECT_TYPES = (
     ),
     ComfoconnectSelectEntityDescription(
         key="sensor_ventmode_temperature_passive",
-        name="Temperature sensor ventilation",
+        translation_key="sensor_ventmode_temperature_passive",
         icon="mdi:thermometer-auto",
         entity_registry_enabled_default=False,
         update_interval=SETTING_UPDATE_INTERVAL,
@@ -292,7 +283,7 @@ SELECT_TYPES = (
     ),
     ComfoconnectSelectEntityDescription(
         key="sensor_ventmode_humidity_comfort",
-        name="Humidity comfort ventilation",
+        translation_key="sensor_ventmode_humidity_comfort",
         icon="mdi:water-percent",
         entity_registry_enabled_default=False,
         update_interval=SETTING_UPDATE_INTERVAL,
@@ -307,7 +298,7 @@ SELECT_TYPES = (
     ),
     ComfoconnectSelectEntityDescription(
         key="sensor_ventmode_humidity_protection",
-        name="Humidity protection ventilation",
+        translation_key="sensor_ventmode_humidity_protection",
         icon="mdi:water-alert",
         entity_registry_enabled_default=False,
         update_interval=SETTING_UPDATE_INTERVAL,
@@ -399,7 +390,7 @@ class ComfoConnectSelect(ComfoConnectEntity, SelectEntity):
         try:
             self._attr_current_option = await self.entity_description.get_value_fn(self._ccb)
         except AioComfoConnectError as err:
-            _LOGGER.warning("Could not update %s: %s", self.entity_description.name, err)
+            _LOGGER.warning("Could not update %s: %s", self.entity_id, err)
             return
         self._last_update = time.monotonic()
 
@@ -416,6 +407,6 @@ class ComfoConnectSelect(ComfoConnectEntity, SelectEntity):
             else:
                 current_option = option
         except AioComfoConnectError as err:
-            raise HomeAssistantError(f"Failed to set {self.entity_description.name}: {err}") from err
+            raise HomeAssistantError(f"Failed to set {self.name}: {err}") from err
         self._attr_current_option = current_option
         self.async_write_ha_state()

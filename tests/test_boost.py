@@ -21,18 +21,18 @@ def test_boost_status_duration_and_off(tmp_path):
         entity = ComfoConnectSelect(bridge, SimpleNamespace(), description)
         entity.hass = hass
         entity.entity_id = "select.boost"
-        await entity.async_select_option("Active")
+        await entity.async_select_option("active")
         bridge.set_boost.assert_not_awaited()
-        assert hass.states.get(entity.entity_id).state == "Off"
-        await entity.async_select_option("10 Minutes")
+        assert hass.states.get(entity.entity_id).state == "off"
+        await entity.async_select_option("10")
         bridge.set_boost.assert_awaited_once_with(True, 600)
-        assert hass.states.get(entity.entity_id).state == "Active"
+        assert hass.states.get(entity.entity_id).state == "active"
         bridge.get_boost.return_value = True
         await entity.async_update()
-        assert entity.current_option == "Active"
-        await entity.async_select_option("Off")
+        assert entity.current_option == "active"
+        await entity.async_select_option("off")
         assert bridge.set_boost.await_args.args == (False,)
-        assert hass.states.get(entity.entity_id).state == "Off"
+        assert hass.states.get(entity.entity_id).state == "off"
 
     asyncio.run(scenario())
 

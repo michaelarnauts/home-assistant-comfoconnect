@@ -45,7 +45,7 @@ class ComfoConnectNumberEntityDescription(NumberEntityDescription, ComfoConnectN
 NUMBER_TYPES = (
     ComfoConnectNumberEntityDescription(
         key="rmot_heating",
-        name="Heating RMOT threshold",
+        translation_key="rmot_heating",
         device_class=NumberDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         mode=NumberMode.BOX,
@@ -53,7 +53,7 @@ NUMBER_TYPES = (
     ),
     ComfoConnectNumberEntityDescription(
         key="rmot_cooling",
-        name="Cooling RMOT threshold",
+        translation_key="rmot_cooling",
         device_class=NumberDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         mode=NumberMode.BOX,
@@ -62,7 +62,7 @@ NUMBER_TYPES = (
     # The profile temperatures are only used in the fixed temperature profile mode. The unit also stores them in adaptive mode.
     ComfoConnectNumberEntityDescription(
         key="profile_temperature_warm",
-        name="Warm profile temperature",
+        translation_key="profile_temperature_warm",
         device_class=NumberDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         mode=NumberMode.BOX,
@@ -70,7 +70,7 @@ NUMBER_TYPES = (
     ),
     ComfoConnectNumberEntityDescription(
         key="profile_temperature_normal",
-        name="Normal profile temperature",
+        translation_key="profile_temperature_normal",
         device_class=NumberDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         mode=NumberMode.BOX,
@@ -78,7 +78,7 @@ NUMBER_TYPES = (
     ),
     ComfoConnectNumberEntityDescription(
         key="profile_temperature_cool",
-        name="Cool profile temperature",
+        translation_key="profile_temperature_cool",
         device_class=NumberDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         mode=NumberMode.BOX,
@@ -133,7 +133,7 @@ class ComfoConnectNumber(ComfoConnectEntity, NumberEntity):
                 raise ValueError("Invalid property limits")
         except (AioComfoConnectError, ValueError) as err:
             self._attr_available = False
-            _LOGGER.warning("Could not update %s: %s", self.entity_description.name, err)
+            _LOGGER.warning("Could not update %s: %s", self.entity_id, err)
             return
         self._attr_native_value = constraints.value
         self._attr_native_min_value = constraints.minimum
@@ -146,5 +146,5 @@ class ComfoConnectNumber(ComfoConnectEntity, NumberEntity):
         try:
             await self._ccb.set_property(self.entity_description.property, value)
         except AioComfoConnectError as err:
-            raise HomeAssistantError(f"Failed to set {self.entity_description.name}: {err}") from err
+            raise HomeAssistantError(f"Failed to set {self.name}: {err}") from err
         self.async_schedule_update_ha_state(True)

@@ -18,10 +18,10 @@ def test_failing_select_raises_and_keeps_its_option():
         bridge = SimpleNamespace(uuid="test", is_available=True, set_boost=AsyncMock(side_effect=AioComfoConnectTimeout("No answer")))
         description = next(item for item in SELECT_TYPES if item.key == "boost_timeout")
         entity = ComfoConnectSelect(bridge, SimpleNamespace(), description)
-        entity._attr_current_option = "Off"
-        with pytest.raises(HomeAssistantError, match="Failed to set Boost Mode: No answer"):
-            await entity.async_select_option("10 Minutes")
-        assert entity.current_option == "Off"
+        entity._attr_current_option = "off"
+        with pytest.raises(HomeAssistantError, match="Failed to set .*: No answer"):
+            await entity.async_select_option("10")
+        assert entity.current_option == "off"
 
     asyncio.run(scenario())
 
@@ -33,7 +33,7 @@ def test_failing_button_raises():
         bridge = SimpleNamespace(uuid="test", is_available=True, set_boost=AsyncMock(side_effect=AioComfoConnectTimeout("No answer")))
         description = next(item for item in BUTTON_TYPES if item.key == "cancel_boost")
         entity = ComfoConnectButton(bridge, SimpleNamespace(), description)
-        with pytest.raises(HomeAssistantError, match=f"Failed to press {description.name}: No answer"):
+        with pytest.raises(HomeAssistantError, match="Failed to press .*: No answer"):
             await entity.async_press()
 
     asyncio.run(scenario())

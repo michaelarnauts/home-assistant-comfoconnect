@@ -1,70 +1,351 @@
 {
     "config": {
-        "abort": {
-            "no_devices_found": "No devices found on the network",
-            "reauth_successful": "Re-authentication was successful",
-            "cannot_connect": "Could not connect to the bridge. Check that it is on and reachable, and that the official app isn't using it."
-        },
-        "create_entry": {
-            "default": "Some sensors are not enabled by default. You can enable them in the entity registry after the integration configuration."
-        },
         "error": {
-            "invalid_host": "Could not find a ComfoConnect bridge at this address",
             "invalid_pin": "Invalid PIN",
+            "invalid_host": "Could not find a ComfoConnect bridge at this address",
             "cannot_connect": "Could not connect to the bridge. Check that it is on and reachable, and that the official app isn't using it."
         },
         "step": {
-            "confirm": {
-                "description": "Do you want to start set up?"
-            },
-            "enter_pin": {
-                "description": "The selected ComfoConnect LAN C bridge isn't using the default PIN. Please enter the correct PIN.",
-                "title": "Enter PIN"
+            "user": {
+                "data": {
+                    "host": "Host"
+                },
+                "title": "Add a ComfoConnect LAN C bridge",
+                "description": "Select the ComfoConnect LAN C bridge from the list below."
             },
             "manual": {
                 "data": {
                     "host": "Host"
                 },
-                "description": "Enter a ComfoConnect LAN C bridge hostname or IP address below.",
-                "title": "Add a ComfoConnect LAN C bridge manually"
+                "title": "Add a ComfoConnect LAN C bridge manually",
+                "description": "Enter a ComfoConnect LAN C bridge hostname or IP address below."
             },
-            "user": {
-                "data": {
-                    "host": "Host"
-                },
-                "description": "Select the ComfoConnect LAN C bridge from the list below.",
-                "title": "Add a ComfoConnect LAN C bridge"
+            "enter_pin": {
+                "title": "Enter PIN",
+                "description": "The selected ComfoConnect LAN C bridge isn't using the default PIN. Please enter the correct PIN."
+            },
+            "confirm": {
+                "description": "Do you want to start set up?"
             }
+        },
+        "create_entry": {
+            "default": "Some sensors are not enabled by default. You can enable them in the entity registry after the integration configuration."
+        },
+        "abort": {
+            "no_devices_found": "No devices found on the network",
+            "reauth_successful": "Re-authentication was successful",
+            "cannot_connect": "Could not connect to the bridge. Check that it is on and reachable, and that the official app isn't using it."
         }
     },
     "entity": {
-        "select": {
-            "balance": {
-                "state": {
-                    "balance": "Balance",
-                    "exhaust_only": "Exhaust only",
-                    "supply_only": "Supply only"
-                }
+        "binary_sensor": {
+            "heating_season_active": {
+                "name": "Heating Season Active"
             },
-            "setting": {
+            "cooling_season_active": {
+                "name": "Cooling Season Active"
+            },
+            "comfofond_ghe_present": {
+                "name": "ComfoFond GHE present"
+            },
+            "postheater_present": {
+                "name": "Postheater present"
+            },
+            "comfocool_state": {
+                "name": "ComfoCool state"
+            },
+            "active_alarms": {
+                "name": "Active alarms"
+            }
+        },
+        "button": {
+            "reset_errors": {
+                "name": "Reset errors"
+            },
+            "cancel_boost": {
+                "name": "Cancel boost"
+            },
+            "cancel_away": {
+                "name": "Cancel away"
+            }
+        },
+        "fan": {
+            "ventilation": {
+                "state_attributes": {
+                    "preset_mode": {
+                        "state": {
+                            "auto": "Auto",
+                            "manual": "Manual"
+                        }
+                    }
+                }
+            }
+        },
+        "number": {
+            "rmot_heating": {
+                "name": "Heating RMOT threshold"
+            },
+            "rmot_cooling": {
+                "name": "Cooling RMOT threshold"
+            },
+            "profile_temperature_warm": {
+                "name": "Warm profile temperature"
+            },
+            "profile_temperature_normal": {
+                "name": "Normal profile temperature"
+            },
+            "profile_temperature_cool": {
+                "name": "Cool profile temperature"
+            }
+        },
+        "select": {
+            "select_mode": {
+                "name": "Ventilation Mode",
                 "state": {
                     "auto": "Auto",
-                    "manual": "Manual",
-                    "off": "Off",
-                    "on": "On"
+                    "manual": "Manual"
+                }
+            },
+            "bypass_mode": {
+                "name": "Bypass Mode",
+                "state": {
+                    "auto": "Auto",
+                    "on": "On",
+                    "off": "Off"
+                }
+            },
+            "balance_mode": {
+                "name": "Balance Mode",
+                "state": {
+                    "balance": "Balance",
+                    "supply_only": "Supply only",
+                    "exhaust_only": "Exhaust only"
                 }
             },
             "temperature_profile": {
+                "name": "Temperature Profile",
                 "state": {
-                    "cool": "Cool",
+                    "warm": "Warm",
                     "normal": "Normal",
-                    "warm": "Warm"
+                    "cool": "Cool"
+                }
+            },
+            "temperature_profile_mode": {
+                "name": "Temperature Profile Mode",
+                "state": {
+                    "adaptive": "Adaptive",
+                    "fixed": "Fixed"
                 }
             },
             "comfocool": {
+                "name": "ComfoCool Mode",
                 "state": {
                     "auto": "Auto",
                     "off": "Off"
+                }
+            },
+            "boost_timeout": {
+                "name": "Boost Mode",
+                "state": {
+                    "off": "Off",
+                    "active": "Active",
+                    "10": "10 minutes",
+                    "20": "20 minutes",
+                    "30": "30 minutes",
+                    "40": "40 minutes",
+                    "50": "50 minutes",
+                    "60": "60 minutes"
+                }
+            },
+            "away_timeout": {
+                "name": "Away Mode",
+                "state": {
+                    "off": "Off",
+                    "active": "Active",
+                    "10": "10 minutes",
+                    "20": "20 minutes",
+                    "30": "30 minutes",
+                    "40": "40 minutes",
+                    "50": "50 minutes",
+                    "60": "60 minutes",
+                    "120": "2 hours",
+                    "480": "8 hours",
+                    "1440": "24 hours",
+                    "10080": "7 days",
+                    "20160": "14 days"
+                }
+            },
+            "bypass_timeout": {
+                "name": "Bypass timer",
+                "state": {
+                    "off": "Off",
+                    "active": "Active",
+                    "10": "10 minutes",
+                    "20": "20 minutes",
+                    "30": "30 minutes",
+                    "40": "40 minutes",
+                    "50": "50 minutes",
+                    "60": "60 minutes"
+                }
+            },
+            "sensor_ventmode_temperature_passive": {
+                "name": "Temperature sensor ventilation",
+                "state": {
+                    "auto": "Auto",
+                    "on": "On",
+                    "off": "Off"
+                }
+            },
+            "sensor_ventmode_humidity_comfort": {
+                "name": "Humidity comfort ventilation",
+                "state": {
+                    "auto": "Auto",
+                    "on": "On",
+                    "off": "Off"
+                }
+            },
+            "sensor_ventmode_humidity_protection": {
+                "name": "Humidity protection ventilation",
+                "state": {
+                    "auto": "Auto",
+                    "on": "On",
+                    "off": "Off"
+                }
+            }
+        },
+        "sensor": {
+            "outside_humidity_after_preheater": {
+                "name": "Outside humidity after preheater"
+            },
+            "inside_temperature": {
+                "name": "Inside temperature"
+            },
+            "inside_humidity": {
+                "name": "Inside humidity"
+            },
+            "current_rmot": {
+                "name": "Current RMOT"
+            },
+            "target_temperature": {
+                "name": "Target temperature"
+            },
+            "outside_temperature": {
+                "name": "Outside temperature"
+            },
+            "outside_humidity": {
+                "name": "Outside humidity"
+            },
+            "supply_temperature": {
+                "name": "Supply temperature"
+            },
+            "supply_humidity": {
+                "name": "Supply humidity"
+            },
+            "supply_fan_speed": {
+                "name": "Supply fan speed"
+            },
+            "supply_fan_duty": {
+                "name": "Supply fan duty"
+            },
+            "exhaust_fan_speed": {
+                "name": "Exhaust fan speed"
+            },
+            "exhaust_fan_duty": {
+                "name": "Exhaust fan duty"
+            },
+            "exhaust_temperature": {
+                "name": "Exhaust temperature"
+            },
+            "exhaust_humidity": {
+                "name": "Exhaust humidity"
+            },
+            "supply_airflow": {
+                "name": "Supply airflow"
+            },
+            "exhaust_airflow": {
+                "name": "Exhaust airflow"
+            },
+            "bypass_state": {
+                "name": "Bypass state"
+            },
+            "days_to_replace_filter": {
+                "name": "Days to replace filter"
+            },
+            "ventilation_current_power_usage": {
+                "name": "Ventilation current power usage"
+            },
+            "ventilation_total_energy_usage": {
+                "name": "Ventilation total energy usage"
+            },
+            "preheater_current_power_usage": {
+                "name": "Preheater current power usage"
+            },
+            "preheater_total_energy_usage": {
+                "name": "Preheater total energy usage"
+            },
+            "analog_input_1": {
+                "name": "Analog Input 1"
+            },
+            "analog_input_2": {
+                "name": "Analog Input 2"
+            },
+            "analog_input_3": {
+                "name": "Analog Input 3"
+            },
+            "analog_input_4": {
+                "name": "Analog Input 4"
+            },
+            "airflow_constraint": {
+                "name": "Airflow Constraint"
+            },
+            "comfofond_ghe_state": {
+                "name": "ComfoFond GHE state"
+            },
+            "comfofond_ground_temperature": {
+                "name": "ComfoFond ground temperature"
+            },
+            "comfofond_outdoor_air_temperature": {
+                "name": "ComfoFond outdoor air temperature"
+            },
+            "comfocool_condensor_temperature": {
+                "name": "ComfoCool condensor temperature"
+            },
+            "ventilation_year_energy_usage": {
+                "name": "Ventilation year energy usage"
+            },
+            "preheater_year_energy_usage": {
+                "name": "Preheater year energy usage"
+            },
+            "avoided_heating_power": {
+                "name": "Avoided heating power"
+            },
+            "avoided_heating_year_energy": {
+                "name": "Avoided heating year energy"
+            },
+            "avoided_heating_total_energy": {
+                "name": "Avoided heating total energy"
+            },
+            "avoided_cooling_power": {
+                "name": "Avoided cooling power"
+            },
+            "avoided_cooling_year_energy": {
+                "name": "Avoided cooling year energy"
+            },
+            "avoided_cooling_total_energy": {
+                "name": "Avoided cooling total energy"
+            },
+            "postheater_state": {
+                "name": "Postheater state"
+            },
+            "temperature_before_postheater": {
+                "name": "Temperature before postheater"
+            },
+            "sensor_based_ventilation_state": {
+                "name": "Sensor based ventilation state",
+                "state": {
+                    "disabled": "Disabled",
+                    "active": "Active",
+                    "overruling": "Overruling"
                 }
             }
         }
