@@ -51,6 +51,8 @@ EVENT_COMFOCONNECT_ALARM = "comfoconnect_alarm"
 # The ComfoNet CO2 sensors in zone 1 report on SENSOR_CO2_1 to SENSOR_CO2_8, ordered by node id.
 CO2_SENSOR_IDS = range(SENSOR_CO2_1, SENSOR_CO2_8 + 1)
 
+type ComfoConnectConfigEntry = ConfigEntry[ComfoConnectBridge]
+
 # The unit takes a timer duration in whole seconds, as a signed 32-bit number.
 MAX_TIMER_DURATION = timedelta(seconds=2**31 - 1)
 
@@ -123,10 +125,8 @@ async def read_co2_sensor_info(bridge: ComfoConnectBridge, node_id: int) -> dict
         return {}
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ComfoConnectConfigEntry) -> bool:
     """Set up Zehnder ComfoConnect from a config entry."""
-
-    hass.data.setdefault(DOMAIN, {})
 
     try:
         bridge = ComfoConnectBridge(hass, entry, entry.data[CONF_HOST])
@@ -181,7 +181,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await bridge.disconnect()
         raise
 
-    hass.data[DOMAIN][entry.entry_id] = bridge
+    entry.runtime_data = bridge
 
     device_registry = dr.async_get(hass)
 
@@ -234,19 +234,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: ComfoConnectConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        bridge = hass.data[DOMAIN][entry.entry_id]
-        await bridge.disconnect()
-        hass.data[DOMAIN].pop(entry.entry_id)
+        await entry.runtime_data.disconnect()
 
     return unload_ok
 
 
-async def async_remove_config_entry_device(hass: HomeAssistant, entry: ConfigEntry, device_entry: dr.DeviceEntry) -> bool:
+async def async_remove_config_entry_device(hass: HomeAssistant, entry: ComfoConnectConfigEntry, device_entry: dr.DeviceEntry) -> bool:
     """Allow removing the device of a CO2 sensor that is no longer on the bus."""
-    bridge = hass.data[DOMAIN][entry.entry_id]
+    bridge = entry.runtime_data
     prefix = f"{bridge.uuid}-"
     for domain, identifier in device_entry.identifiers:
         if domain == DOMAIN and identifier.startswith(prefix):
@@ -259,7 +257,7 @@ async def async_remove_config_entry_device(hass: HomeAssistant, entry: ConfigEnt
 class ComfoConnectBridge(ComfoConnect):
     """Representation of a ComfoConnect bridge."""
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, host: str):
+    def __init__(self, hass: HomeAssistant, entry: ComfoConnectConfigEntry, host: str):
         """Initialize the ComfoConnect bridge of a config entry."""
         super().__init__(
             host,

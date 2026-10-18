@@ -21,7 +21,6 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
@@ -33,6 +32,7 @@ from . import (
     SIGNAL_COMFOCONNECT_AVAILABILITY,
     SIGNAL_COMFOCONNECT_UPDATE_RECEIVED,
     ComfoConnectBridge,
+    ComfoConnectConfigEntry,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -94,11 +94,11 @@ SENSOR_TYPES = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: ComfoConnectConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the ComfoConnect binary sensors."""
-    ccb = hass.data[DOMAIN][config_entry.entry_id]
+    ccb = config_entry.runtime_data
 
     sensors = [ComfoConnectBinarySensor(ccb=ccb, config_entry=config_entry, description=description) for description in SENSOR_TYPES]
     sensors.append(ComfoConnectAlarmBinarySensor(ccb=ccb))
@@ -116,7 +116,7 @@ class ComfoConnectBinarySensor(BinarySensorEntity):
     def __init__(
         self,
         ccb: ComfoConnectBridge,
-        config_entry: ConfigEntry,
+        config_entry: ComfoConnectConfigEntry,
         description: ComfoconnectBinarySensorEntityDescription,
     ) -> None:
         """Initialize the ComfoConnect sensor."""

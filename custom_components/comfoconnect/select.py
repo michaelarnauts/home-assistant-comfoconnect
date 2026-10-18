@@ -35,7 +35,6 @@ from aiocomfoconnect.sensors import (
     Sensor as AioComfoConnectSensor,
 )
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
@@ -47,6 +46,7 @@ from . import (
     SIGNAL_COMFOCONNECT_AVAILABILITY,
     SIGNAL_COMFOCONNECT_UPDATE_RECEIVED,
     ComfoConnectBridge,
+    ComfoConnectConfigEntry,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -326,11 +326,11 @@ SELECT_TYPES = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: ComfoConnectConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the ComfoConnect selects."""
-    ccb = hass.data[DOMAIN][config_entry.entry_id]
+    ccb = config_entry.runtime_data
 
     selects = [ComfoConnectSelect(ccb=ccb, config_entry=config_entry, description=description) for description in SELECT_TYPES]
 
@@ -346,7 +346,7 @@ class ComfoConnectSelect(SelectEntity):
     def __init__(
         self,
         ccb: ComfoConnectBridge,
-        config_entry: ConfigEntry,
+        config_entry: ComfoConnectConfigEntry,
         description: ComfoconnectSelectEntityDescription,
     ) -> None:
         """Initialize the ComfoConnect select."""

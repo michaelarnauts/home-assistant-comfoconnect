@@ -13,7 +13,7 @@ from aiocomfoconnect.exceptions import (
     ComfoConnectRmiError,
     VentilationUnitNotFoundException,
 )
-from custom_components.comfoconnect import DOMAIN, async_setup_entry
+from custom_components.comfoconnect import async_setup_entry
 from custom_components.comfoconnect.const import CONF_LOCAL_UUID, CONF_UUID
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 
@@ -70,7 +70,7 @@ def test_failed_device_read_closes_session_and_requests_retry(error):
             await async_setup_entry(hass, entry)
         assert failure.value.__cause__ is error
         bridge.disconnect.assert_awaited_once()
-        assert entry.entry_id not in hass.data[DOMAIN]
+        assert not hasattr(entry, "runtime_data")
 
     asyncio.run(scenario())
 
@@ -85,6 +85,6 @@ def test_cancelled_setup_read_closes_session_and_propagates_cancellation():
         with patch("custom_components.comfoconnect.ComfoConnectBridge", return_value=bridge), pytest.raises(asyncio.CancelledError):
             await async_setup_entry(hass, entry)
         bridge.disconnect.assert_awaited_once()
-        assert entry.entry_id not in hass.data[DOMAIN]
+        assert not hasattr(entry, "runtime_data")
 
     asyncio.run(scenario())

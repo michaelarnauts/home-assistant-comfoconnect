@@ -149,7 +149,6 @@ async def test_co2_sensor_devices_and_entities(hass: HomeAssistant, nodes: list[
 async def test_only_a_co2_sensor_that_left_the_bus_can_be_removed(hass: HomeAssistant, identifier: str, available: bool, removable: bool) -> None:
     """The sensor on node 7 is still on the bus, the one on node 54 is gone; the bridge and unit always stay."""
     bridge = SimpleNamespace(uuid=UNIT_UUID, is_available=available, nodes={1: UNIT, 7: co2_node(7)})
-    hass.data[DOMAIN] = {"entry": bridge}
     device = SimpleNamespace(identifiers={(DOMAIN, identifier)})
 
-    assert await async_remove_config_entry_device(hass, SimpleNamespace(entry_id="entry"), device) is removable
+    assert await async_remove_config_entry_device(hass, SimpleNamespace(runtime_data=bridge), device) is removable
