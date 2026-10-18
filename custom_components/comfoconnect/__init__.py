@@ -244,6 +244,18 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 
+async def async_remove_config_entry_device(hass: HomeAssistant, entry: ConfigEntry, device_entry: dr.DeviceEntry) -> bool:
+    """Allow removing the device of a CO2 sensor that is no longer on the bus."""
+    bridge = hass.data[DOMAIN][entry.entry_id]
+    prefix = f"{bridge.uuid}-"
+    for domain, identifier in device_entry.identifiers:
+        if domain == DOMAIN and identifier.startswith(prefix):
+            node = bridge.nodes.get(int(identifier.removeprefix(prefix)))
+            # The nodes are only known while we are connected.
+            return bridge.is_available and (node is None or node.product_id != ProductId.CO2SENSOR)
+    return False
+
+
 class ComfoConnectBridge(ComfoConnect):
     """Representation of a ComfoConnect bridge."""
 

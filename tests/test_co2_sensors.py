@@ -11,7 +11,7 @@ from aiocomfoconnect.comfoconnect import NodeInfo
 from aiocomfoconnect.const import ProductId
 from aiocomfoconnect.exceptions import ComfoConnectRmiError
 from aiocomfoconnect.sensors import SENSOR_CO2_1, SENSOR_CO2_2, SENSOR_CO2_3
-from custom_components.comfoconnect import find_co2_sensors
+from custom_components.comfoconnect import async_remove_config_entry_device, find_co2_sensors
 from custom_components.comfoconnect.const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN
 from custom_components.comfoconnect.sensor import ComfoConnectCO2Sensor
 from custom_components.comfoconnect.sensor import async_setup_entry as async_setup_sensors
@@ -133,3 +133,23 @@ async def test_co2_sensor_devices_and_entities(hass: HomeAssistant, nodes: list[
         assert entity.state_class == SensorStateClass.MEASUREMENT
         assert entity.native_unit_of_measurement == UnitOfRatio.PARTS_PER_MILLION
         assert entity.entity_registry_enabled_default is True
+
+
+@pytest.mark.parametrize(
+    ("identifier", "available", "removable"),
+    [
+        (f"{UNIT_UUID}-54", True, True),
+        (f"{UNIT_UUID}-7", True, False),
+        # The nodes aren't known while the bridge is reconnecting.
+        (f"{UNIT_UUID}-54", False, False),
+        (UNIT_UUID, True, False),
+        ("DEMO0001", True, False),
+    ],
+)
+async def test_only_a_co2_sensor_that_left_the_bus_can_be_removed(hass: HomeAssistant, identifier: str, available: bool, removable: bool) -> None:
+    """The sensor on node 7 is still on the bus, the one on node 54 is gone; the bridge and unit always stay."""
+    bridge = SimpleNamespace(uuid=UNIT_UUID, is_available=available, nodes={1: UNIT, 7: co2_node(7)})
+    hass.data[DOMAIN] = {"entry": bridge}
+    device = SimpleNamespace(identifiers={(DOMAIN, identifier)})
+
+    assert await async_remove_config_entry_device(hass, SimpleNamespace(entry_id="entry"), device) is removable
