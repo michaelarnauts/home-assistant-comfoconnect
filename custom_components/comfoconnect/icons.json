@@ -1,0 +1,89 @@
+{
+  "entity": {
+    "button": {
+      "cancel_boost": {
+        "default": "mdi:fan-off"
+      },
+      "cancel_away": {
+        "default": "mdi:home-import-outline"
+      }
+    },
+    "fan": {
+      "ventilation": {
+        "default": "mdi:air-conditioner"
+      }
+    },
+    "select": {
+      "select_mode": {
+        "default": "mdi:fan-auto"
+      },
+      "bypass_mode": {
+        "default": "mdi:camera-iris"
+      },
+      "temperature_profile": {
+        "default": "mdi:thermometer-auto"
+      },
+      "temperature_profile_mode": {
+        "default": "mdi:thermometer-auto"
+      },
+      "boost_timeout": {
+        "default": "mdi:fan-plus"
+      },
+      "away_timeout": {
+        "default": "mdi:home-export-outline"
+      },
+      "bypass_timeout": {
+        "default": "mdi:camera-iris"
+      },
+      "sensor_ventmode_temperature_passive": {
+        "default": "mdi:thermometer-auto"
+      },
+      "sensor_ventmode_humidity_comfort": {
+        "default": "mdi:water-percent"
+      },
+      "sensor_ventmode_humidity_protection": {
+        "default": "mdi:water-alert"
+      }
+    },
+    "sensor": {
+      "supply_fan_speed": {
+        "default": "mdi:fan-plus"
+      },
+      "supply_fan_duty": {
+        "default": "mdi:fan-plus"
+      },
+      "exhaust_fan_speed": {
+        "default": "mdi:fan-minus"
+      },
+      "exhaust_fan_duty": {
+        "default": "mdi:fan-minus"
+      },
+      "supply_airflow": {
+        "default": "mdi:fan-plus"
+      },
+      "exhaust_airflow": {
+        "default": "mdi:fan-minus"
+      },
+      "bypass_state": {
+        "default": "mdi:camera-iris"
+      },
+      "days_to_replace_filter": {
+        "default": "mdi:calendar"
+      },
+      "airflow_constraint": {
+        "default": "mdi:fan-alert"
+      },
+      "postheater_state": {
+        "default": "mdi:radiator"
+      },
+      "sensor_based_ventilation_state": {
+        "default": "mdi:auto-fix"
+      }
+    }
+  },
+  "services": {
+    "start_boost": {
+      "service": "mdi:fan-plus"
+    }
+  }
+}
