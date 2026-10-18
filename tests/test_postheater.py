@@ -4,13 +4,13 @@ import asyncio
 from types import SimpleNamespace
 
 import pytest
-from custom_components.comfoconnect.binary_sensor import SENSOR_TYPES as BINARY_SENSOR_TYPES
-from custom_components.comfoconnect.binary_sensor import ComfoConnectBinarySensor
-from custom_components.comfoconnect.const import (
+from aiocomfoconnect.sensors import (
     SENSOR_POSTHEATER_PRESENT,
     SENSOR_POSTHEATER_STATE,
-    SENSOR_POSTHEATER_TEMP_BEFORE,
+    SENSOR_POSTHEATER_TEMPERATURE_BEFORE,
 )
+from custom_components.comfoconnect.binary_sensor import SENSOR_TYPES as BINARY_SENSOR_TYPES
+from custom_components.comfoconnect.binary_sensor import ComfoConnectBinarySensor
 from custom_components.comfoconnect.sensor import SENSOR_TYPES, ComfoConnectSensor
 from homeassistant.core import HomeAssistant
 from homeassistant.loader import async_setup as setup_loader
@@ -20,7 +20,7 @@ from homeassistant.loader import async_setup as setup_loader
     "key,value,state,unit",
     [
         (SENSOR_POSTHEATER_STATE, 25, "25", "%"),
-        (SENSOR_POSTHEATER_TEMP_BEFORE, 21.7, "21.7", "°C"),
+        (SENSOR_POSTHEATER_TEMPERATURE_BEFORE, 21.7, "21.7", "°C"),
     ],
 )
 def test_postheater_sensors_report_value_and_unit(tmp_path, key, value, state, unit):

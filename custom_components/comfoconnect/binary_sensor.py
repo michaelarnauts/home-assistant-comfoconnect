@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from aiocomfoconnect.sensors import (
     SENSOR_COMFOCOOL_STATE,
     SENSOR_COMFOFOND_GHE_PRESENT,
+    SENSOR_POSTHEATER_PRESENT,
     SENSOR_SEASON_COOLING_ACTIVE,
     SENSOR_SEASON_HEATING_ACTIVE,
     SENSORS,
@@ -33,7 +34,6 @@ from . import (
     SIGNAL_COMFOCONNECT_UPDATE_RECEIVED,
     ComfoConnectBridge,
 )
-from .const import SENSOR_POSTHEATER_PRESENT
 
 _LOGGER = logging.getLogger(__name__)
 
