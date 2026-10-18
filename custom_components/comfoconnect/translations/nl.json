@@ -2,27 +2,27 @@
     "config": {
         "error": {
             "invalid_pin": "Ongeldige pincode",
-            "invalid_host": "Geen ComfoConnect-bridge gevonden op dit adres",
-            "cannot_connect": "Kan geen verbinding maken met de bridge. Controleer of die aan staat en bereikbaar is, en of de officiële app hem niet gebruikt."
+            "invalid_host": "Geen ComfoConnect-gateway gevonden op dit adres",
+            "cannot_connect": "Kan geen verbinding maken met de gateway. Controleer of die aan staat en bereikbaar is, en of de officiële app hem niet gebruikt."
         },
         "step": {
             "user": {
                 "data": {
                     "host": "Host"
                 },
-                "title": "ComfoConnect LAN C-bridge toevoegen",
-                "description": "Kies de ComfoConnect LAN C-bridge uit de lijst hieronder."
+                "title": "ComfoConnect LAN C-gateway toevoegen",
+                "description": "Kies de ComfoConnect LAN C-gateway uit de lijst hieronder."
             },
             "manual": {
                 "data": {
                     "host": "Host"
                 },
-                "title": "ComfoConnect LAN C-bridge handmatig toevoegen",
-                "description": "Vul hieronder de hostnaam of het IP-adres van een ComfoConnect LAN C-bridge in."
+                "title": "ComfoConnect LAN C-gateway handmatig toevoegen",
+                "description": "Vul hieronder de hostnaam of het IP-adres van een ComfoConnect LAN C-gateway in."
             },
             "enter_pin": {
                 "title": "Pincode invoeren",
-                "description": "De gekozen ComfoConnect LAN C-bridge gebruikt niet de standaardpincode. Vul de juiste pincode in."
+                "description": "De gekozen ComfoConnect LAN C-gateway gebruikt niet de standaardpincode. Vul de juiste pincode in."
             },
             "confirm": {
                 "description": "Wil je beginnen met instellen?"
@@ -34,7 +34,7 @@
         "abort": {
             "no_devices_found": "Geen apparaten gevonden op het netwerk",
             "reauth_successful": "Opnieuw authenticeren is gelukt",
-            "cannot_connect": "Kan geen verbinding maken met de bridge. Controleer of die aan staat en bereikbaar is, en of de officiële app hem niet gebruikt."
+            "cannot_connect": "Kan geen verbinding maken met de gateway. Controleer of die aan staat en bereikbaar is, en of de officiële app hem niet gebruikt."
         }
     },
     "entity": {
@@ -55,12 +55,12 @@
                 "name": "ComfoCool-status"
             },
             "active_alarms": {
-                "name": "Actieve storingen"
+                "name": "Huidige fouten"
             }
         },
         "button": {
             "reset_errors": {
-                "name": "Storingen resetten"
+                "name": "Fouten resetten"
             },
             "cancel_boost": {
                 "name": "Boost annuleren"
@@ -74,8 +74,8 @@
                 "state_attributes": {
                     "preset_mode": {
                         "state": {
-                            "auto": "Automatisch",
-                            "manual": "Handmatig"
+                            "auto": "Auto",
+                            "manual": "Manueel"
                         }
                     }
                 }
@@ -83,10 +83,10 @@
         },
         "number": {
             "rmot_heating": {
-                "name": "RMOT-grens verwarmen"
+                "name": "Verwarmingslimiet RMOT"
             },
             "rmot_cooling": {
-                "name": "RMOT-grens koelen"
+                "name": "Koellimiet RMOT"
             },
             "profile_temperature_warm": {
                 "name": "Temperatuur profiel warm"
@@ -102,14 +102,14 @@
             "select_mode": {
                 "name": "Ventilatiemodus",
                 "state": {
-                    "auto": "Automatisch",
-                    "manual": "Handmatig"
+                    "auto": "Auto",
+                    "manual": "Manueel"
                 }
             },
             "bypass_mode": {
                 "name": "Bypassmodus",
                 "state": {
-                    "auto": "Automatisch",
+                    "auto": "Auto",
                     "on": "Aan",
                     "off": "Uit"
                 }
@@ -131,7 +131,7 @@
                 }
             },
             "temperature_profile_mode": {
-                "name": "Modus temperatuurprofiel",
+                "name": "Temperatuurprofielmodus",
                 "state": {
                     "adaptive": "Adaptief",
                     "fixed": "Vast"
@@ -140,7 +140,7 @@
             "comfocool": {
                 "name": "ComfoCool-modus",
                 "state": {
-                    "auto": "Automatisch",
+                    "auto": "Auto",
                     "off": "Uit"
                 }
             },
@@ -158,7 +158,7 @@
                 }
             },
             "away_timeout": {
-                "name": "Afwezigheidsmodus",
+                "name": "Afwezig-modus",
                 "state": {
                     "off": "Uit",
                     "active": "Actief",
@@ -189,25 +189,25 @@
                 }
             },
             "sensor_ventmode_temperature_passive": {
-                "name": "Temperatuurgestuurde ventilatie",
+                "name": "Sensorventilatie temperatuur passief",
                 "state": {
-                    "auto": "Automatisch",
+                    "auto": "Auto",
                     "on": "Aan",
                     "off": "Uit"
                 }
             },
             "sensor_ventmode_humidity_comfort": {
-                "name": "Ventilatie voor vochtcomfort",
+                "name": "Sensorventilatie comfort vocht",
                 "state": {
-                    "auto": "Automatisch",
+                    "auto": "Auto",
                     "on": "Aan",
                     "off": "Uit"
                 }
             },
             "sensor_ventmode_humidity_protection": {
-                "name": "Ventilatie voor vochtbescherming",
+                "name": "Sensorventilatie bescherming tegen vocht",
                 "state": {
-                    "auto": "Automatisch",
+                    "auto": "Auto",
                     "on": "Aan",
                     "off": "Uit"
                 }
@@ -245,13 +245,13 @@
                 "name": "Toerental toevoerventilator"
             },
             "supply_fan_duty": {
-                "name": "Sturing toevoerventilator"
+                "name": "Last toevoerventilator"
             },
             "exhaust_fan_speed": {
                 "name": "Toerental afvoerventilator"
             },
             "exhaust_fan_duty": {
-                "name": "Sturing afvoerventilator"
+                "name": "Last afvoerventilator"
             },
             "exhaust_temperature": {
                 "name": "Afvoertemperatuur"
@@ -260,40 +260,40 @@
                 "name": "Afvoerluchtvochtigheid"
             },
             "supply_airflow": {
-                "name": "Toevoerluchtdebiet"
+                "name": "Luchtdebiet toevoerventilator"
             },
             "exhaust_airflow": {
-                "name": "Afvoerluchtdebiet"
+                "name": "Luchtdebiet afvoerventilator"
             },
             "bypass_state": {
                 "name": "Bypassstand"
             },
             "days_to_replace_filter": {
-                "name": "Dagen tot filtervervanging"
+                "name": "Resterende dagen filter"
             },
             "ventilation_current_power_usage": {
-                "name": "Huidig vermogen ventilatie"
+                "name": "Huidig stroomverbruik ventilatie"
             },
             "ventilation_total_energy_usage": {
                 "name": "Totaal energieverbruik ventilatie"
             },
             "preheater_current_power_usage": {
-                "name": "Huidig vermogen voorverwarmer"
+                "name": "Huidig stroomverbruik voorverwarmer"
             },
             "preheater_total_energy_usage": {
                 "name": "Totaal energieverbruik voorverwarmer"
             },
             "analog_input_1": {
-                "name": "Analoge ingang 1"
+                "name": "Analoge input 1"
             },
             "analog_input_2": {
-                "name": "Analoge ingang 2"
+                "name": "Analoge input 2"
             },
             "analog_input_3": {
-                "name": "Analoge ingang 3"
+                "name": "Analoge input 3"
             },
             "analog_input_4": {
-                "name": "Analoge ingang 4"
+                "name": "Analoge input 4"
             },
             "airflow_constraint": {
                 "name": "Debietbeperking"
@@ -302,7 +302,7 @@
                 "name": "Stand ComfoFond-aardwarmtewisselaar"
             },
             "comfofond_ground_temperature": {
-                "name": "ComfoFond-bodemtemperatuur"
+                "name": "ComfoFond-grondtemperatuur"
             },
             "comfofond_outdoor_air_temperature": {
                 "name": "ComfoFond-buitenluchttemperatuur"
@@ -317,22 +317,22 @@
                 "name": "Energieverbruik voorverwarmer dit jaar"
             },
             "avoided_heating_power": {
-                "name": "Vermeden verwarmingsvermogen"
+                "name": "Actueel vermeden verwarming"
             },
             "avoided_heating_year_energy": {
-                "name": "Vermeden verwarmingsenergie dit jaar"
+                "name": "Vermeden verwarming jaar tot op heden"
             },
             "avoided_heating_total_energy": {
-                "name": "Totaal vermeden verwarmingsenergie"
+                "name": "Totaal vermeden verwarming"
             },
             "avoided_cooling_power": {
-                "name": "Vermeden koelvermogen"
+                "name": "Actueel vermeden koeling"
             },
             "avoided_cooling_year_energy": {
-                "name": "Vermeden koelenergie dit jaar"
+                "name": "Vermeden koeling jaar tot op heden"
             },
             "avoided_cooling_total_energy": {
-                "name": "Totaal vermeden koelenergie"
+                "name": "Totaal vermeden koeling"
             },
             "postheater_state": {
                 "name": "Stand naverwarmer"
@@ -341,7 +341,7 @@
                 "name": "Temperatuur voor naverwarmer"
             },
             "sensor_based_ventilation_state": {
-                "name": "Status sensorgestuurde ventilatie",
+                "name": "Status sensorventilatie",
                 "state": {
                     "disabled": "Uitgeschakeld",
                     "active": "Actief",
