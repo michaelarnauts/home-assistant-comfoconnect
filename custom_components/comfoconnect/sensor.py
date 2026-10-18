@@ -259,6 +259,7 @@ SENSOR_TYPES = (
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_FAN_SUPPLY_FLOW,
+        device_class=SensorDeviceClass.VOLUME_FLOW_RATE,
         state_class=SensorStateClass.MEASUREMENT,
         name="Supply airflow",
         native_unit_of_measurement=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR,
@@ -270,6 +271,7 @@ SENSOR_TYPES = (
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_FAN_EXHAUST_FLOW,
+        device_class=SensorDeviceClass.VOLUME_FLOW_RATE,
         state_class=SensorStateClass.MEASUREMENT,
         name="Exhaust airflow",
         native_unit_of_measurement=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR,
@@ -289,6 +291,7 @@ SENSOR_TYPES = (
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_DAYS_TO_REPLACE_FILTER,
+        device_class=SensorDeviceClass.DURATION,
         name="Days to replace filter",
         native_unit_of_measurement=UnitOfTime.DAYS,
         icon="mdi:calendar",
@@ -540,12 +543,15 @@ SENSOR_TYPES = (
     ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_COMFORTCONTROL_MODE,
+        device_class=SensorDeviceClass.ENUM,
+        options=list(COMFORT_CONTROL_STATE.values()),
         name="Sensor based ventilation state",
         icon="mdi:auto-fix",
         ccb_sensor=SENSORS.get(SENSOR_COMFORTCONTROL_MODE),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
-        mapping=lambda x: COMFORT_CONTROL_STATE.get(x, x),
+        # An enum sensor only accepts its options, so an unknown state is shown as unknown.
+        mapping=COMFORT_CONTROL_STATE.get,
     ),
 )
 
