@@ -361,5 +361,28 @@
                 }
             }
         }
+    },
+    "exceptions": {
+        "access_denied": {
+            "message": "De gateway weigert de toegang. Registreer Home Assistant opnieuw bij de gateway."
+        },
+        "device_info_failed": {
+            "message": "De gateway gaf zijn apparaatinformatie niet door."
+        },
+        "set_failed": {
+            "message": "Instellen van {entity} is mislukt: {error}"
+        },
+        "press_failed": {
+            "message": "Indrukken van {entity} is mislukt: {error}"
+        },
+        "set_speed_failed": {
+            "message": "Instellen van de ventilatiestand is mislukt: {error}"
+        },
+        "set_preset_mode_failed": {
+            "message": "Instellen van de ventilatiemodus is mislukt: {error}"
+        },
+        "start_boost_failed": {
+            "message": "Starten van de boostmodus is mislukt: {error}"
+        }
     }
 }

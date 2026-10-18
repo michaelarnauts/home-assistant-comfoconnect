@@ -28,6 +28,7 @@ from . import (
     ComfoConnectBridge,
     ComfoConnectConfigEntry,
 )
+from .const import DOMAIN
 from .entity import ComfoConnectEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -159,7 +160,9 @@ class ComfoConnectFan(ComfoConnectEntity, FanEntity):
         try:
             await self._ccb.set_speed(speed)
         except AioComfoConnectError as err:
-            raise HomeAssistantError(f"Failed to set fan speed: {err}") from err
+            raise HomeAssistantError(
+                translation_domain=DOMAIN, translation_key="set_speed_failed", translation_placeholders={"error": str(err)}
+            ) from err
 
     async def async_start_boost(self, duration: timedelta) -> None:
         """Start boost mode for the given duration."""
@@ -167,7 +170,9 @@ class ComfoConnectFan(ComfoConnectEntity, FanEntity):
         try:
             await self._ccb.set_boost(True, int(duration.total_seconds()))
         except AioComfoConnectError as err:
-            raise HomeAssistantError(f"Failed to start boost: {err}") from err
+            raise HomeAssistantError(
+                translation_domain=DOMAIN, translation_key="start_boost_failed", translation_placeholders={"error": str(err)}
+            ) from err
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new preset mode."""
@@ -178,4 +183,6 @@ class ComfoConnectFan(ComfoConnectEntity, FanEntity):
         try:
             await self._ccb.set_mode(preset_mode)
         except AioComfoConnectError as err:
-            raise HomeAssistantError(f"Failed to set preset mode: {err}") from err
+            raise HomeAssistantError(
+                translation_domain=DOMAIN, translation_key="set_preset_mode_failed", translation_placeholders={"error": str(err)}
+            ) from err

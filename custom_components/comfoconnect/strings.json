@@ -361,5 +361,28 @@
         }
       }
     }
+  },
+  "exceptions": {
+    "access_denied": {
+      "message": "The bridge refused access. Register Home Assistant with the bridge again."
+    },
+    "device_info_failed": {
+      "message": "The bridge did not return its device information."
+    },
+    "set_failed": {
+      "message": "Failed to set {entity}: {error}"
+    },
+    "press_failed": {
+      "message": "Failed to press {entity}: {error}"
+    },
+    "set_speed_failed": {
+      "message": "Failed to set the fan speed: {error}"
+    },
+    "set_preset_mode_failed": {
+      "message": "Failed to set the preset mode: {error}"
+    },
+    "start_boost_failed": {
+      "message": "Failed to start boost: {error}"
+    }
   }
 }
