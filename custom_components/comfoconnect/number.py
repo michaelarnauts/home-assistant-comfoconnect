@@ -27,6 +27,9 @@ from . import DOMAIN, SIGNAL_COMFOCONNECT_AVAILABILITY, ComfoConnectBridge
 
 _LOGGER = logging.getLogger(__name__)
 
+# One at a time: these entities poll or send commands, and the bridge doesn't like many requests at once.
+PARALLEL_UPDATES = 1
+
 
 @dataclass
 class ComfoConnectNumberRequiredKeysMixin:
