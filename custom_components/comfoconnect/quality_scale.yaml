@@ -60,7 +60,7 @@ rules:
       CO2 sensors get their own device, but only the ones on the bus at setup.
       One added later only appears after a reload.
   entity-category: done
-  entity-device-class: todo
+  entity-device-class: done
   entity-disabled-by-default: done
   entity-translations: todo
   exception-translations: todo
