@@ -145,7 +145,6 @@ SELECT_TYPES = (
     ComfoconnectSelectEntityDescription(
         key="select_mode",
         translation_key="select_mode",
-        icon="mdi:fan-auto",
         entity_category=EntityCategory.CONFIG,
         get_value_fn=lambda ccb: cast(Coroutine, ccb.get_mode()),
         set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_mode(option)),
@@ -159,7 +158,6 @@ SELECT_TYPES = (
     ComfoconnectSelectEntityDescription(
         key="bypass_mode",
         translation_key="bypass_mode",
-        icon="mdi:camera-iris",
         entity_category=EntityCategory.CONFIG,
         get_value_fn=lambda ccb: cast(Coroutine, ccb.get_bypass()),
         set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_bypass(option)),
@@ -192,7 +190,6 @@ SELECT_TYPES = (
     ComfoconnectSelectEntityDescription(
         key="temperature_profile",
         translation_key="temperature_profile",
-        icon="mdi:thermometer-auto",
         entity_category=EntityCategory.CONFIG,
         get_value_fn=lambda ccb: cast(Coroutine, ccb.get_temperature_profile()),
         set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_temperature_profile(option)),
@@ -211,7 +208,6 @@ SELECT_TYPES = (
     ComfoconnectSelectEntityDescription(
         key="temperature_profile_mode",
         translation_key="temperature_profile_mode",
-        icon="mdi:thermometer-auto",
         entity_registry_enabled_default=False,
         update_interval=SETTING_UPDATE_INTERVAL,
         entity_category=EntityCategory.CONFIG,
@@ -238,7 +234,6 @@ SELECT_TYPES = (
     ComfoconnectSelectEntityDescription(
         key="boost_timeout",
         translation_key="boost_timeout",
-        icon="mdi:fan-plus",
         get_value_fn=_get_boost_option,
         set_value_fn=_set_boost_option,
         options=list(TIMER_OPTIONS),
@@ -249,7 +244,6 @@ SELECT_TYPES = (
     ComfoconnectSelectEntityDescription(
         key="away_timeout",
         translation_key="away_timeout",
-        icon="mdi:home-export-outline",
         get_value_fn=_get_away_option,
         set_value_fn=_set_away_option,
         options=list(AWAY_OPTIONS),
@@ -259,7 +253,6 @@ SELECT_TYPES = (
     ComfoconnectSelectEntityDescription(
         key="bypass_timeout",
         translation_key="bypass_timeout",
-        icon="mdi:camera-iris",
         get_value_fn=_get_bypass_option,
         set_value_fn=_set_bypass_option,
         options=list(TIMER_OPTIONS),
@@ -270,7 +263,6 @@ SELECT_TYPES = (
     ComfoconnectSelectEntityDescription(
         key="sensor_ventmode_temperature_passive",
         translation_key="sensor_ventmode_temperature_passive",
-        icon="mdi:thermometer-auto",
         entity_registry_enabled_default=False,
         update_interval=SETTING_UPDATE_INTERVAL,
         entity_category=EntityCategory.CONFIG,
@@ -285,7 +277,6 @@ SELECT_TYPES = (
     ComfoconnectSelectEntityDescription(
         key="sensor_ventmode_humidity_comfort",
         translation_key="sensor_ventmode_humidity_comfort",
-        icon="mdi:water-percent",
         entity_registry_enabled_default=False,
         update_interval=SETTING_UPDATE_INTERVAL,
         entity_category=EntityCategory.CONFIG,
@@ -300,7 +291,6 @@ SELECT_TYPES = (
     ComfoconnectSelectEntityDescription(
         key="sensor_ventmode_humidity_protection",
         translation_key="sensor_ventmode_humidity_protection",
-        icon="mdi:water-alert",
         entity_registry_enabled_default=False,
         update_interval=SETTING_UPDATE_INTERVAL,
         entity_category=EntityCategory.CONFIG,
