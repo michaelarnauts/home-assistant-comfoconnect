@@ -2,13 +2,14 @@
 
 import asyncio
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from aiocomfoconnect.bridge import Message
 from aiocomfoconnect.protobuf import zehnder_pb2
 from aiocomfoconnect.sensors import SENSOR_AVOIDED_COOLING, SENSOR_AVOIDED_HEATING, SENSOR_AVOIDED_HEATING_TOTAL, SENSOR_POWER_USAGE_TOTAL_YEAR
 from custom_components.comfoconnect import ComfoConnectBridge
+from custom_components.comfoconnect.const import CONF_UUID
 from custom_components.comfoconnect.sensor import SENSOR_TYPES, ComfoConnectSensor
 from homeassistant.core import HomeAssistant
 from homeassistant.loader import async_setup as setup_loader
@@ -44,7 +45,7 @@ def test_unsigned_energy_counter_reaches_ha_state(tmp_path):
         hass = HomeAssistant(str(tmp_path))
         setup_loader(hass)
         uuid = "00000000000000000000000000000001"
-        bridge = ComfoConnectBridge(hass, "127.0.0.1", uuid)
+        bridge = ComfoConnectBridge(hass, Mock(data={CONF_UUID: uuid}), "127.0.0.1")
         bridge.sensor_delay = 0
         bridge._send = AsyncMock()
         description = next(item for item in SENSOR_TYPES if item.key == SENSOR_AVOIDED_HEATING_TOTAL)
