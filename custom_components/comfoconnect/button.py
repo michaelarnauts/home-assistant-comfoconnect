@@ -7,9 +7,11 @@ from collections.abc import Awaitable, Callable, Coroutine
 from dataclasses import dataclass
 from typing import Any, cast
 
+from aiocomfoconnect.exceptions import AioComfoConnectError
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -106,4 +108,7 @@ class ComfoConnectButton(ButtonEntity):
 
     async def async_press(self) -> None:
         """Press the button."""
-        await self.entity_description.press_fn(self._ccb, self._attr_unique_id)
+        try:
+            await self.entity_description.press_fn(self._ccb, self._attr_unique_id)
+        except AioComfoConnectError as err:
+            raise HomeAssistantError(f"Failed to press {self.entity_description.name}: {err}") from err

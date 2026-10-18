@@ -37,6 +37,7 @@ from aiocomfoconnect.sensors import (
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -419,13 +420,17 @@ class ComfoConnectSelect(SelectEntity):
 
     async def async_select_option(self, option: str) -> None:
         """Set the selected option."""
-        await self.entity_description.set_value_fn(self._ccb, option)
-        if TIMER_ACTIVE in self.entity_description.options:
-            if option == TIMER_ACTIVE:
-                # Active only reports status; selecting it must not invent a timer.
-                self._attr_current_option = await self.entity_description.get_value_fn(self._ccb)
+        try:
+            await self.entity_description.set_value_fn(self._ccb, option)
+            if TIMER_ACTIVE in self.entity_description.options:
+                if option == TIMER_ACTIVE:
+                    # Active only reports status; selecting it must not invent a timer.
+                    current_option = await self.entity_description.get_value_fn(self._ccb)
+                else:
+                    current_option = TIMER_OFF if option == TIMER_OFF else TIMER_ACTIVE
             else:
-                self._attr_current_option = TIMER_OFF if option == TIMER_OFF else TIMER_ACTIVE
-        else:
-            self._attr_current_option = option
+                current_option = option
+        except AioComfoConnectError as err:
+            raise HomeAssistantError(f"Failed to set {self.entity_description.name}: {err}") from err
+        self._attr_current_option = current_option
         self.async_write_ha_state()
