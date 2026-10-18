@@ -181,6 +181,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ComfoConnectConfigEntry)
         await bridge.disconnect()
         raise
 
+    bridge.gateway_version = version_decode(bridge_info.gatewayVersion)
     entry.runtime_data = bridge
 
     device_registry = dr.async_get(hass)
@@ -196,7 +197,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ComfoConnectConfigEntry)
         name=bridge_model,
         model=bridge_model,
         serial_number=bridge_info.serialNumber,
-        sw_version=version_decode(bridge_info.gatewayVersion),
+        sw_version=bridge.gateway_version,
     )
 
     # Add Ventilation Unit to device registry, connected through the bridge. Passing `via_device` to
@@ -274,6 +275,8 @@ class ComfoConnectBridge(ComfoConnect):
         self.device_id: str | None = None
         # The node id and sensor id of each CO2 sensor, known once setup has registered them.
         self.co2_sensors: list[tuple[int, int]] = []
+        # The firmware version of the bridge, known once setup has read it.
+        self.gateway_version: str | None = None
         self.is_available = True
 
     @callback
