@@ -561,7 +561,7 @@ async def async_setup_entry(
     sensors = [ComfoConnectSensor(ccb=ccb, config_entry=config_entry, description=description) for description in SENSOR_TYPES]
     sensors += [ComfoConnectCO2Sensor(ccb, config_entry, node_id, sensor_id) for node_id, sensor_id in ccb.co2_sensors]
 
-    async_add_entities(sensors, True)
+    async_add_entities(sensors)
 
 
 class ComfoConnectSensor(SensorEntity):

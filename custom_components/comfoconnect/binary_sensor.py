@@ -103,7 +103,7 @@ async def async_setup_entry(
     sensors = [ComfoConnectBinarySensor(ccb=ccb, config_entry=config_entry, description=description) for description in SENSOR_TYPES]
     sensors.append(ComfoConnectAlarmBinarySensor(ccb=ccb))
 
-    async_add_entities(sensors, True)
+    async_add_entities(sensors)
 
 
 class ComfoConnectBinarySensor(BinarySensorEntity):

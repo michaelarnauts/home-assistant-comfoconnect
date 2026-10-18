@@ -56,7 +56,7 @@ async def async_setup_entry(
     """Set up the ComfoConnect fan."""
     ccb = hass.data[DOMAIN][config_entry.entry_id]
 
-    async_add_entities([ComfoConnectFan(ccb=ccb, config_entry=config_entry)], True)
+    async_add_entities([ComfoConnectFan(ccb=ccb, config_entry=config_entry)])
 
 
 class ComfoConnectFan(FanEntity):

@@ -26,7 +26,7 @@ from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import service
-from homeassistant.helpers.dispatcher import async_dispatcher_send, dispatcher_send
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.typing import ConfigType
 
 from .const import ATTR_DURATION, CONF_LOCAL_UUID, CONF_UUID, DOMAIN, SERVICE_START_BOOST
@@ -285,7 +285,7 @@ class ComfoConnectBridge(ComfoConnect):
     @callback
     def sensor_callback(self, sensor: Sensor, value):
         """Notify listeners that we have received an update."""
-        dispatcher_send(
+        async_dispatcher_send(
             self.hass,
             SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(self.uuid, sensor.id),
             value,
@@ -298,7 +298,7 @@ class ComfoConnectBridge(ComfoConnect):
         if previous == errors:
             return
         self.active_alarms[node_id] = dict(errors)
-        dispatcher_send(self.hass, SIGNAL_COMFOCONNECT_ALARM_RECEIVED.format(self.uuid))
+        async_dispatcher_send(self.hass, SIGNAL_COMFOCONNECT_ALARM_RECEIVED.format(self.uuid))
 
         # An initial empty report clears nothing; do not emit a clear on every start or reload.
         if previous is not None or errors:
