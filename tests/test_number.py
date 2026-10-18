@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from aiocomfoconnect.comfoconnect import NodeInfo
 from aiocomfoconnect.exceptions import ComfoConnectNotReachable, ComfoConnectRmiError
 from aiocomfoconnect.properties import (
     PROPERTY_PROFILE_TEMPERATURE_COOL,
@@ -56,9 +57,6 @@ def protocol():
     values |= {prop.property_id: value for prop, value in zip(profiles, (23.0, 21.0, 19.0), strict=True)}
     ranges |= {prop.property_id: limits for prop, limits in zip(profiles, ((23.0, 28.9), (18.9, 23.3), (17.8, 19.0)), strict=True)}
 
-    async def get_property(prop):
-        return "Test unit"
-
     async def get_property_constraints(prop):
         assert prop in (heating, cooling, *profiles)
         return PropertyConstraints(values[prop.property_id], *ranges[prop.property_id], 1.0)
@@ -70,7 +68,9 @@ def protocol():
         for method in ("connect", "disconnect"):
             stack.enter_context(patch(f"{BRIDGE}.{method}", new_callable=AsyncMock))
         stack.enter_context(patch(f"{BRIDGE}.set_property", new_callable=AsyncMock, side_effect=set_property))
-        stack.enter_context(patch(f"{BRIDGE}.get_property", new_callable=AsyncMock, side_effect=get_property))
+        stack.enter_context(
+            patch(f"{BRIDGE}.get_node_info", new_callable=AsyncMock, return_value=NodeInfo("Test unit", None, None, None, None, None))
+        )
         stack.enter_context(patch(f"{BRIDGE}.get_property_constraints", new_callable=AsyncMock, side_effect=get_property_constraints))
         stack.enter_context(
             patch(f"{BRIDGE}.cmd_version_request", new_callable=AsyncMock, return_value=SimpleNamespace(serialNumber="DEMO0001", gatewayVersion=0))

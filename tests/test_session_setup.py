@@ -61,7 +61,10 @@ def test_failed_device_read_closes_session_and_requests_retry(error):
         hass = SimpleNamespace(loop=asyncio.get_running_loop(), data={})
         entry = SimpleNamespace(entry_id="entry", data={"host": "127.0.0.1", CONF_UUID: "bridge", CONF_LOCAL_UUID: "local"})
         bridge = SimpleNamespace(
-            connect=AsyncMock(), disconnect=AsyncMock(), cmd_version_request=AsyncMock(return_value=Mock()), get_property=AsyncMock(side_effect=error)
+            connect=AsyncMock(),
+            disconnect=AsyncMock(),
+            cmd_version_request=AsyncMock(return_value=Mock()),
+            get_node_info=AsyncMock(side_effect=error),
         )
         with patch("custom_components.comfoconnect.ComfoConnectBridge", return_value=bridge), pytest.raises(ConfigEntryNotReady) as failure:
             await async_setup_entry(hass, entry)

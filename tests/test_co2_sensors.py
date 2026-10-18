@@ -7,10 +7,10 @@ from unittest.mock import AsyncMock, PropertyMock, patch
 
 import pytest
 from aiocomfoconnect.bridge import Node
+from aiocomfoconnect.comfoconnect import NodeInfo
 from aiocomfoconnect.const import ProductId
-from aiocomfoconnect.exceptions import AioComfoConnectTimeout
-from aiocomfoconnect.properties import PROPERTY_FIRMWARE_VERSION, PROPERTY_MODEL, PROPERTY_NAME, PROPERTY_SERIAL_NUMBER
-from aiocomfoconnect.sensors import SENSOR_CO2_1, SENSOR_CO2_2
+from aiocomfoconnect.exceptions import ComfoConnectRmiError
+from aiocomfoconnect.sensors import SENSOR_CO2_1, SENSOR_CO2_2, SENSOR_CO2_3
 from custom_components.comfoconnect import find_co2_sensors
 from custom_components.comfoconnect.const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN
 from custom_components.comfoconnect.sensor import ComfoConnectCO2Sensor
@@ -25,25 +25,19 @@ MockConfigEntry = pytest.importorskip("pytest_homeassistant_custom_component.com
 BRIDGE = "custom_components.comfoconnect.ComfoConnectBridge"
 UNIT_UUID = "00" * 16
 UNIT = Node(1, ProductId.COMFOAIRQ, 1, 0)
-# The device info the nodes return; node 54 doesn't answer its name and serial number.
-NODE_PROPERTIES = {
-    7: {
-        PROPERTY_NAME.property_id: "Living",
-        PROPERTY_MODEL.property_id: "CO2 demo",
-        PROPERTY_SERIAL_NUMBER.property_id: "DEMO0007",
-        PROPERTY_FIRMWARE_VERSION.property_id: "1.2.3",
-    },
-    54: {PROPERTY_MODEL.property_id: "CO2 demo", PROPERTY_FIRMWARE_VERSION.property_id: "1.2.4"},
+# What the nodes tell about themselves: node 54 has no name or serial number, node 60 can't be read.
+NODE_INFO = {
+    None: NodeInfo("ComfoAirQ", "ComfoAir Q450", "DEMO-ART-Q", "DEMO0001", "R1.4.0", 3),
+    7: NodeInfo("Living", "CO2 demo", "DEMO-ART-CO2", "DEMO0007", "1.2.3", 1),
+    54: NodeInfo(None, "CO2 demo", None, None, "1.2.4", None),
 }
 
 
-async def get_property(prop, node_id=None):
-    """Return the unit's or a node's property, or time out like an unanswered read."""
-    if node_id is None:
-        return "demo"
-    if prop.property_id not in NODE_PROPERTIES[node_id]:
-        raise AioComfoConnectTimeout("No answer")
-    return NODE_PROPERTIES[node_id][prop.property_id]
+async def get_node_info(node_id=None):
+    """Return what a node tells about itself, or fail like a node that can't be read."""
+    if node_id not in NODE_INFO:
+        raise ComfoConnectRmiError("No answer")
+    return NODE_INFO[node_id]
 
 
 def co2_node(node_id: int, zone_id: int = 1) -> Node:
@@ -76,11 +70,13 @@ def auto_enable_custom_integrations(enable_custom_integrations):
     ("nodes", "expected"),
     [
         (
-            [UNIT, co2_node(7), co2_node(54)],
+            [UNIT, co2_node(7), co2_node(54), co2_node(60)],
             [
-                (7, SENSOR_CO2_1, ("Living", "CO2 demo", "DEMO0007", "1.2.3")),
-                # A read that fails leaves that info out, and the name falls back to the sensor's number.
-                (54, SENSOR_CO2_2, ("CO2 sensor 2", "CO2 demo", None, "1.2.4")),
+                (7, SENSOR_CO2_1, ("Living", "CO2 demo", "DEMO-ART-CO2", "DEMO0007", "1.2.3", "1")),
+                # Without a name, the device is named after the sensor's number.
+                (54, SENSOR_CO2_2, ("CO2 sensor 2", "CO2 demo", None, None, "1.2.4", None)),
+                # A sensor that can't be read is still added, without its device info.
+                (60, SENSOR_CO2_3, ("CO2 sensor 3", None, None, None, None, None)),
             ],
         ),
         ([UNIT], []),
@@ -104,7 +100,7 @@ async def test_co2_sensor_devices_and_entities(hass: HomeAssistant, nodes: list[
             new_callable=AsyncMock,
             return_value=SimpleNamespace(serialNumber="DEMO0001", gatewayVersion=0),
         ),
-        patch(f"{BRIDGE}.get_property", side_effect=get_property),
+        patch(f"{BRIDGE}.get_node_info", side_effect=get_node_info),
         patch("custom_components.comfoconnect.version_decode", return_value="1.0.0"),
         patch(
             "homeassistant.config_entries.ConfigEntries.async_forward_entry_setups",
@@ -127,7 +123,7 @@ async def test_co2_sensor_devices_and_entities(hass: HomeAssistant, nodes: list[
 
     for entity, (node_id, sensor_id, device_info) in zip(co2_entities, expected, strict=True):
         device = registry.async_get_device_by_identifier((DOMAIN, f"{UNIT_UUID}-{node_id}"), entry.entry_id)
-        assert (device.name, device.model, device.serial_number, device.sw_version) == device_info
+        assert (device.name, device.model, device.model_id, device.serial_number, device.sw_version, device.hw_version) == device_info
         assert device.via_device_id == bridge_device.id
 
         assert entity.entity_description.ccb_sensor.id == sensor_id
