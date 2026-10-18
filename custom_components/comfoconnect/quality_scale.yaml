@@ -68,9 +68,9 @@ rules:
   reconfiguration-flow: todo
   repair-issues: todo
   stale-devices:
-    status: todo
+    status: done
     comment: |
-      The device of a CO2 sensor that was removed from the bus stays behind.
+      CO2 sensor devices can be removed from the UI once the sensor is gone from the bus.
 
   # ──── Platinum ────
   async-dependency: done
