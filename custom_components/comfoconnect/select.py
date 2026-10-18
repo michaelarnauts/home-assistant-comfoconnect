@@ -127,6 +127,14 @@ async def _get_bypass_option(ccb: ComfoConnectBridge) -> str:
     return _timer_option(await ccb.get_bypass() == VentilationSetting.ON)
 
 
+async def _get_temperature_profile_mode(ccb: ComfoConnectBridge) -> str | None:
+    """Return the temperature profile mode, or None for a mode that isn't offered, like external setpoint (2)."""
+    try:
+        return await ccb.get_property(PROPERTY_TEMPERATURE_PROFILE_MODE)
+    except ValueError:
+        return None
+
+
 SELECT_TYPES = (
     ComfoconnectSelectEntityDescription(
         key="select_mode",
@@ -205,7 +213,7 @@ SELECT_TYPES = (
         entity_registry_enabled_default=False,
         update_interval=SETTING_UPDATE_INTERVAL,
         entity_category=EntityCategory.CONFIG,
-        get_value_fn=lambda ccb: cast(Coroutine, ccb.get_property(PROPERTY_TEMPERATURE_PROFILE_MODE)),
+        get_value_fn=_get_temperature_profile_mode,
         set_value_fn=lambda ccb, option: cast(Coroutine, ccb.set_property(PROPERTY_TEMPERATURE_PROFILE_MODE, option)),
         options=list(PROPERTY_TEMPERATURE_PROFILE_MODE.options.values()),
     ),
