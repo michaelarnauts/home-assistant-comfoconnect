@@ -90,6 +90,9 @@ from . import (
 
 _LOGGER = logging.getLogger(__name__)
 
+# Push only: the entities subscribe to their sensor once, they never poll or send commands.
+PARALLEL_UPDATES = 0
+
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=10)
 
 

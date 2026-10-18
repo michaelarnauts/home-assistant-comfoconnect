@@ -50,6 +50,9 @@ from . import (
 
 _LOGGER = logging.getLogger(__name__)
 
+# One at a time: these entities poll or send commands, and the bridge doesn't like many requests at once.
+PARALLEL_UPDATES = 1
+
 
 @dataclass
 class ComfoconnectSelectDescriptionMixin:
