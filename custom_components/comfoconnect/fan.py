@@ -61,7 +61,6 @@ class ComfoConnectFan(ComfoConnectEntity, FanEntity):
     """Representation of the ComfoConnect fan platform."""
 
     _attr_enable_turn_on_off_backwards_compatibility = False
-    _attr_icon = "mdi:air-conditioner"
     _attr_should_poll = False
     _attr_supported_features = FanEntityFeature.SET_SPEED | FanEntityFeature.PRESET_MODE | FanEntityFeature.TURN_ON | FanEntityFeature.TURN_OFF
     _attr_speed_count = len(FAN_SPEEDS)

@@ -46,13 +46,11 @@ BUTTON_TYPES = (
         key="cancel_boost",
         press_fn=lambda ccb, option: cast(Coroutine, ccb.set_boost(False)),
         translation_key="cancel_boost",
-        icon="mdi:fan-off",
     ),
     ComfoconnectButtonEntityDescription(
         key="cancel_away",
         press_fn=lambda ccb, option: cast(Coroutine, ccb.set_away(False)),
         translation_key="cancel_away",
-        icon="mdi:home-import-outline",
     ),
 )
 
