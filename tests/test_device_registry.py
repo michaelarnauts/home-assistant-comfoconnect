@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from aiocomfoconnect.const import GatewayType
-from aiocomfoconnect.properties import PROPERTY_MODEL, PROPERTY_NAME, PROPERTY_SERIAL_NUMBER
+from aiocomfoconnect.properties import PROPERTY_FIRMWARE_VERSION, PROPERTY_MODEL, PROPERTY_NAME, PROPERTY_SERIAL_NUMBER
 from custom_components.comfoconnect import EVENT_COMFOCONNECT_ALARM
 from custom_components.comfoconnect.const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN
 from homeassistant.const import CONF_HOST
@@ -26,6 +26,7 @@ UNIT_PROPERTIES = {
     PROPERTY_NAME.property_id: "ComfoAirQ",
     PROPERTY_MODEL.property_id: "ComfoAir Q450",
     PROPERTY_SERIAL_NUMBER.property_id: "BEA0000000001",
+    PROPERTY_FIRMWARE_VERSION.property_id: "R1.4.0",
 }
 
 
@@ -81,6 +82,8 @@ async def test_unit_is_connected_through_the_bridge(hass: HomeAssistant) -> None
     # The bridge is named after its model, and both devices show their serial number.
     assert (bridge_device.name, bridge_device.model, bridge_device.serial_number) == ("ComfoConnect LAN C", "ComfoConnect LAN C", "DEMO0001")
     assert (unit_device.name, unit_device.model, unit_device.serial_number) == ("ComfoAirQ", "ComfoAir Q450", "BEA0000000001")
+    # The library decodes the unit's firmware version; only the bridge's version is decoded here.
+    assert (bridge_device.sw_version, unit_device.sw_version) == ("1.0.0", "R1.4.0")
 
     # Alarm automations must identify the registered unit, rather than the LAN bridge.
     events = []

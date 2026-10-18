@@ -145,17 +145,16 @@ class ComfoConnectNumber(NumberEntity):
             self._attr_available = False
             _LOGGER.warning("Could not update %s: %s", self.entity_description.name, err)
             return
-        self._attr_native_value = constraints.value / 10
-        self._attr_native_min_value = constraints.minimum / 10
-        self._attr_native_max_value = constraints.maximum / 10
-        self._attr_native_step = constraints.step / 10
+        self._attr_native_value = constraints.value
+        self._attr_native_min_value = constraints.minimum
+        self._attr_native_max_value = constraints.maximum
+        self._attr_native_step = constraints.step
         self._attr_available = self._ccb.is_available
 
     async def async_set_native_value(self, value: float) -> None:
-        """Write the temperature in tenths of a degree, then read back what the unit reports."""
-        prop = self.entity_description.property
+        """Write the temperature, then read back what the unit reports."""
         try:
-            await self._ccb.set_property_typed(prop.unit, prop.subunit, prop.property_id, round(value * 10), prop.property_type)
+            await self._ccb.set_property(self.entity_description.property, value)
         except (ComfoConnectError, AioComfoConnectTimeout, AioComfoConnectNotConnected, AioComfoConnectNotReachable) as err:
             raise HomeAssistantError(f"Failed to set {self.entity_description.name}: {err}") from err
         self.async_schedule_update_ha_state(True)
