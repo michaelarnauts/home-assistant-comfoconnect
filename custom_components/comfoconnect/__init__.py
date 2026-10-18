@@ -107,6 +107,25 @@ def find_co2_sensors(bridge: ComfoConnectBridge) -> list[tuple[int, int]]:
     return list(zip(node_ids, CO2_SENSOR_IDS, strict=False))
 
 
+async def read_node_info(bridge: ComfoConnectBridge, node_id: int) -> dict[str, str]:
+    """Read the device info of a node; a read that fails leaves that info out."""
+    info = {}
+    for key, prop in (
+        ("name", PROPERTY_NAME),
+        ("model", PROPERTY_MODEL),
+        ("serial_number", PROPERTY_SERIAL_NUMBER),
+        ("sw_version", PROPERTY_FIRMWARE_VERSION),
+    ):
+        try:
+            value = await bridge.get_property(prop, node_id=node_id)
+        except AioComfoConnectError as err:
+            _LOGGER.debug("Could not read the %s of node %s: %s", key, node_id, err)
+            continue
+        if value:
+            info[key] = value
+    return info
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Zehnder ComfoConnect from a config entry."""
 
@@ -158,6 +177,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         unit_firmware = await bridge.get_property(PROPERTY_FIRMWARE_VERSION)
         unit_name = await bridge.get_property(PROPERTY_NAME)
         unit_serial_number = await bridge.get_property(PROPERTY_SERIAL_NUMBER)
+        bridge.co2_sensors = find_co2_sensors(bridge)
+        co2_sensor_info = {node_id: await read_node_info(bridge, node_id) for node_id, _sensor_id in bridge.co2_sensors}
     except AioComfoConnectError as err:
         await bridge.disconnect()
         raise ConfigEntryNotReady("The bridge did not return its device information") from err
@@ -200,13 +221,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     bridge.device_id = unit_device.id
 
     # Add the ComfoNet CO2 sensors, connected through the bridge like the unit.
-    bridge.co2_sensors = find_co2_sensors(bridge)
     for index, (node_id, _sensor_id) in enumerate(bridge.co2_sensors, start=1):
+        info = {"name": f"CO2 sensor {index}", **co2_sensor_info[node_id]}
         co2_device = device_registry.async_get_or_create(
             config_entry_id=entry.entry_id,
             identifiers={co2_sensor_identifier(bridge, node_id)},
             manufacturer="Zehnder",
-            name=f"CO2 sensor {index}",
+            **info,
         )
         device_registry.async_update_device(co2_device.id, via_device_id=bridge_device.id)
 

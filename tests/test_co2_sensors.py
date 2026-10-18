@@ -8,6 +8,8 @@ from unittest.mock import AsyncMock, PropertyMock, patch
 import pytest
 from aiocomfoconnect.bridge import Node
 from aiocomfoconnect.const import ProductId
+from aiocomfoconnect.exceptions import AioComfoConnectTimeout
+from aiocomfoconnect.properties import PROPERTY_FIRMWARE_VERSION, PROPERTY_MODEL, PROPERTY_NAME, PROPERTY_SERIAL_NUMBER
 from aiocomfoconnect.sensors import SENSOR_CO2_1, SENSOR_CO2_2
 from custom_components.comfoconnect import find_co2_sensors
 from custom_components.comfoconnect.const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN
@@ -23,6 +25,25 @@ MockConfigEntry = pytest.importorskip("pytest_homeassistant_custom_component.com
 BRIDGE = "custom_components.comfoconnect.ComfoConnectBridge"
 UNIT_UUID = "00" * 16
 UNIT = Node(1, ProductId.COMFOAIRQ, 1, 0)
+# The device info the nodes return; node 54 doesn't answer its name and serial number.
+NODE_PROPERTIES = {
+    7: {
+        PROPERTY_NAME.property_id: "Living",
+        PROPERTY_MODEL.property_id: "CO2 demo",
+        PROPERTY_SERIAL_NUMBER.property_id: "DEMO0007",
+        PROPERTY_FIRMWARE_VERSION.property_id: "1.2.3",
+    },
+    54: {PROPERTY_MODEL.property_id: "CO2 demo", PROPERTY_FIRMWARE_VERSION.property_id: "1.2.4"},
+}
+
+
+async def get_property(prop, node_id=None):
+    """Return the unit's or a node's property, or time out like an unanswered read."""
+    if node_id is None:
+        return "demo"
+    if prop.property_id not in NODE_PROPERTIES[node_id]:
+        raise AioComfoConnectTimeout("No answer")
+    return NODE_PROPERTIES[node_id][prop.property_id]
 
 
 def co2_node(node_id: int, zone_id: int = 1) -> Node:
@@ -54,12 +75,19 @@ def auto_enable_custom_integrations(enable_custom_integrations):
 @pytest.mark.parametrize(
     ("nodes", "expected"),
     [
-        ([UNIT, co2_node(7), co2_node(54)], [(7, SENSOR_CO2_1, "CO2 sensor 1"), (54, SENSOR_CO2_2, "CO2 sensor 2")]),
+        (
+            [UNIT, co2_node(7), co2_node(54)],
+            [
+                (7, SENSOR_CO2_1, ("Living", "CO2 demo", "DEMO0007", "1.2.3")),
+                # A read that fails leaves that info out, and the name falls back to the sensor's number.
+                (54, SENSOR_CO2_2, ("CO2 sensor 2", "CO2 demo", None, "1.2.4")),
+            ],
+        ),
         ([UNIT], []),
     ],
 )
 async def test_co2_sensor_devices_and_entities(hass: HomeAssistant, nodes: list[Node], expected: list) -> None:
-    """Each CO2 sensor is a device behind the bridge with one CO2 entity; without CO2 sensors there are none."""
+    """Each CO2 sensor is a device behind the bridge with its own device info and one CO2 entity; without CO2 sensors there are none."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="192.0.2.10",
@@ -76,7 +104,7 @@ async def test_co2_sensor_devices_and_entities(hass: HomeAssistant, nodes: list[
             new_callable=AsyncMock,
             return_value=SimpleNamespace(serialNumber="DEMO0001", gatewayVersion=0),
         ),
-        patch(f"{BRIDGE}.get_property", new_callable=AsyncMock, return_value="demo"),
+        patch(f"{BRIDGE}.get_property", side_effect=get_property),
         patch("custom_components.comfoconnect.version_decode", return_value="1.0.0"),
         patch(
             "homeassistant.config_entries.ConfigEntries.async_forward_entry_setups",
@@ -97,9 +125,9 @@ async def test_co2_sensor_devices_and_entities(hass: HomeAssistant, nodes: list[
     co2_entities = [entity for entity in entities if isinstance(entity, ComfoConnectCO2Sensor)]
     assert len(co2_entities) == len(expected)
 
-    for entity, (node_id, sensor_id, name) in zip(co2_entities, expected, strict=True):
+    for entity, (node_id, sensor_id, device_info) in zip(co2_entities, expected, strict=True):
         device = registry.async_get_device_by_identifier((DOMAIN, f"{UNIT_UUID}-{node_id}"), entry.entry_id)
-        assert device.name == name
+        assert (device.name, device.model, device.serial_number, device.sw_version) == device_info
         assert device.via_device_id == bridge_device.id
 
         assert entity.entity_description.ccb_sensor.id == sensor_id
