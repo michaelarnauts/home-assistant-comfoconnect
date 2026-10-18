@@ -1,12 +1,15 @@
 """Alarm automation events retain their payload and change-only delivery contract."""
 
+from unittest.mock import Mock
+
 from custom_components.comfoconnect import EVENT_COMFOCONNECT_ALARM, ComfoConnectBridge
+from custom_components.comfoconnect.const import CONF_UUID
 from homeassistant.core import HomeAssistant, callback
 
 
 async def test_changed_and_cleared_alarm_events_keep_the_public_payload(hass: HomeAssistant) -> None:
     """Real HA listeners receive one event per changed node/content snapshot."""
-    bridge = ComfoConnectBridge(hass, "127.0.0.1", "test-bridge")
+    bridge = ComfoConnectBridge(hass, Mock(data={CONF_UUID: "test-bridge"}), "127.0.0.1")
     bridge.device_id = "unit-device"
     events = []
 
@@ -36,7 +39,7 @@ async def test_changed_and_cleared_alarm_events_keep_the_public_payload(hass: Ho
 
 async def test_alarm_event_before_the_device_is_registered(hass: HomeAssistant) -> None:
     """Alarms reported while connecting, before setup registered the device, fire without a device_id."""
-    bridge = ComfoConnectBridge(hass, "127.0.0.1", "test-bridge")
+    bridge = ComfoConnectBridge(hass, Mock(data={CONF_UUID: "test-bridge"}), "127.0.0.1")
     events = []
 
     @callback

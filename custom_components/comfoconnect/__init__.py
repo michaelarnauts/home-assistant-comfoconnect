@@ -90,7 +90,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
 
     try:
-        bridge = ComfoConnectBridge(hass, entry.data[CONF_HOST], entry.data[CONF_UUID])
+        bridge = ComfoConnectBridge(hass, entry, entry.data[CONF_HOST])
         await bridge.connect(entry.data[CONF_LOCAL_UUID])
 
     except ComfoConnectNotAllowed:
@@ -111,7 +111,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             raise ConfigEntryNotReady from err
 
         # Try again, with the updated host this time
-        bridge = ComfoConnectBridge(hass, discovered_bridge.host, entry.data[CONF_UUID])
+        bridge = ComfoConnectBridge(hass, entry, discovered_bridge.host)
         try:
             await bridge.connect(entry.data[CONF_LOCAL_UUID])
 
@@ -144,7 +144,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         raise
 
     hass.data[DOMAIN][entry.entry_id] = bridge
-    bridge.entry = entry
 
     device_registry = dr.async_get(hass)
 
@@ -202,20 +201,20 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 class ComfoConnectBridge(ComfoConnect):
     """Representation of a ComfoConnect bridge."""
 
-    def __init__(self, hass: HomeAssistant, host: str, uuid: str):
-        """Initialize the ComfoConnect bridge."""
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, host: str):
+        """Initialize the ComfoConnect bridge of a config entry."""
         super().__init__(
             host,
-            uuid,
+            entry.data[CONF_UUID],
             sensor_callback=self.sensor_callback,
             alarm_callback=self.alarm_callback,
             connection_state_callback=self.connection_state_callback,
         )
         self.hass = hass
+        self.entry = entry
         # Latest alarms per node; a node is missing until it has reported.
         self.active_alarms: dict[int, dict[int, str]] = {}
-        # The config entry and the ventilation unit's device, known once setup has registered them.
-        self.entry: ConfigEntry | None = None
+        # The ventilation unit's device, known once setup has registered it.
         self.device_id: str | None = None
         self.is_available = True
 
@@ -223,7 +222,7 @@ class ComfoConnectBridge(ComfoConnect):
     def connection_state_callback(self, state: str) -> None:
         """Follow the session the library keeps up, and ask to register again when the bridge refuses it."""
         self.set_available(state == ConnectionState.CONNECTED)
-        if state == ConnectionState.NOT_ALLOWED and self.entry is not None:
+        if state == ConnectionState.NOT_ALLOWED:
             self.entry.async_start_reauth(self.hass)
 
     @callback

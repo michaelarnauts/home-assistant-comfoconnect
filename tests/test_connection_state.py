@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, Mock
 from aiocomfoconnect.const import ConnectionState
 from aiocomfoconnect.exceptions import AioComfoConnectTimeout
 from custom_components.comfoconnect import SIGNAL_COMFOCONNECT_AVAILABILITY, ComfoConnectBridge, async_unload_entry
-from custom_components.comfoconnect.const import DOMAIN
+from custom_components.comfoconnect.const import CONF_UUID, DOMAIN
 from custom_components.comfoconnect.select import SELECT_TYPES, ComfoConnectSelect
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
@@ -14,7 +14,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 async def test_availability_follows_the_session(hass: HomeAssistant) -> None:
     """Entities become unavailable while the library reconnects, and available again once the session is up."""
-    bridge = ComfoConnectBridge(hass, "192.0.2.10", "test-bridge")
+    bridge = ComfoConnectBridge(hass, Mock(data={CONF_UUID: "test-bridge"}), "192.0.2.10")
     changes = []
     async_dispatcher_connect(hass, SIGNAL_COMFOCONNECT_AVAILABILITY.format(bridge.uuid), callback(lambda available: changes.append(available)))
 
@@ -27,12 +27,12 @@ async def test_availability_follows_the_session(hass: HomeAssistant) -> None:
 
 async def test_refused_session_starts_reauth(hass: HomeAssistant) -> None:
     """When the bridge no longer knows us, the library stops reconnecting and the user is asked to register again."""
-    bridge = ComfoConnectBridge(hass, "192.0.2.10", "test-bridge")
-    bridge.entry = Mock()
+    entry = Mock(data={CONF_UUID: "test-bridge"})
+    bridge = ComfoConnectBridge(hass, entry, "192.0.2.10")
 
     bridge.connection_state_callback(ConnectionState.NOT_ALLOWED)
     assert not bridge.is_available
-    bridge.entry.async_start_reauth.assert_called_once_with(hass)
+    entry.async_start_reauth.assert_called_once_with(hass)
 
 
 async def test_unload_entry_disconnects_the_bridge(hass: HomeAssistant) -> None:

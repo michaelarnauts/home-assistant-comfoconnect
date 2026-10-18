@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 import pytest
 from custom_components.comfoconnect import ComfoConnectBridge
 from custom_components.comfoconnect.binary_sensor import ComfoConnectAlarmBinarySensor
+from custom_components.comfoconnect.const import CONF_UUID
 from homeassistant.core import HomeAssistant
 from homeassistant.loader import async_setup as setup_loader
 
@@ -16,7 +17,7 @@ def test_alarm_changes_and_clear_publish_sensor_state(tmp_path):
     async def scenario():
         hass = HomeAssistant(str(tmp_path))
         setup_loader(hass)
-        bridge = ComfoConnectBridge(hass, "127.0.0.1", "test-bridge")
+        bridge = ComfoConnectBridge(hass, Mock(data={CONF_UUID: "test-bridge"}), "127.0.0.1")
         entity = ComfoConnectAlarmBinarySensor(bridge)
         entity.hass = hass
         entity.entity_id = "binary_sensor.alarms"
@@ -67,7 +68,7 @@ def test_alarm_subscription_uses_the_current_snapshot(tmp_path, initial, current
     async def scenario():
         hass = HomeAssistant(str(tmp_path))
         setup_loader(hass)
-        bridge = ComfoConnectBridge(hass, "127.0.0.1", "test-bridge")
+        bridge = ComfoConnectBridge(hass, Mock(data={CONF_UUID: "test-bridge"}), "127.0.0.1")
         if initial is not None:
             bridge.alarm_callback(1, initial)
         entity = ComfoConnectAlarmBinarySensor(bridge)
@@ -93,7 +94,7 @@ def test_identical_alarms_do_not_repeat_dispatch(tmp_path):
 
     async def scenario():
         hass = HomeAssistant(str(tmp_path))
-        bridge = ComfoConnectBridge(hass, "127.0.0.1", "test-bridge")
+        bridge = ComfoConnectBridge(hass, Mock(data={CONF_UUID: "test-bridge"}), "127.0.0.1")
         with patch("custom_components.comfoconnect.dispatcher_send", new=Mock()) as send:
             bridge.alarm_callback(1, {79: "Replace filters"})
             bridge.alarm_callback(1, {79: "Replace filters"})
