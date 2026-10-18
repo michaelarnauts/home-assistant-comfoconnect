@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
-from custom_components.comfoconnect.const import SENSOR_PRESET_TIMERS
+from aiocomfoconnect.sensors import SENSOR_PRESET_TIMERS
 from custom_components.comfoconnect.select import SELECT_TYPES, ComfoConnectSelect
 from homeassistant.core import HomeAssistant
 from homeassistant.loader import async_setup as setup_loader

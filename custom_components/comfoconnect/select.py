@@ -27,6 +27,7 @@ from aiocomfoconnect.sensors import (
     SENSOR_BYPASS_ACTIVATION_STATE,
     SENSOR_COMFOCOOL_STATE,
     SENSOR_OPERATING_MODE,
+    SENSOR_PRESET_TIMERS,
     SENSOR_PROFILE_TEMPERATURE,
     SENSORS,
 )
@@ -46,7 +47,6 @@ from . import (
     SIGNAL_COMFOCONNECT_UPDATE_RECEIVED,
     ComfoConnectBridge,
 )
-from .const import SENSOR_PRESET_TIMERS
 
 _LOGGER = logging.getLogger(__name__)
 
