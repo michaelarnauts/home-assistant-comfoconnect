@@ -25,11 +25,12 @@ MockConfigEntry = pytest.importorskip("pytest_homeassistant_custom_component.com
 BRIDGE = "custom_components.comfoconnect.ComfoConnectBridge"
 UNIT_UUID = "00" * 16
 UNIT = Node(1, ProductId.COMFOAIRQ, 1, 0)
-# What the nodes tell about themselves: node 54 has no name or serial number, node 60 can't be read.
+# What the nodes tell about themselves: node 7 has a name ending with a space, node 54 has no name, model or serial
+# number, node 60 can't be read.
 NODE_INFO = {
     None: NodeInfo("ComfoAirQ", "ComfoAir Q450", "DEMO-ART-Q", "DEMO0001", "R1.4.0", 3),
-    7: NodeInfo("Living", "CO2 demo", "DEMO-ART-CO2", "DEMO0007", "1.2.3", 1),
-    54: NodeInfo(None, "CO2 demo", None, None, "1.2.4", None),
+    7: NodeInfo("Living ", "CO2 demo", "DEMO-ART-CO2", "DEMO0007", "1.2.3", 1),
+    54: NodeInfo(None, None, None, None, "1.2.4", None),
 }
 
 
@@ -66,24 +67,8 @@ def auto_enable_custom_integrations(enable_custom_integrations):
     return
 
 
-@pytest.mark.parametrize(
-    ("nodes", "expected"),
-    [
-        (
-            [UNIT, co2_node(7), co2_node(54), co2_node(60)],
-            [
-                (7, SENSOR_CO2_1, ("Living", "CO2 demo", "DEMO-ART-CO2", "DEMO0007", "1.2.3", "1")),
-                # Without a name, the device is named after the sensor's number.
-                (54, SENSOR_CO2_2, ("CO2 sensor 2", "CO2 demo", None, None, "1.2.4", None)),
-                # A sensor that can't be read is still added, without its device info.
-                (60, SENSOR_CO2_3, ("CO2 sensor 3", None, None, None, None, None)),
-            ],
-        ),
-        ([UNIT], []),
-    ],
-)
-async def test_co2_sensor_devices_and_entities(hass: HomeAssistant, nodes: list[Node], expected: list) -> None:
-    """Each CO2 sensor is a device behind the bridge with its own device info and one CO2 entity; without CO2 sensors there are none."""
+async def setup_entry(hass: HomeAssistant, nodes: list[Node]) -> MockConfigEntry:
+    """Set up the integration with these nodes on the bus."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="192.0.2.10",
@@ -109,6 +94,28 @@ async def test_co2_sensor_devices_and_entities(hass: HomeAssistant, nodes: list[
         ),
     ):
         assert await hass.config_entries.async_setup(entry.entry_id)
+    return entry
+
+
+@pytest.mark.parametrize(
+    ("nodes", "expected"),
+    [
+        (
+            [UNIT, co2_node(7), co2_node(54), co2_node(60)],
+            [
+                (7, SENSOR_CO2_1, ("Living", "CO2 demo", "DEMO-ART-CO2", "DEMO0007", "1.2.3", "1")),
+                # Without a name, the device is named after the sensor's number; without a model, after its product.
+                (54, SENSOR_CO2_2, ("CO2 sensor 2", "CO2 Sensor C", None, None, "1.2.4", None)),
+                # A sensor that can't be read is still added, without its device info.
+                (60, SENSOR_CO2_3, ("CO2 sensor 3", "CO2 Sensor C", None, None, None, None)),
+            ],
+        ),
+        ([UNIT], []),
+    ],
+)
+async def test_co2_sensor_devices_and_entities(hass: HomeAssistant, nodes: list[Node], expected: list) -> None:
+    """Each CO2 sensor is a device behind the bridge with its own device info and one CO2 entity; without CO2 sensors there are none."""
+    entry = await setup_entry(hass, nodes)
 
     registry = dr.async_get(hass)
     bridge_device = registry.async_get_device_by_identifier((DOMAIN, "DEMO0001"), entry.entry_id)
@@ -152,3 +159,12 @@ async def test_only_a_co2_sensor_that_left_the_bus_can_be_removed(hass: HomeAssi
     device = SimpleNamespace(identifiers={(DOMAIN, identifier)})
 
     assert await async_remove_config_entry_device(hass, SimpleNamespace(runtime_data=bridge), device) is removable
+
+
+async def test_co2_sensor_without_name_is_named_in_the_language_of_home_assistant(hass: HomeAssistant) -> None:
+    """The name of a CO2 sensor without a name is translated."""
+    hass.config.language = "nl"
+    entry = await setup_entry(hass, [UNIT, co2_node(54)])
+
+    device = dr.async_get(hass).async_get_device_by_identifier((DOMAIN, f"{UNIT_UUID}-54"), entry.entry_id)
+    assert device.name == "CO2-sensor 1"
