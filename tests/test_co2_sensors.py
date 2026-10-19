@@ -25,11 +25,12 @@ MockConfigEntry = pytest.importorskip("pytest_homeassistant_custom_component.com
 BRIDGE = "custom_components.comfoconnect.ComfoConnectBridge"
 UNIT_UUID = "00" * 16
 UNIT = Node(1, ProductId.COMFOAIRQ, 1, 0)
-# What the nodes tell about themselves: node 54 has no name or serial number, node 60 can't be read.
+# What the nodes tell about themselves: node 7 has a name ending with a space, node 54 has no name, model or serial
+# number, node 60 can't be read.
 NODE_INFO = {
     None: NodeInfo("ComfoAirQ", "ComfoAir Q450", "DEMO-ART-Q", "DEMO0001", "R1.4.0", 3),
-    7: NodeInfo("Living", "CO2 demo", "DEMO-ART-CO2", "DEMO0007", "1.2.3", 1),
-    54: NodeInfo(None, "CO2 demo", None, None, "1.2.4", None),
+    7: NodeInfo("Living ", "CO2 demo", "DEMO-ART-CO2", "DEMO0007", "1.2.3", 1),
+    54: NodeInfo(None, None, None, None, "1.2.4", None),
 }
 
 
@@ -73,10 +74,10 @@ def auto_enable_custom_integrations(enable_custom_integrations):
             [UNIT, co2_node(7), co2_node(54), co2_node(60)],
             [
                 (7, SENSOR_CO2_1, ("Living", "CO2 demo", "DEMO-ART-CO2", "DEMO0007", "1.2.3", "1")),
-                # Without a name, the device is named after the sensor's number.
-                (54, SENSOR_CO2_2, ("CO2 sensor 2", "CO2 demo", None, None, "1.2.4", None)),
+                # Without a model, the device gets the model of its product, and without a name, it's named after its model.
+                (54, SENSOR_CO2_2, ("CO2 Sensor C", "CO2 Sensor C", None, None, "1.2.4", None)),
                 # A sensor that can't be read is still added, without its device info.
-                (60, SENSOR_CO2_3, ("CO2 sensor 3", None, None, None, None, None)),
+                (60, SENSOR_CO2_3, ("CO2 Sensor C", "CO2 Sensor C", None, None, None, None)),
             ],
         ),
         ([UNIT], []),

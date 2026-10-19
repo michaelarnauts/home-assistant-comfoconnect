@@ -29,7 +29,7 @@ from homeassistant.helpers import service
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.typing import ConfigType
 
-from .const import ATTR_DURATION, CONF_LOCAL_UUID, CONF_UUID, DOMAIN, SERVICE_START_BOOST
+from .const import ATTR_DURATION, CONF_LOCAL_UUID, CONF_UUID, DOMAIN, PRODUCT_MODELS, SERVICE_START_BOOST
 
 PLATFORMS: list[Platform] = [
     Platform.FAN,
@@ -107,7 +107,8 @@ def find_co2_sensors(bridge: ComfoConnectBridge) -> list[tuple[int, int]]:
 def node_device_info(info: NodeInfo) -> dict[str, str | None]:
     """Return the device registry fields for what a node tells about itself."""
     return {
-        "name": info.name,
+        # A name can end with spaces, e.g. "CO2 woonkamer ".
+        "name": info.name.strip() if info.name else None,
         "model": info.model,
         "model_id": info.article_number,
         "serial_number": info.serial_number,
@@ -213,13 +214,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ComfoConnectConfigEntry)
     bridge.device_id = unit_device.id
 
     # Add the ComfoNet CO2 sensors, connected through the bridge like the unit.
-    for index, (node_id, _sensor_id) in enumerate(bridge.co2_sensors, start=1):
-        info = co2_sensor_info[node_id]
+    for node_id, _sensor_id in bridge.co2_sensors:
+        info = {**co2_sensor_info[node_id]}
+        info["model"] = info.get("model") or PRODUCT_MODELS[ProductId.CO2SENSOR]
+        # Without a name, the device is named after its model.
+        info["name"] = info.get("name") or info["model"]
         co2_device = device_registry.async_get_or_create(
             config_entry_id=entry.entry_id,
             identifiers={co2_sensor_identifier(bridge, node_id)},
             manufacturer="Zehnder",
-            **{**info, "name": info.get("name") or f"CO2 sensor {index}"},
+            **info,
         )
         device_registry.async_update_device(co2_device.id, via_device_id=bridge_device.id)
 
