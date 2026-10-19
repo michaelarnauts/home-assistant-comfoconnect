@@ -37,11 +37,6 @@
             "cannot_connect": "Kan geen verbinding maken met de gateway. Controleer of die aan staat en bereikbaar is, en of de officiële app hem niet gebruikt."
         }
     },
-    "device": {
-        "co2_sensor": {
-            "name": "CO2-sensor {index}"
-        }
-    },
     "entity": {
         "binary_sensor": {
             "heating_season_active": {

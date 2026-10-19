@@ -37,11 +37,6 @@
       "cannot_connect": "Could not connect to the bridge. Check that it is on and reachable, and that the official app isn't using it."
     }
   },
-  "device": {
-    "co2_sensor": {
-      "name": "CO2 sensor {index}"
-    }
-  },
   "entity": {
     "binary_sensor": {
       "heating_season_active": {

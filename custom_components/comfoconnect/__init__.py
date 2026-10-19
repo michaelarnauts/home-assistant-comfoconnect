@@ -214,12 +214,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ComfoConnectConfigEntry)
     bridge.device_id = unit_device.id
 
     # Add the ComfoNet CO2 sensors, connected through the bridge like the unit.
-    for index, (node_id, _sensor_id) in enumerate(bridge.co2_sensors, start=1):
+    for node_id, _sensor_id in bridge.co2_sensors:
         info = {**co2_sensor_info[node_id]}
         info["model"] = info.get("model") or PRODUCT_MODELS[ProductId.CO2SENSOR]
-        if not info.get("name"):
-            # Without a name, the device is named after the sensor's number.
-            info |= {"translation_key": "co2_sensor", "translation_placeholders": {"index": str(index)}}
+        # Without a name, the device is named after its model.
+        info["name"] = info.get("name") or info["model"]
         co2_device = device_registry.async_get_or_create(
             config_entry_id=entry.entry_id,
             identifiers={co2_sensor_identifier(bridge, node_id)},
