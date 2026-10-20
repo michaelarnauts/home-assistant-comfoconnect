@@ -29,10 +29,12 @@ PRO = Node(20, ProductId.COMFOCONNECTPRO, 255, 2)
 FLEX_WIFI = Node(41, ProductId.COMFOAIRFLEXCONNECTIONBOARD, 1, 2)
 SWITCH = Node(43, ProductId.COMFOSWITCH, 1, 2)
 UNKNOWN = Node(11, 25, 1, 2)
-# What the nodes tell about themselves; the Pro, the WiFi module and the unknown node can't be read.
+# What the nodes tell about themselves; the unknown node can't be read.
 NODE_INFO = {
     None: NodeInfo("ComfoAirQ", "ComfoAir Q450", "DEMO-ART-Q", "BEA0000000001", "R1.4.0", 3, 2),
     LAN_C.node_id: NodeInfo("ComfoConnect LAN C", None, None, "DEMO0001", "R1.5.1", 1, 0),
+    PRO.node_id: NodeInfo(None, None, None, "DEMO0020", "R2.0.0", 1, 0),
+    FLEX_WIFI.node_id: NodeInfo(None, None, None, "DEMO0041", "R1.0.0", 1, 0),
     SWITCH.node_id: NodeInfo("ComfoSwitch", None, None, "DEMO0043", "R9.0.0", 16, 0),
 }
 
@@ -105,10 +107,10 @@ async def test_every_node_is_a_device(hass: HomeAssistant) -> None:
     assert all("via_device" not in call.kwargs for call in get_or_create.call_args_list)
 
     assert devices(hass, entry) == {
-        # The bridge keeps the serial number as identifier, like before every node was a device.
+        # A node is identified by its serial number, the unit by the uuid of the bridge.
         "DEMO0001": ("ComfoConnect LAN C", "ComfoConnect LAN C", "R1.5.1", "1", "DEMO0001", None),
         UNIT_UUID: ("ComfoAirQ", "ComfoAir Q450", "R1.4.0", "3", "BEA0000000001", "ComfoConnect LAN C"),
-        f"{UNIT_UUID}-43": ("ComfoSwitch", "ComfoSwitch C", "R9.0.0", "16", "DEMO0043", "ComfoConnect LAN C"),
+        "DEMO0043": ("ComfoSwitch", "ComfoSwitch C", "R9.0.0", "16", "DEMO0043", "ComfoConnect LAN C"),
     }
 
     # Alarm automations must identify the registered unit, rather than the LAN bridge.
@@ -123,14 +125,14 @@ async def test_every_node_is_a_device(hass: HomeAssistant) -> None:
 @pytest.mark.parametrize(
     ("bridge_nodes", "expected"),
     [
-        # A node that can't tell about itself is named after its product.
-        ([PRO], {f"{UNIT_UUID}-20": ("ComfoConnect Pro", "ComfoConnect Pro", None, None, None, None)}),
-        ([FLEX_WIFI], {f"{UNIT_UUID}-41": ("ComfoAir WiFi Connection Module", "ComfoAir WiFi Connection Module", None, None, None, None)}),
+        # A node that doesn't tell its name is named after its product.
+        ([PRO], {"DEMO0020": ("ComfoConnect Pro", "ComfoConnect Pro", "R2.0.0", "1", "DEMO0020", None)}),
+        ([FLEX_WIFI], {"DEMO0041": ("ComfoAir WiFi Connection Module", "ComfoAir WiFi Connection Module", "R1.0.0", "1", "DEMO0041", None)}),
         # A ComfoAir Flex with a LAN C: we reach the unit through the LAN C.
         (
             [FLEX_WIFI, LAN_C],
             {
-                f"{UNIT_UUID}-41": ("ComfoAir WiFi Connection Module", "ComfoAir WiFi Connection Module", None, None, None, None),
+                "DEMO0041": ("ComfoAir WiFi Connection Module", "ComfoAir WiFi Connection Module", "R1.0.0", "1", "DEMO0041", None),
                 "DEMO0001": ("ComfoConnect LAN C", "ComfoConnect LAN C", "R1.5.1", "1", "DEMO0001", None),
             },
         ),
@@ -157,8 +159,14 @@ async def test_node_announced_after_setup(hass: HomeAssistant) -> None:
     assert devices(hass, entry)[UNIT_UUID][-1] == "ComfoConnect LAN C"
 
 
-async def test_unknown_node_without_name(hass: HomeAssistant) -> None:
-    """A node of a product we don't know, that doesn't tell its name, gets no device."""
-    entry = await setup_entry(hass, UNIT, LAN_C, UNKNOWN)
+async def test_node_that_cant_be_read(hass: HomeAssistant) -> None:
+    """A node that doesn't tell its serial number gets no device, until it does when the bridge announces it again."""
+    with patch.dict(NODE_INFO, {LAN_C.node_id: NodeInfo(None, None, None, None, None, None, None)}):
+        entry = await setup_entry(hass, UNIT, LAN_C, UNKNOWN)
+    assert list(devices(hass, entry)) == [UNIT_UUID]
 
-    assert f"{UNIT_UUID}-11" not in devices(hass, entry)
+    with patch(f"{BRIDGE}.get_node_info", side_effect=get_node_info):
+        entry.runtime_data.node_callback(LAN_C)
+        await hass.async_block_till_done()
+
+    assert devices(hass, entry)[UNIT_UUID][-1] == "ComfoConnect LAN C"

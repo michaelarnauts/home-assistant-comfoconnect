@@ -83,8 +83,8 @@ from . import (
     SIGNAL_COMFOCONNECT_UPDATE_RECEIVED,
     ComfoConnectBridge,
     ComfoConnectConfigEntry,
-    node_identifier,
 )
+from .const import DOMAIN
 from .entity import ComfoConnectEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -553,7 +553,12 @@ async def async_setup_entry(
     ccb = config_entry.runtime_data
 
     sensors = [ComfoConnectSensor(ccb=ccb, config_entry=config_entry, description=description) for description in SENSOR_TYPES]
-    sensors += [ComfoConnectCO2Sensor(ccb, config_entry, node_id, sensor_id) for node_id, sensor_id in ccb.co2_sensors]
+    # A CO2 sensor is identified by its serial number, so one without a device yet gets no entity.
+    sensors += [
+        ComfoConnectCO2Sensor(ccb, config_entry, ccb.node_devices[node_id][2], sensor_id)
+        for node_id, sensor_id in ccb.co2_sensors
+        if node_id in ccb.node_devices
+    ]
 
     async_add_entities(sensors)
 
@@ -628,8 +633,8 @@ class ComfoConnectSensor(ComfoConnectEntity, SensorEntity):
 class ComfoConnectCO2Sensor(ComfoConnectSensor):
     """The CO2 level of a ComfoNet CO2 sensor, on the sensor's own device."""
 
-    def __init__(self, ccb: ComfoConnectBridge, config_entry: ComfoConnectConfigEntry, node_id: int, sensor_id: int) -> None:
-        """Initialize the CO2 sensor of a node."""
+    def __init__(self, ccb: ComfoConnectBridge, config_entry: ComfoConnectConfigEntry, serial_number: str, sensor_id: int) -> None:
+        """Initialize the CO2 sensor with this serial number, that reports on this sensor id."""
         super().__init__(
             ccb,
             config_entry,
@@ -642,6 +647,6 @@ class ComfoConnectCO2Sensor(ComfoConnectSensor):
                 ccb_sensor=SENSORS[sensor_id],
             ),
         )
-        # Follow the node, since its sensor id shifts when a sensor with a lower node id is removed.
-        self._attr_unique_id = f"{ccb.uuid}-co2-{node_id}"
-        self._attr_device_info = DeviceInfo(identifiers={node_identifier(ccb, node_id)})
+        # Follow the sensor, since its sensor id shifts when a sensor with a lower node id is removed.
+        self._attr_unique_id = f"{serial_number}-co2"
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, serial_number)})

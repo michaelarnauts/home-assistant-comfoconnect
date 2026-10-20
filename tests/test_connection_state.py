@@ -74,7 +74,7 @@ def _entities(bridge):
     entry = SimpleNamespace()
     return [
         ComfoConnectSensor(bridge, entry, next(item for item in SENSOR_TYPES if item.key == SENSOR_TEMPERATURE_EXTRACT)),
-        ComfoConnectCO2Sensor(bridge, entry, 7, SENSOR_CO2_1),
+        ComfoConnectCO2Sensor(bridge, entry, "DEMO0007", SENSOR_CO2_1),
         ComfoConnectBinarySensor(bridge, entry, next(item for item in BINARY_SENSOR_TYPES if item.key == SENSOR_COMFOCOOL_STATE)),
         ComfoConnectAlarmBinarySensor(bridge),
         ComfoConnectSelect(bridge, entry, next(item for item in SELECT_TYPES if item.key == "balance_mode")),
@@ -102,6 +102,6 @@ def test_entities_keep_their_unique_id_and_device() -> None:
     """The unit's entities stay on the unit's device, the CO2 sensor on its own."""
     bridge = SimpleNamespace(uuid="test", is_available=True, active_alarms={})
     unique_ids = [entity.unique_id for entity in _entities(bridge)]
-    assert unique_ids == ["test-274", "test-co2-7", "test-784", "test-active_alarms", "test-balance_mode", "test-cancel_boost", "test"]
+    assert unique_ids == ["test-274", "DEMO0007-co2", "test-784", "test-active_alarms", "test-balance_mode", "test-cancel_boost", "test"]
     devices = [entity.device_info["identifiers"] for entity in _entities(bridge)]
-    assert devices == [{("comfoconnect", "test")}] + [{("comfoconnect", "test-7")}] + [{("comfoconnect", "test")}] * 5
+    assert devices == [{("comfoconnect", "test")}] + [{("comfoconnect", "DEMO0007")}] + [{("comfoconnect", "test")}] * 5
