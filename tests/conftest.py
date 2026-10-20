@@ -4,12 +4,15 @@ import sys
 from collections.abc import Generator
 from contextlib import ExitStack
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, create_autospec, patch
 
 import pytest
 from aiocomfoconnect import Bridge, ComfoConnect
+from aiocomfoconnect.bridge import Node
 from aiocomfoconnect.comfoconnect import NodeInfo
 from aiocomfoconnect.const import ConnectionState
+from aiocomfoconnect.exceptions import ComfoConnectRmiError
 from aiocomfoconnect.properties import (
     PROPERTY_PROFILE_TEMPERATURE_COOL,
     PROPERTY_PROFILE_TEMPERATURE_NORMAL,
@@ -37,7 +40,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from custom_components.comfoconnect import PLATFORMS
 from custom_components.comfoconnect.const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN
-from tests.nodes import LAN_C, UNIT, announcing
+from tests.nodes import LAN_C, UNIT
 
 HOST = "192.0.2.10"
 BRIDGE_UUID = "00" * 16
@@ -168,23 +171,41 @@ def mock_discover_bridges(mock_bridge: MagicMock) -> Generator[AsyncMock]:
         yield discover_bridges
 
 
+def announce(bridge: ComfoConnect, node: Node) -> None:
+    """Announce a node on the bus, or that it went offline, like the bridge does."""
+    bridge._process_node_notification(SimpleNamespace(nodeId=node.node_id, productId=node.product_id, zoneId=node.zone_id, mode=node.mode))
+
+
 @pytest.fixture
-def mock_comfoconnect() -> Generator[dict[str, MagicMock]]:
+def nodes() -> list[Node]:
+    """Return the nodes the bridge announces when a session starts; a test overrides this for another bus."""
+    return [UNIT, LAN_C]
+
+
+@pytest.fixture
+def node_info() -> dict[int | None, NodeInfo]:
+    """Return what each node tells about itself, by node id, the unit's as None; a node that's missing can't be read."""
+    return NODE_INFO
+
+
+@pytest.fixture
+def mock_comfoconnect(nodes: list[Node], node_info: dict[int | None, NodeInfo]) -> Generator[dict[str, MagicMock]]:
     """
     Patch the library's session with a ComfoAir Q450 behind a LAN C, and return its mocked methods by name.
 
     The unit reports no alarms, and pushes the value of a sensor as soon as it's registered.
     """
 
-    announce = announcing(UNIT, LAN_C)
-
     async def connect(self: ComfoConnect, uuid: str) -> None:
-        await announce(self, uuid)
+        for node in nodes:
+            announce(self, node)
         # The unit reports its alarms when the session starts, here none.
         self._alarm_callback_fn(UNIT.node_id, {})
 
     async def get_node_info(self: ComfoConnect, node_id: int | None = None) -> NodeInfo:
-        return NODE_INFO[node_id]
+        if node_id not in node_info:
+            raise ComfoConnectRmiError("No answer")
+        return node_info[node_id]
 
     async def register_sensor(self: ComfoConnect, sensor: Sensor) -> None:
         self._sensor_callback_fn(sensor, SENSOR_VALUES[sensor.id])
@@ -241,6 +262,11 @@ def push_sensor(entry: MockConfigEntry, sensor_id: int, value) -> None:
 def push_alarms(entry: MockConfigEntry, node_id: int, errors: dict[int, str]) -> None:
     """Push the alarms of a node, like the library does when the bridge reports them."""
     entry.runtime_data._alarm_callback_fn(node_id, errors)
+
+
+def announce_node(entry: MockConfigEntry, node: Node) -> None:
+    """Announce a node on the bus after setup, or that it went offline."""
+    announce(entry.runtime_data, node)
 
 
 def set_connection_state(entry: MockConfigEntry, state: ConnectionState) -> None:
