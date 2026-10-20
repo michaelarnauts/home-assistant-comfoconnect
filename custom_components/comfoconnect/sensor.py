@@ -83,6 +83,7 @@ from . import (
     SIGNAL_COMFOCONNECT_UPDATE_RECEIVED,
     ComfoConnectBridge,
     ComfoConnectConfigEntry,
+    find_co2_sensors,
 )
 from .const import DOMAIN
 from .entity import ComfoConnectEntity
@@ -556,7 +557,7 @@ async def async_setup_entry(
     # A CO2 sensor is identified by its serial number, so one without a device yet gets no entity.
     sensors += [
         ComfoConnectCO2Sensor(ccb, config_entry, ccb.node_devices[node_id][2], sensor_id)
-        for node_id, sensor_id in ccb.co2_sensors
+        for node_id, sensor_id in find_co2_sensors(ccb)
         if node_id in ccb.node_devices
     ]
 

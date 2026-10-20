@@ -17,7 +17,6 @@ from aiocomfoconnect.exceptions import (
     ComfoConnectNotAllowed,
 )
 from aiocomfoconnect.sensors import SENSOR_CO2_1, SENSOR_CO2_8, Sensor
-from aiocomfoconnect.util import version_decode
 from homeassistant.components import network
 from homeassistant.components.fan import DOMAIN as FAN_DOMAIN
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
@@ -164,9 +163,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ComfoConnectConfigEntry)
 
     # A failed read must not leave a reconnecting session behind the failed entry.
     try:
-        bridge_info = await bridge.cmd_version_request()
         unit_info = await bridge.get_node_info()
-        bridge.co2_sensors = find_co2_sensors(bridge)
     except AioComfoConnectError as err:
         await bridge.disconnect()
         raise ConfigEntryNotReady(translation_domain=DOMAIN, translation_key="device_info_failed") from err
@@ -175,7 +172,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ComfoConnectConfigEntry)
         await bridge.disconnect()
         raise
 
-    bridge.gateway_version = version_decode(bridge_info.gatewayVersion)
     entry.runtime_data = bridge
 
     # Add a device for every node on the bus. The bridge announces some nodes, like itself, a little after we
@@ -239,10 +235,6 @@ class ComfoConnectBridge(ComfoConnect):
         # number is None for the unit. Setup turns on adding them.
         self.node_devices: dict[int, tuple[Node, str, str | None]] = {}
         self.add_node_devices = False
-        # The node id and sensor id of each CO2 sensor, known once setup has registered them.
-        self.co2_sensors: list[tuple[int, int]] = []
-        # The firmware version of the bridge, known once setup has read it.
-        self.gateway_version: str | None = None
         self.is_available = True
 
     async def async_add_node_device(self, node: Node, info: NodeInfo | None = None) -> None:

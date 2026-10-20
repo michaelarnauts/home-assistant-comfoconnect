@@ -17,7 +17,6 @@ async def test_config_entry_diagnostics(hass: HomeAssistant) -> None:
     info = NodeInfo("ComfoAirQ", "ComfoAirQ 350", "471502004", "SERIAL123", "R1.12.0", 2, 1)
     bridge = Mock(
         bridge_type=GatewayType.PRO,
-        gateway_version="R1.7.0",
         is_available=True,
         connection_state=ConnectionState.CONNECTED,
         nodes={1: Node(1, 1, 1, 1), 2: Node(2, 5, 1, 1)},
@@ -31,7 +30,7 @@ async def test_config_entry_diagnostics(hass: HomeAssistant) -> None:
 
     assert data == {
         "entry": {"host": REDACTED, "uuid": REDACTED, "local_uuid": REDACTED},
-        "bridge": {"type": GatewayType.PRO, "gateway_version": "R1.7.0", "available": True, "connection_state": "connected"},
+        "bridge": {"type": GatewayType.PRO, "available": True, "connection_state": "connected"},
         "nodes": [
             {
                 "node_id": 1,

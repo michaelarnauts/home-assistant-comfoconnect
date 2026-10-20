@@ -64,13 +64,7 @@ async def setup_entry(hass: HomeAssistant, *nodes: Node) -> MockConfigEntry:
     with (
         patch(f"{BRIDGE}.connect", autospec=True, side_effect=announcing(*nodes)),
         patch(f"{BRIDGE}.disconnect", new_callable=AsyncMock),
-        patch(
-            f"{BRIDGE}.cmd_version_request",
-            new_callable=AsyncMock,
-            return_value=SimpleNamespace(serialNumber="DEMO0001", gatewayVersion=0),
-        ),
         patch(f"{BRIDGE}.get_node_info", side_effect=get_node_info),
-        patch("custom_components.comfoconnect.version_decode", return_value="1.0.0"),
         patch(
             "homeassistant.config_entries.ConfigEntries.async_forward_entry_setups",
             new_callable=AsyncMock,
