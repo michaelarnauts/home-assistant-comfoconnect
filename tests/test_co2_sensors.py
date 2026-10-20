@@ -2,45 +2,19 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
-
 import pytest
 from aiocomfoconnect.bridge import Node
 from aiocomfoconnect.comfoconnect import NodeInfo
 from aiocomfoconnect.const import ProductId
-from aiocomfoconnect.exceptions import ComfoConnectRmiError
 from aiocomfoconnect.sensors import SENSOR_CO2_1, SENSOR_CO2_2
-from custom_components.comfoconnect import async_remove_config_entry_device, find_co2_sensors
-from custom_components.comfoconnect.const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN
-from custom_components.comfoconnect.sensor import ComfoConnectCO2Sensor
-from custom_components.comfoconnect.sensor import async_setup_entry as async_setup_sensors
-from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
-from homeassistant.const import CONF_HOST, UnitOfRatio
+from custom_components.comfoconnect.const import DOMAIN
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
-from tests.nodes import LAN_C, announcing
-
-MockConfigEntry = pytest.importorskip("pytest_homeassistant_custom_component.common").MockConfigEntry
-
-BRIDGE = "custom_components.comfoconnect.ComfoConnectBridge"
-UNIT_UUID = "00" * 16
-UNIT = Node(1, ProductId.COMFOAIRQ, 1, 0)
-# What the nodes tell about themselves: node 7 has a name ending with a space, node 54 has no name or model, node 60
-# can't be read.
-NODE_INFO = {
-    None: NodeInfo("ComfoAirQ", "ComfoAir Q450", "DEMO-ART-Q", "DEMO0001", "R1.4.0", 3, 2),
-    7: NodeInfo("Living ", "CO2 demo", "DEMO-ART-CO2", "DEMO0007", "1.2.3", 1, 0),
-    54: NodeInfo(None, None, None, "DEMO0054", "1.2.4", None, None),
-    LAN_C.node_id: NodeInfo("ComfoConnect LAN C", None, None, "DEMO0001", "R1.5.1", 1, 0),
-}
-
-
-async def get_node_info(node_id=None):
-    """Return what a node tells about itself, or fail like a node that can't be read."""
-    if node_id not in NODE_INFO:
-        raise ComfoConnectRmiError("No answer")
-    return NODE_INFO[node_id]
+from homeassistant.helpers import entity_registry as er
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+from tests.conftest import NODE_INFO, push_sensor
+from tests.nodes import LAN_C, UNIT
 
 
 def co2_node(node_id: int, zone_id: int = 1) -> Node:
@@ -48,102 +22,75 @@ def co2_node(node_id: int, zone_id: int = 1) -> Node:
     return Node(node_id, ProductId.CO2SENSOR, zone_id, 0)
 
 
-def test_co2_sensors_are_numbered_by_node_id_in_zone_1() -> None:
-    """The n-th CO2 sensor in zone 1 reports on SENSOR_CO2_n; other zones and products are skipped."""
-    nodes = [UNIT, co2_node(54), co2_node(7), co2_node(60, zone_id=2)]
-    bridge = SimpleNamespace(nodes={node.node_id: node for node in nodes})
-
-    assert find_co2_sensors(bridge) == [(7, SENSOR_CO2_1), (54, SENSOR_CO2_2)]
+@pytest.fixture
+def platforms() -> list[Platform]:
+    """Set up only the sensor platform."""
+    return [Platform.SENSOR]
 
 
-def test_at_most_eight_co2_sensors() -> None:
-    """There are only eight CO2 sensor PDOs."""
-    bridge = SimpleNamespace(nodes={node_id: co2_node(node_id) for node_id in range(10, 20)})
-
-    assert [node_id for node_id, _ in find_co2_sensors(bridge)] == list(range(10, 18))
-
-
-@pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(enable_custom_integrations):
-    """Load the integration from custom_components."""
-    return
+@pytest.fixture
+def node_info() -> dict[int | None, NodeInfo]:
+    """Return what the nodes tell about themselves: node 7 has a name ending with a space, node 54 has no name or model, node 60 can't be read."""
+    return {
+        **NODE_INFO,
+        7: NodeInfo("Living ", "CO2 demo", "DEMO-ART-CO2", "DEMO0007", "1.2.3", 1, 0),
+        54: NodeInfo(None, None, None, "DEMO0054", "1.2.4", None, None),
+        **{node_id: NodeInfo(None, None, None, f"DEMO{node_id:04}", "1.2.5", None, None) for node_id in range(10, 20)},
+    }
 
 
-@pytest.mark.parametrize(
-    ("nodes", "expected"),
-    [
-        (
-            [UNIT, LAN_C, co2_node(7), co2_node(54), co2_node(60)],
-            [
-                (SENSOR_CO2_1, ("Living", "CO2 demo", "DEMO-ART-CO2", "DEMO0007", "1.2.3", "1")),
-                # Without a model, the device gets the model of its product, and without a name, it's named after its model.
-                (SENSOR_CO2_2, ("CO2 Sensor C", "CO2 Sensor C", None, "DEMO0054", "1.2.4", None)),
-                # A sensor that can't be read, so without a serial number, gets no device or entity (yet).
-            ],
-        ),
-        ([UNIT, LAN_C], []),
-    ],
-)
-async def test_co2_sensor_devices_and_entities(hass: HomeAssistant, nodes: list[Node], expected: list) -> None:
-    """Each CO2 sensor is a device behind the bridge with its device info and a CO2 entity, by its serial number."""
-    entry = MockConfigEntry(
-        domain=DOMAIN,
-        title="192.0.2.10",
-        data={CONF_HOST: "192.0.2.10", CONF_UUID: UNIT_UUID, CONF_LOCAL_UUID: "11" * 16},
+def co2_entities(entity_registry: er.EntityRegistry, entry: MockConfigEntry) -> dict[str, str]:
+    """Return the entity id of each CO2 sensor, by its unique id."""
+    return {
+        entity.unique_id: entity.entity_id
+        for entity in er.async_entries_for_config_entry(entity_registry, entry.entry_id)
+        if entity.unique_id.endswith("-co2")
+    }
+
+
+@pytest.mark.parametrize("nodes", [[UNIT, LAN_C, co2_node(54), co2_node(7), co2_node(60), co2_node(61, zone_id=2)]])
+async def test_co2_sensors(
+    hass: HomeAssistant, device_registry: dr.DeviceRegistry, entity_registry: er.EntityRegistry, init_integration: MockConfigEntry
+) -> None:
+    """Test that each CO2 sensor in zone 1 is a device behind the bridge with a CO2 entity, identified by its serial number."""
+    bridge = device_registry.async_get_device_by_identifier((DOMAIN, "DEMO0001"), init_integration.entry_id)
+    living = device_registry.async_get_device_by_identifier((DOMAIN, "DEMO0007"), init_integration.entry_id)
+    assert (living.name, living.model, living.model_id, living.serial_number, living.sw_version, living.hw_version) == (
+        "Living",
+        "CO2 demo",
+        "DEMO-ART-CO2",
+        "DEMO0007",
+        "1.2.3",
+        "1",
     )
-    entry.add_to_hass(hass)
+    assert living.via_device_id == bridge.id
+    # Without a model, the device gets the model of its product, and without a name, it's named after its model.
+    other = device_registry.async_get_device_by_identifier((DOMAIN, "DEMO0054"), init_integration.entry_id)
+    assert (other.name, other.model, other.serial_number) == ("CO2 Sensor C", "CO2 Sensor C", "DEMO0054")
 
-    with (
-        patch(f"{BRIDGE}.connect", autospec=True, side_effect=announcing(*nodes)),
-        patch(f"{BRIDGE}.disconnect", new_callable=AsyncMock),
-        patch(f"{BRIDGE}.get_node_info", side_effect=get_node_info),
-        patch(
-            "homeassistant.config_entries.ConfigEntries.async_forward_entry_setups",
-            new_callable=AsyncMock,
-            return_value=True,
-        ),
-    ):
-        assert await hass.config_entries.async_setup(entry.entry_id)
+    # A sensor that can't be read gets no device or entity (yet), and one in another zone none at all.
+    entities = co2_entities(entity_registry, init_integration)
+    assert entities == {"DEMO0007-co2": "sensor.living", "DEMO0054-co2": "sensor.co2_sensor_c"}
+    assert entity_registry.async_get("sensor.living").device_id == living.id
 
-    registry = dr.async_get(hass)
-    bridge_device = registry.async_get_device_by_identifier((DOMAIN, "DEMO0001"), entry.entry_id)
-    devices = dr.async_entries_for_config_entry(registry, entry.entry_id)
-    # The bridge and the unit, plus one device per CO2 sensor.
-    assert len(devices) == 2 + len(expected)
-
-    entities = []
-    await async_setup_sensors(hass, entry, lambda new, update_before_add=False: entities.extend(new))
-    co2_entities = [entity for entity in entities if isinstance(entity, ComfoConnectCO2Sensor)]
-    assert len(co2_entities) == len(expected)
-
-    for entity, (sensor_id, device_info) in zip(co2_entities, expected, strict=True):
-        serial_number = device_info[3]
-        device = registry.async_get_device_by_identifier((DOMAIN, serial_number), entry.entry_id)
-        assert (device.name, device.model, device.model_id, device.serial_number, device.sw_version, device.hw_version) == device_info
-        assert device.via_device_id == bridge_device.id
-
-        assert entity.entity_description.ccb_sensor.id == sensor_id
-        assert entity.unique_id == f"{serial_number}-co2"
-        assert entity.device_info["identifiers"] == device.identifiers
-        assert entity.device_class == SensorDeviceClass.CO2
-        assert entity.state_class == SensorStateClass.MEASUREMENT
-        assert entity.native_unit_of_measurement == UnitOfRatio.PARTS_PER_MILLION
-        assert entity.entity_registry_enabled_default is True
+    state = hass.states.get("sensor.living")
+    assert state.state == "650"
+    assert state.attributes["device_class"] == "carbon_dioxide"
+    assert state.attributes["unit_of_measurement"] == "ppm"
 
 
-@pytest.mark.parametrize(
-    ("device_id", "available", "removable"),
-    [
-        ("old-device", True, True),
-        ("node-device", True, False),
-        # The nodes aren't known while the bridge is reconnecting.
-        ("old-device", False, False),
-        ("unit-device", True, False),
-    ],
-)
-async def test_only_a_device_of_no_node_on_the_bus_can_be_removed(hass: HomeAssistant, device_id: str, available: bool, removable: bool) -> None:
-    """The device of a node on the bus stays; another one, e.g. of a node that left the bus, can be removed."""
-    bridge = SimpleNamespace(is_available=available, device_id="unit-device", node_devices={7: (co2_node(7), "node-device", "DEMO0007")})
-    device = SimpleNamespace(id=device_id)
+@pytest.mark.parametrize("nodes", [[UNIT, LAN_C, co2_node(54), co2_node(7)]])
+async def test_co2_sensors_are_numbered_by_node_id(hass: HomeAssistant, init_integration: MockConfigEntry) -> None:
+    """Test that the n-th CO2 sensor in zone 1, by node id, reports on the n-th CO2 sensor of the unit."""
+    push_sensor(init_integration, SENSOR_CO2_1, 700)
+    push_sensor(init_integration, SENSOR_CO2_2, 900)
+    await hass.async_block_till_done()
 
-    assert await async_remove_config_entry_device(hass, SimpleNamespace(runtime_data=bridge), device) is removable
+    assert hass.states.get("sensor.living").state == "700"
+    assert hass.states.get("sensor.co2_sensor_c").state == "900"
+
+
+@pytest.mark.parametrize("nodes", [[UNIT, LAN_C, *(co2_node(node_id) for node_id in range(10, 20))]])
+async def test_at_most_eight_co2_sensors(hass: HomeAssistant, entity_registry: er.EntityRegistry, init_integration: MockConfigEntry) -> None:
+    """Test that only the first eight CO2 sensors get an entity, since the unit has eight CO2 sensors."""
+    assert sorted(co2_entities(entity_registry, init_integration)) == [f"DEMO{node_id:04}-co2" for node_id in range(10, 18)]

@@ -2,183 +2,180 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from collections.abc import Generator
+from unittest.mock import patch
 
 import pytest
 from aiocomfoconnect.bridge import Node
 from aiocomfoconnect.comfoconnect import NodeInfo
-from aiocomfoconnect.const import ProductId
-from aiocomfoconnect.exceptions import ComfoConnectRmiError
-from custom_components.comfoconnect import EVENT_COMFOCONNECT_ALARM, async_remove_config_entry_device
-from custom_components.comfoconnect.const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant, callback
+from aiocomfoconnect.const import ConnectionState, ProductId
+from custom_components.comfoconnect.const import DOMAIN
+from homeassistant.const import Platform
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
-from tests.nodes import LAN_C, UNIT, announcing
+from homeassistant.setup import async_setup_component
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.typing import WebSocketGenerator
+from tests.conftest import BRIDGE_UUID, NODE_INFO, announce_node, set_connection_state
+from tests.nodes import LAN_C, UNIT
 
-# These tests set up the integration in a real Home Assistant instance. They need
-# pytest-homeassistant-custom-component (and asyncio_mode = "auto"), which the dev
-# dependencies don't include yet, so skip them where it isn't installed. Taken from
-# importorskip's return value, since an import after it trips E402 on older ruff.
-MockConfigEntry = pytest.importorskip("pytest_homeassistant_custom_component.common").MockConfigEntry
-
-BRIDGE = "custom_components.comfoconnect.ComfoConnectBridge"
-UNIT_UUID = "00" * 16
 PRO = Node(20, ProductId.COMFOCONNECTPRO, 255, 2)
 FLEX_WIFI = Node(41, ProductId.COMFOAIRFLEXCONNECTIONBOARD, 1, 2)
 SWITCH = Node(43, ProductId.COMFOSWITCH, 1, 2)
 UNKNOWN = Node(11, 25, 1, 2)
-# What the nodes tell about themselves; the unknown node can't be read.
-NODE_INFO = {
-    None: NodeInfo("ComfoAirQ", "ComfoAir Q450", "DEMO-ART-Q", "BEA0000000001", "R1.4.0", 3, 2),
-    LAN_C.node_id: NodeInfo("ComfoConnect LAN C", None, None, "DEMO0001", "R1.5.1", 1, 0),
-    PRO.node_id: NodeInfo(None, None, None, "DEMO0020", "R2.0.0", 1, 0),
-    FLEX_WIFI.node_id: NodeInfo(None, None, None, "DEMO0041", "R1.0.0", 1, 0),
-    SWITCH.node_id: NodeInfo("ComfoSwitch", None, None, "DEMO0043", "R9.0.0", 16, 0),
-}
+UNIT_DEVICE = ("ComfoAirQ", "ComfoAir Q450", "R1.4.0", "3", "BEA0000000001")
+LAN_C_DEVICE = ("ComfoConnect LAN C", "ComfoConnect LAN C", "R1.5.1", "1", "DEMO0001", None)
 
 
-async def get_node_info(node_id=None):
-    """Return what a node tells about itself, or fail like a node that can't be read."""
-    if node_id not in NODE_INFO:
-        raise ComfoConnectRmiError("No answer")
-    return NODE_INFO[node_id]
+@pytest.fixture
+def platforms() -> list[Platform]:
+    """Set up no platforms, the devices come from setting up the entry."""
+    return []
 
 
-@pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(enable_custom_integrations):
-    """Load the integration from custom_components."""
-    return
+@pytest.fixture
+def node_info() -> dict[int | None, NodeInfo]:
+    """Return what the nodes tell about themselves; the unknown node can't be read."""
+    return {
+        **NODE_INFO,
+        PRO.node_id: NodeInfo(None, None, None, "DEMO0020", "R2.0.0", 1, 0),
+        FLEX_WIFI.node_id: NodeInfo(None, None, None, "DEMO0041", "R1.0.0", 1, 0),
+        SWITCH.node_id: NodeInfo("ComfoSwitch", None, None, "DEMO0043", "R9.0.0", 16, 0),
+    }
 
 
-async def setup_entry(hass: HomeAssistant, *nodes: Node) -> MockConfigEntry:
-    """Set up the integration with these nodes on the bus."""
-    entry = MockConfigEntry(
-        domain=DOMAIN,
-        title="192.0.2.10",
-        data={CONF_HOST: "192.0.2.10", CONF_UUID: UNIT_UUID, CONF_LOCAL_UUID: "11" * 16},
-    )
-    entry.add_to_hass(hass)
-
-    with (
-        patch(f"{BRIDGE}.connect", autospec=True, side_effect=announcing(*nodes)),
-        patch(f"{BRIDGE}.disconnect", new_callable=AsyncMock),
-        patch(f"{BRIDGE}.get_node_info", side_effect=get_node_info),
-        patch(
-            "homeassistant.config_entries.ConfigEntries.async_forward_entry_setups",
-            new_callable=AsyncMock,
-            return_value=True,
-        ),
-    ):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
-    return entry
+@pytest.fixture
+def no_via_device() -> Generator[None]:
+    """Check that no device is created with via_device, which is deprecated since Home Assistant 2026.7 and stops working in 2027.8."""
+    with patch.object(dr.DeviceRegistry, "async_get_or_create", autospec=True, side_effect=dr.DeviceRegistry.async_get_or_create) as get_or_create:
+        yield
+    assert all("via_device" not in call.kwargs for call in get_or_create.call_args_list)
 
 
-def devices(hass: HomeAssistant, entry: MockConfigEntry) -> dict[str, tuple]:
+def devices(device_registry: dr.DeviceRegistry, entry: MockConfigEntry) -> dict[str, tuple]:
     """Return the name, model, versions, serial number and the name of the via device of each device, by identifier."""
-    registry = dr.async_get(hass)
     result = {}
-    for device in dr.async_entries_for_config_entry(registry, entry.entry_id):
-        via = registry.async_get(device.via_device_id).name if device.via_device_id else None
+    for device in dr.async_entries_for_config_entry(device_registry, entry.entry_id):
+        via = device_registry.async_get(device.via_device_id).name if device.via_device_id else None
         [(_domain, identifier)] = device.identifiers
         result[identifier] = (device.name, device.model, device.sw_version, device.hw_version, device.serial_number, via)
     return result
 
 
-async def test_every_node_is_a_device(hass: HomeAssistant) -> None:
-    """Each node is a device with what it tells about itself and its product as model, linked to the bridge."""
-    with patch.object(
-        dr.DeviceRegistry,
-        "async_get_or_create",
-        autospec=True,
-        side_effect=dr.DeviceRegistry.async_get_or_create,
-    ) as get_or_create:
-        entry = await setup_entry(hass, UNIT, LAN_C, SWITCH)
-
-    # Deprecated since Home Assistant 2026.7, stops working in 2027.8.
-    assert all("via_device" not in call.kwargs for call in get_or_create.call_args_list)
-
-    assert devices(hass, entry) == {
+@pytest.mark.parametrize("nodes", [[UNIT, LAN_C, SWITCH]])
+@pytest.mark.usefixtures("no_via_device")
+async def test_every_node_is_a_device(hass: HomeAssistant, device_registry: dr.DeviceRegistry, init_integration: MockConfigEntry) -> None:
+    """Test that each node is a device with what it tells about itself and its product as model, linked to the bridge."""
+    assert devices(device_registry, init_integration) == {
         # A node is identified by its serial number, the unit by the uuid of the bridge.
-        "DEMO0001": ("ComfoConnect LAN C", "ComfoConnect LAN C", "R1.5.1", "1", "DEMO0001", None),
-        UNIT_UUID: ("ComfoAirQ", "ComfoAir Q450", "R1.4.0", "3", "BEA0000000001", "ComfoConnect LAN C"),
+        "DEMO0001": LAN_C_DEVICE,
+        BRIDGE_UUID: (*UNIT_DEVICE, "ComfoConnect LAN C"),
         "DEMO0043": ("ComfoSwitch", "ComfoSwitch C", "R9.0.0", "16", "DEMO0043", "ComfoConnect LAN C"),
     }
 
-    # Alarm automations must identify the registered unit, rather than the LAN bridge.
-    unit_device = dr.async_get(hass).async_get_device_by_identifier((DOMAIN, UNIT_UUID), entry.entry_id)
-    events = []
-    hass.bus.async_listen(EVENT_COMFOCONNECT_ALARM, callback(lambda event: events.append(event.data)))
-    entry.runtime_data.alarm_callback(1, {79: "Replace filters"})
-    await hass.async_block_till_done()
-    assert events[0]["device_id"] == unit_device.id
-
 
 @pytest.mark.parametrize(
-    ("bridge_nodes", "expected"),
+    ("nodes", "expected"),
     [
         # A node that doesn't tell its name is named after its product.
-        ([PRO], {"DEMO0020": ("ComfoConnect Pro", "ComfoConnect Pro", "R2.0.0", "1", "DEMO0020", None)}),
-        ([FLEX_WIFI], {"DEMO0041": ("ComfoAir WiFi Connection Module", "ComfoAir WiFi Connection Module", "R1.0.0", "1", "DEMO0041", None)}),
+        ([UNIT, PRO], {"DEMO0020": ("ComfoConnect Pro", "ComfoConnect Pro", "R2.0.0", "1", "DEMO0020", None)}),
+        ([UNIT, FLEX_WIFI], {"DEMO0041": ("ComfoAir WiFi Connection Module", "ComfoAir WiFi Connection Module", "R1.0.0", "1", "DEMO0041", None)}),
         # A ComfoAir Flex with a LAN C: we reach the unit through the LAN C.
         (
-            [FLEX_WIFI, LAN_C],
+            [UNIT, FLEX_WIFI, LAN_C],
             {
                 "DEMO0041": ("ComfoAir WiFi Connection Module", "ComfoAir WiFi Connection Module", "R1.0.0", "1", "DEMO0041", None),
-                "DEMO0001": ("ComfoConnect LAN C", "ComfoConnect LAN C", "R1.5.1", "1", "DEMO0001", None),
+                "DEMO0001": LAN_C_DEVICE,
             },
         ),
     ],
 )
-async def test_bridges(hass: HomeAssistant, bridge_nodes: list[Node], expected: dict) -> None:
-    """A ComfoConnect Pro and the WiFi module of a ComfoAir Flex are bridges too."""
-    entry = await setup_entry(hass, UNIT, *bridge_nodes)
-
+async def test_bridges(hass: HomeAssistant, device_registry: dr.DeviceRegistry, init_integration: MockConfigEntry, expected: dict) -> None:
+    """Test that a ComfoConnect Pro and the WiFi module of a ComfoAir Flex are bridges too."""
     via = next(name for name, *_rest in expected.values()) if len(expected) == 1 else "ComfoConnect LAN C"
-    assert devices(hass, entry) == {**expected, UNIT_UUID: ("ComfoAirQ", "ComfoAir Q450", "R1.4.0", "3", "BEA0000000001", via)}
+    assert devices(device_registry, init_integration) == {**expected, BRIDGE_UUID: (*UNIT_DEVICE, via)}
 
 
-async def test_node_announced_after_setup(hass: HomeAssistant) -> None:
-    """A node that the bridge announces after setup gets a device too, and the bridge links the others to it."""
-    entry = await setup_entry(hass, UNIT)
-    assert devices(hass, entry)[UNIT_UUID][-1] is None
+@pytest.mark.parametrize("nodes", [[UNIT]])
+async def test_node_announced_after_setup(hass: HomeAssistant, device_registry: dr.DeviceRegistry, init_integration: MockConfigEntry) -> None:
+    """Test that a node the bridge announces after setup gets a device too, and that the other devices are linked to the bridge then."""
+    assert devices(device_registry, init_integration) == {BRIDGE_UUID: (*UNIT_DEVICE, None)}
 
-    with patch(f"{BRIDGE}.get_node_info", side_effect=get_node_info):
-        entry.runtime_data._nodes[LAN_C.node_id] = LAN_C
-        entry.runtime_data.node_callback(LAN_C)
-        await hass.async_block_till_done()
-
-    assert devices(hass, entry)[UNIT_UUID][-1] == "ComfoConnect LAN C"
-
-
-async def test_node_that_cant_be_read(hass: HomeAssistant) -> None:
-    """A node that doesn't tell its serial number gets no device, until it does when the bridge announces it again."""
-    with patch.dict(NODE_INFO, {LAN_C.node_id: NodeInfo(None, None, None, None, None, None, None)}):
-        entry = await setup_entry(hass, UNIT, LAN_C, UNKNOWN)
-    assert list(devices(hass, entry)) == [UNIT_UUID]
-
-    with patch(f"{BRIDGE}.get_node_info", side_effect=get_node_info):
-        entry.runtime_data.node_callback(LAN_C)
-        await hass.async_block_till_done()
-
-    assert devices(hass, entry)[UNIT_UUID][-1] == "ComfoConnect LAN C"
-
-
-async def test_node_on_the_bus(hass: HomeAssistant) -> None:
-    """A node is on the bus while the bridge announces it, until it goes offline."""
-    entry = await setup_entry(hass, UNIT, LAN_C, SWITCH)
-    bridge = entry.runtime_data
-    assert bridge.is_on_bus("DEMO0043")
-
-    offline = Node(SWITCH.node_id, SWITCH.product_id, SWITCH.zone_id, 1)
-    bridge._process_node_notification(
-        SimpleNamespace(nodeId=offline.node_id, productId=offline.product_id, zoneId=offline.zone_id, mode=offline.mode)
-    )
+    announce_node(init_integration, LAN_C)
     await hass.async_block_till_done()
 
-    assert not bridge.is_on_bus("DEMO0043")
-    # Its device can be removed now.
-    device = dr.async_get(hass).async_get_device_by_identifier((DOMAIN, "DEMO0043"), entry.entry_id)
-    assert await async_remove_config_entry_device(hass, entry, device)
+    assert devices(device_registry, init_integration) == {"DEMO0001": LAN_C_DEVICE, BRIDGE_UUID: (*UNIT_DEVICE, "ComfoConnect LAN C")}
+
+
+async def test_node_announced_again(
+    hass: HomeAssistant, device_registry: dr.DeviceRegistry, node_info: dict[int | None, NodeInfo], init_integration: MockConfigEntry
+) -> None:
+    """Test that a node the bridge announces again, like it does in every new session, keeps its device without being read again."""
+    node_info[LAN_C.node_id] = NodeInfo("ComfoConnect LAN C", None, None, "DEMO0002", "R1.5.1", 1, 0)
+    announce_node(init_integration, LAN_C)
+    await hass.async_block_till_done()
+    assert "DEMO0002" not in devices(device_registry, init_integration)
+
+
+@pytest.fixture
+def unreadable_lan_c(node_info: dict[int | None, NodeInfo]) -> None:
+    """Let the LAN C answer without a serial number."""
+    node_info[LAN_C.node_id] = NodeInfo(None, None, None, None, None, None, None)
+
+
+@pytest.mark.parametrize("nodes", [[UNIT, LAN_C, UNKNOWN]])
+async def test_node_that_cant_be_read(
+    hass: HomeAssistant,
+    device_registry: dr.DeviceRegistry,
+    node_info: dict[int | None, NodeInfo],
+    unreadable_lan_c: None,
+    init_integration: MockConfigEntry,
+) -> None:
+    """Test that a node without a serial number gets no device, until it tells it when the bridge announces it again."""
+    # The unknown product that can't be read gets no device either.
+    assert devices(device_registry, init_integration) == {BRIDGE_UUID: (*UNIT_DEVICE, None)}
+
+    node_info[LAN_C.node_id] = NODE_INFO[LAN_C.node_id]
+    announce_node(init_integration, LAN_C)
+    await hass.async_block_till_done()
+
+    assert devices(device_registry, init_integration) == {"DEMO0001": LAN_C_DEVICE, BRIDGE_UUID: (*UNIT_DEVICE, "ComfoConnect LAN C")}
+
+
+@pytest.mark.parametrize("nodes", [[UNIT, LAN_C, SWITCH]])
+@pytest.mark.parametrize(
+    ("identifier", "offline", "available", "removable"),
+    [
+        ("DEMO0043", False, True, False),
+        ("DEMO0043", True, True, True),
+        # The nodes aren't known while the bridge is reconnecting.
+        ("DEMO0043", True, False, False),
+        (BRIDGE_UUID, False, True, False),
+    ],
+)
+async def test_remove_device(
+    hass: HomeAssistant,
+    hass_ws_client: WebSocketGenerator,
+    device_registry: dr.DeviceRegistry,
+    init_integration: MockConfigEntry,
+    identifier: str,
+    offline: bool,
+    available: bool,
+    removable: bool,
+) -> None:
+    """Test that only the device of a node that's no longer on the bus can be removed, and never the unit's."""
+    assert await async_setup_component(hass, "config", {})
+    if offline:
+        announce_node(init_integration, Node(SWITCH.node_id, SWITCH.product_id, SWITCH.zone_id, 1))
+    if not available:
+        set_connection_state(init_integration, ConnectionState.DISCONNECTED)
+    await hass.async_block_till_done()
+    device = device_registry.async_get_device_by_identifier((DOMAIN, identifier), init_integration.entry_id)
+
+    client = await hass_ws_client(hass)
+    await client.send_json_auto_id(
+        {"type": "config/device_registry/remove_config_entry", "config_entry_id": init_integration.entry_id, "device_id": device.id}
+    )
+    response = await client.receive_json()
+
+    assert response["success"] is removable
