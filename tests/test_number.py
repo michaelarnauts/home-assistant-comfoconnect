@@ -1,7 +1,6 @@
 """RMOT numbers load through integration setup and use the device's property values."""
 
 from contextlib import ExitStack
-from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -25,6 +24,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_component import async_update_entity
 from pytest_homeassistant_custom_component.common import MockConfigEntry
+from tests.nodes import UNIT, announcing
 
 pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
 BRIDGE = "custom_components.comfoconnect.ComfoConnectBridge"
@@ -65,17 +65,13 @@ def protocol():
         values[prop.property_id] = value
 
     with ExitStack() as stack:
-        for method in ("connect", "disconnect"):
-            stack.enter_context(patch(f"{BRIDGE}.{method}", new_callable=AsyncMock))
+        stack.enter_context(patch(f"{BRIDGE}.connect", autospec=True, side_effect=announcing(UNIT)))
+        stack.enter_context(patch(f"{BRIDGE}.disconnect", new_callable=AsyncMock))
         stack.enter_context(patch(f"{BRIDGE}.set_property", new_callable=AsyncMock, side_effect=set_property))
         stack.enter_context(
-            patch(f"{BRIDGE}.get_node_info", new_callable=AsyncMock, return_value=NodeInfo("Test unit", None, None, None, None, None))
+            patch(f"{BRIDGE}.get_node_info", new_callable=AsyncMock, return_value=NodeInfo("Test unit", None, None, None, None, None, None))
         )
         stack.enter_context(patch(f"{BRIDGE}.get_property_constraints", new_callable=AsyncMock, side_effect=get_property_constraints))
-        stack.enter_context(
-            patch(f"{BRIDGE}.cmd_version_request", new_callable=AsyncMock, return_value=SimpleNamespace(serialNumber="DEMO0001", gatewayVersion=0))
-        )
-        stack.enter_context(patch("custom_components.comfoconnect.version_decode", return_value="1.0.0"))
         # Other platforms are unrelated; do not mock async_forward_entry_setups or the number platform.
         for platform in ("fan", "sensor", "binary_sensor", "select", "button"):
             stack.enter_context(patch(f"custom_components.comfoconnect.{platform}.async_setup_entry", new_callable=AsyncMock))

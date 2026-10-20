@@ -22,6 +22,7 @@ from custom_components.comfoconnect.sensor import SENSOR_TYPES
 from homeassistant.const import CONF_HOST, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
+from tests.nodes import UNIT, announcing
 
 MockConfigEntry = pytest.importorskip("pytest_homeassistant_custom_component.common").MockConfigEntry
 
@@ -75,12 +76,10 @@ async def setup(hass: HomeAssistant, language: str) -> MockConfigEntry:
     entry.add_to_hass(hass)
     with (
         patch("custom_components.comfoconnect.PLATFORMS", [Platform.SENSOR, Platform.BUTTON]),
-        patch(f"{BRIDGE}.connect", new_callable=AsyncMock),
+        patch(f"{BRIDGE}.connect", autospec=True, side_effect=announcing(UNIT)),
         patch(f"{BRIDGE}.disconnect", new_callable=AsyncMock),
-        patch(f"{BRIDGE}.cmd_version_request", new_callable=AsyncMock, return_value=SimpleNamespace(serialNumber="DEMO0001", gatewayVersion=0)),
-        patch(f"{BRIDGE}.get_node_info", new_callable=AsyncMock, return_value=NodeInfo("ComfoAirQ", None, None, None, None, None)),
+        patch(f"{BRIDGE}.get_node_info", new_callable=AsyncMock, return_value=NodeInfo("ComfoAirQ", None, None, None, None, None, None)),
         patch(f"{BRIDGE}.register_sensor", new_callable=AsyncMock),
-        patch("custom_components.comfoconnect.version_decode", return_value="1.0.0"),
     ):
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()

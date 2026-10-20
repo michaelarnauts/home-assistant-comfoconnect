@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -14,6 +13,7 @@ from homeassistant.const import CONF_HOST, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
+from tests.nodes import UNIT, announcing
 
 MockConfigEntry = pytest.importorskip("pytest_homeassistant_custom_component.common").MockConfigEntry
 
@@ -39,17 +39,11 @@ async def fan_entity_id(hass: HomeAssistant):
 
     with (
         patch("custom_components.comfoconnect.PLATFORMS", [Platform.FAN]),
-        patch(f"{BRIDGE}.connect", new_callable=AsyncMock),
+        patch(f"{BRIDGE}.connect", autospec=True, side_effect=announcing(UNIT)),
         patch(f"{BRIDGE}.disconnect", new_callable=AsyncMock),
-        patch(
-            f"{BRIDGE}.cmd_version_request",
-            new_callable=AsyncMock,
-            return_value=SimpleNamespace(serialNumber="DEMO0001", gatewayVersion=0),
-        ),
-        patch(f"{BRIDGE}.get_node_info", new_callable=AsyncMock, return_value=NodeInfo("ComfoAirQ", "ComfoAir Q350", None, None, None, None)),
+        patch(f"{BRIDGE}.get_node_info", new_callable=AsyncMock, return_value=NodeInfo("ComfoAirQ", "ComfoAir Q350", None, None, None, None, None)),
         patch(f"{BRIDGE}.register_sensor", new_callable=AsyncMock),
         patch(f"{BRIDGE}.get_mode", new_callable=AsyncMock, return_value="auto"),
-        patch("custom_components.comfoconnect.version_decode", return_value="1.0.0"),
     ):
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()

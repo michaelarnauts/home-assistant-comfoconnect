@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, Mock
 
 from aiocomfoconnect.bridge import Node
 from aiocomfoconnect.comfoconnect import NodeInfo
-from aiocomfoconnect.const import ConnectionState, GatewayType
+from aiocomfoconnect.const import ConnectionState
 from aiocomfoconnect.exceptions import AioComfoConnectTimeout
 from custom_components.comfoconnect.diagnostics import async_get_config_entry_diagnostics
 from homeassistant.components.diagnostics import REDACTED
@@ -14,10 +14,8 @@ from homeassistant.core import HomeAssistant
 async def test_config_entry_diagnostics(hass: HomeAssistant) -> None:
     """Report the bridge, each node with its info or error, the alarms and the last sensor values."""
     entry = Mock(data={"host": "192.0.2.1", "uuid": "00" * 16, "local_uuid": "11" * 16})
-    info = NodeInfo("ComfoAirQ", "ComfoAirQ 350", "471502004", "SERIAL123", "R1.12.0", 2)
+    info = NodeInfo("ComfoAirQ", "ComfoAirQ 350", "471502004", "SERIAL123", "R1.12.0", 2, 1)
     bridge = Mock(
-        bridge_type=GatewayType.PRO,
-        gateway_version="R1.7.0",
         is_available=True,
         connection_state=ConnectionState.CONNECTED,
         nodes={1: Node(1, 1, 1, 1), 2: Node(2, 5, 1, 1)},
@@ -31,7 +29,7 @@ async def test_config_entry_diagnostics(hass: HomeAssistant) -> None:
 
     assert data == {
         "entry": {"host": REDACTED, "uuid": REDACTED, "local_uuid": REDACTED},
-        "bridge": {"type": "ComfoConnect Pro", "gateway_version": "R1.7.0", "available": True, "connection_state": "connected"},
+        "bridge": {"available": True, "connection_state": "connected"},
         "nodes": [
             {
                 "node_id": 1,
@@ -44,6 +42,7 @@ async def test_config_entry_diagnostics(hass: HomeAssistant) -> None:
                     "serial_number": REDACTED,
                     "firmware": "R1.12.0",
                     "hardware_version": 2,
+                    "product_variant": 1,
                 },
                 "active_alarms": {79: "Replace filters"},
             },
