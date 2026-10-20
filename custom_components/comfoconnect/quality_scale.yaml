@@ -57,8 +57,8 @@ rules:
   dynamic-devices:
     status: todo
     comment: |
-      CO2 sensors get their own device, but only the ones on the bus at setup.
-      One added later only appears after a reload.
+      Every node gets a device, also one the bridge announces after setup.
+      The CO2 entity of a CO2 sensor added later only appears after a reload.
   entity-category: done
   entity-device-class: done
   entity-disabled-by-default: done
@@ -70,7 +70,7 @@ rules:
   stale-devices:
     status: done
     comment: |
-      CO2 sensor devices can be removed from the UI once the sensor is gone from the bus.
+      The device of any node can be removed from the UI once the node is gone from the bus.
 
   # ──── Platinum ────
   async-dependency: done
