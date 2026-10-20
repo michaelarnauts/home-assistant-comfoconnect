@@ -22,7 +22,7 @@ from aiocomfoconnect.properties import (
     Property,
     PropertyConstraints,
 )
-from aiocomfoconnect.sensors import Sensor
+from aiocomfoconnect.sensors import SENSORS, Sensor
 from homeassistant.const import CONF_HOST, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import Entity
@@ -228,6 +228,11 @@ def mock_comfoconnect() -> Generator[dict[str, MagicMock]]:
             else:
                 mocks[name].return_value = value
         yield mocks
+
+
+def push_sensor(entry: MockConfigEntry, sensor_id: int, value) -> None:
+    """Push a sensor value from the unit, like the library does when the bridge sends one."""
+    entry.runtime_data._sensor_callback_fn(SENSORS[sensor_id], value)
 
 
 @pytest.fixture
