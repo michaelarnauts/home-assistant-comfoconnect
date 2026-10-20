@@ -8,7 +8,10 @@
     "step": {
       "user": {
         "data": {
-          "host": "[%key:common::config_flow::data::host%]"
+          "uuid": "Bridge"
+        },
+        "data_description": {
+          "uuid": "The bridges found on your network. Choose to enter an address if yours isn't listed."
         },
         "title": "Add a ComfoConnect LAN C bridge",
         "description": "Select the ComfoConnect LAN C bridge from the list below."
@@ -17,24 +20,30 @@
         "data": {
           "host": "[%key:common::config_flow::data::host%]"
         },
+        "data_description": {
+          "host": "The hostname or IP address of the bridge."
+        },
         "title": "Add a ComfoConnect LAN C bridge manually",
         "description": "Enter a ComfoConnect LAN C bridge hostname or IP address below."
       },
       "enter_pin": {
         "title": "Enter PIN",
-        "description": "The selected ComfoConnect LAN C bridge isn't using the default PIN. Please enter the correct PIN."
-      },
-      "confirm": {
-        "description": "[%key:common::config_flow::description::confirm_setup%]"
+        "description": "The selected ComfoConnect LAN C bridge isn't using the default PIN. Please enter the correct PIN.",
+        "data": {
+          "pin": "PIN"
+        },
+        "data_description": {
+          "pin": "The PIN of the bridge, as set in the ComfoControl app. It's 0000 by default."
+        }
       }
     },
     "create_entry": {
       "default": "Some sensors are not enabled by default. You can enable them in the entity registry after the integration configuration."
     },
     "abort": {
-      "no_devices_found": "[%key:common::config_flow::abort::no_devices_found%]",
       "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]",
-      "cannot_connect": "Could not connect to the bridge. Check that it is on and reachable, and that the official app isn't using it."
+      "cannot_connect": "Could not connect to the bridge. Check that it is on and reachable, and that the official app isn't using it.",
+      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
     }
   },
   "entity": {
@@ -347,6 +356,13 @@
           "active": "Active",
           "overruling": "Overruling"
         }
+      }
+    }
+  },
+  "selector": {
+    "bridge": {
+      "options": {
+        "manual": "Enter the address of a bridge"
       }
     }
   },

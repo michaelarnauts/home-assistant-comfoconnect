@@ -13,6 +13,7 @@ from homeassistant import config_entries
 from homeassistant.components import network
 from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.const import CONF_HOST, CONF_PIN
+from homeassistant.helpers.selector import SelectOptionDict, SelectSelector, SelectSelectorConfig, SelectSelectorMode
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.util.uuid import random_uuid_hex
 
@@ -82,11 +83,16 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_UUID): vol.In(
-                        {
-                            **{bridge.uuid: bridge.host for bridge in self.discovered_bridges.values()},
-                            COMFOCONNECT_MANUAL_BRIDGE_ID: "Manually add a ComfoConnect LAN C Bridge",
-                        }
+                    vol.Required(CONF_UUID): SelectSelector(
+                        SelectSelectorConfig(
+                            options=[
+                                *(SelectOptionDict(value=bridge.uuid, label=bridge.host) for bridge in self.discovered_bridges.values()),
+                                # Translated through the selector's translation key.
+                                SelectOptionDict(value=COMFOCONNECT_MANUAL_BRIDGE_ID, label=COMFOCONNECT_MANUAL_BRIDGE_ID),
+                            ],
+                            mode=SelectSelectorMode.LIST,
+                            translation_key="bridge",
+                        )
                     )
                 }
             ),
