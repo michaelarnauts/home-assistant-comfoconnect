@@ -8,7 +8,10 @@
         "step": {
             "user": {
                 "data": {
-                    "host": "Host"
+                    "uuid": "Gateway"
+                },
+                "data_description": {
+                    "uuid": "De gateways die op je netwerk gevonden zijn. Kies om een adres in te vullen als de jouwe er niet bij staat."
                 },
                 "title": "ComfoConnect LAN C-gateway toevoegen",
                 "description": "Kies de ComfoConnect LAN C-gateway uit de lijst hieronder."
@@ -17,24 +20,30 @@
                 "data": {
                     "host": "Host"
                 },
+                "data_description": {
+                    "host": "De hostnaam of het IP-adres van de gateway."
+                },
                 "title": "ComfoConnect LAN C-gateway handmatig toevoegen",
                 "description": "Vul hieronder de hostnaam of het IP-adres van een ComfoConnect LAN C-gateway in."
             },
             "enter_pin": {
                 "title": "Pincode invoeren",
-                "description": "De gekozen ComfoConnect LAN C-gateway gebruikt niet de standaardpincode. Vul de juiste pincode in."
-            },
-            "confirm": {
-                "description": "Wil je beginnen met instellen?"
+                "description": "De gekozen ComfoConnect LAN C-gateway gebruikt niet de standaardpincode. Vul de juiste pincode in.",
+                "data": {
+                    "pin": "Pincode"
+                },
+                "data_description": {
+                    "pin": "De pincode van de gateway, zoals ingesteld in de ComfoControl-app. Standaard is dat 0000."
+                }
             }
         },
         "create_entry": {
             "default": "Sommige sensoren zijn standaard uitgeschakeld. Je kunt ze na het instellen van de integratie inschakelen in het entiteitenregister."
         },
         "abort": {
-            "no_devices_found": "Geen apparaten gevonden op het netwerk",
             "reauth_successful": "Opnieuw authenticeren is gelukt",
-            "cannot_connect": "Kan geen verbinding maken met de gateway. Controleer of die aan staat en bereikbaar is, en of de officiële app hem niet gebruikt."
+            "cannot_connect": "Kan geen verbinding maken met de gateway. Controleer of die aan staat en bereikbaar is, en of de officiële app hem niet gebruikt.",
+            "already_configured": "Apparaat is al geconfigureerd"
         }
     },
     "entity": {
@@ -347,6 +356,13 @@
                     "active": "Actief",
                     "overruling": "Heeft voorrang"
                 }
+            }
+        }
+    },
+    "selector": {
+        "bridge": {
+            "options": {
+                "manual": "Het adres van een gateway invullen"
             }
         }
     },
