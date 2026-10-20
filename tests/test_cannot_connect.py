@@ -111,7 +111,7 @@ def test_reauth_aborts_with_cannot_connect(tmp_path):
     async def scenario():
         bridge = _bridge(AioComfoConnectTimeout("timeout"))
         flow = _flow(tmp_path, config_entries.SOURCE_REAUTH, None)
-        with _discover(bridge):
+        with patch("custom_components.comfoconnect.config_flow.Bridge", return_value=bridge):
             result = await flow.async_step_reauth({CONF_HOST: "127.0.0.1", CONF_UUID: bridge.uuid, CONF_LOCAL_UUID: "mock-local"})
         assert result["type"] == "abort"
         assert result["reason"] == "cannot_connect"
