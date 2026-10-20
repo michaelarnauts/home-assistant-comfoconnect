@@ -1,0 +1,71 @@
+# serializer version: 1
+# name: test_config_entry_diagnostics[nodes0]
+  dict({
+    'bridge': dict({
+      'available': True,
+      'connection_state': 'connected',
+    }),
+    'entry': dict({
+      'host': '**REDACTED**',
+      'local_uuid': '**REDACTED**',
+      'uuid': '**REDACTED**',
+    }),
+    'nodes': list([
+      dict({
+        'active_alarms': dict({
+          '79': 'Replace filters',
+        }),
+        'info': dict({
+          'article_number': 'DEMO-ART-Q',
+          'firmware': 'R1.4.0',
+          'hardware_version': 3,
+          'model': 'ComfoAir Q450',
+          'name': 'ComfoAirQ',
+          'product_variant': 2,
+          'serial_number': '**REDACTED**',
+        }),
+        'node_id': 1,
+        'product_id': 1,
+        'zone': 1,
+      }),
+      dict({
+        'active_alarms': None,
+        'info': dict({
+          'article_number': None,
+          'firmware': 'R1.5.1',
+          'hardware_version': 1,
+          'model': None,
+          'name': 'ComfoConnect LAN C',
+          'product_variant': 0,
+          'serial_number': '**REDACTED**',
+        }),
+        'node_id': 48,
+        'product_id': 5,
+        'zone': 255,
+      }),
+      dict({
+        'active_alarms': None,
+        'info': dict({
+          'error': "ComfoConnectRmiError('No answer')",
+        }),
+        'node_id': 11,
+        'product_id': 25,
+        'zone': 1,
+      }),
+    ]),
+    'sensors': dict({
+      '117': dict({
+        'name': 'Exhaust Fan Duty',
+        'value': 38,
+      }),
+      '221': dict({
+        'name': 'Supply Air Temperature',
+        'value': None,
+      }),
+      '276': dict({
+        'name': 'Outdoor Air Temperature',
+        'value': 13.0,
+      }),
+    }),
+  })
+# ---

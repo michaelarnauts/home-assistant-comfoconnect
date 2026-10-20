@@ -29,8 +29,6 @@ from aiocomfoconnect.properties import (
 from aiocomfoconnect.sensors import SENSOR_CO2_1, SENSOR_CO2_8, SENSORS, Sensor
 from homeassistant.const import CONF_HOST, Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import PlatformData
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.syrupy import HomeAssistantSnapshotExtension
 from syrupy.assertion import SnapshotAssertion
@@ -123,16 +121,6 @@ PROPERTY_CONSTRAINTS = [
 ]
 
 
-@pytest.fixture(autouse=True)
-def entity_platform_data(monkeypatch: pytest.MonkeyPatch) -> None:
-    """
-    Let tests write the state of entities they create without a platform.
-
-    An entity with a translation key needs platform data for its name. Entities that a platform adds get their own.
-    """
-    monkeypatch.setattr(Entity, "platform_data", PlatformData(None, domain="test", platform_name="comfoconnect"))
-
-
 @pytest.fixture
 def mock_config_entry() -> MockConfigEntry:
     """Return the config entry of a registered bridge."""
@@ -189,20 +177,30 @@ def node_info() -> dict[int | None, NodeInfo]:
 
 
 @pytest.fixture
-def mock_comfoconnect(nodes: list[Node], node_info: dict[int | None, NodeInfo]) -> Generator[dict[str, MagicMock]]:
+def alarms() -> dict[int, str] | None:
+    """Return the alarms the unit reports when a session starts, by id; None for a unit that doesn't report them."""
+    return {}
+
+
+@pytest.fixture
+def mock_comfoconnect(nodes: list[Node], node_info: dict[int | None, NodeInfo], alarms: dict[int, str] | None) -> Generator[dict[str, MagicMock]]:
     """
     Patch the library's session with a ComfoAir Q450 behind a LAN C, and return its mocked methods by name.
 
-    The unit reports no alarms, and pushes the value of a sensor as soon as it's registered.
+    The unit reports its alarms, and pushes the value of a sensor as soon as it's registered.
     """
 
     async def connect(self: ComfoConnect, uuid: str) -> None:
         for node in nodes:
             announce(self, node)
-        # The unit reports its alarms when the session starts, here none.
-        self._alarm_callback_fn(UNIT.node_id, {})
+        if alarms is not None:
+            self._alarm_callback_fn(UNIT.node_id, alarms)
+        self._set_connection_state(ConnectionState.CONNECTED)
 
     async def get_node_info(self: ComfoConnect, node_id: int | None = None) -> NodeInfo:
+        # Without a node id, the library reads the unit.
+        if node_id == UNIT.node_id:
+            node_id = None
         if node_id not in node_info:
             raise ComfoConnectRmiError("No answer")
         return node_info[node_id]
@@ -271,7 +269,7 @@ def announce_node(entry: MockConfigEntry, node: Node) -> None:
 
 def set_connection_state(entry: MockConfigEntry, state: ConnectionState) -> None:
     """Report a change of the session's state, like the library does when it loses the connection or gets it back."""
-    entry.runtime_data._connection_state_callback_fn(state)
+    entry.runtime_data._set_connection_state(state)
 
 
 @pytest.fixture

@@ -6,31 +6,26 @@ import json
 import re
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
 
 import pytest
-from aiocomfoconnect.comfoconnect import NodeInfo
 from aiocomfoconnect.sensors import SENSOR_TEMPERATURE_EXTRACT
 from custom_components.comfoconnect.binary_sensor import SENSOR_TYPES as BINARY_SENSOR_TYPES
 from custom_components.comfoconnect.binary_sensor import ComfoConnectAlarmBinarySensor
 from custom_components.comfoconnect.button import BUTTON_TYPES
-from custom_components.comfoconnect.const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN
+from custom_components.comfoconnect.const import DOMAIN
 from custom_components.comfoconnect.fan import PRESET_MODES, ComfoConnectFan
 from custom_components.comfoconnect.number import NUMBER_TYPES
 from custom_components.comfoconnect.select import SELECT_TYPES
 from custom_components.comfoconnect.sensor import SENSOR_TYPES
-from homeassistant.const import CONF_HOST, Platform
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
-from tests.nodes import UNIT, announcing
-
-MockConfigEntry = pytest.importorskip("pytest_homeassistant_custom_component.common").MockConfigEntry
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+from tests.conftest import BRIDGE_UUID
 
 COMPONENT = Path(__file__).parent.parent / "custom_components" / DOMAIN
 # The translation keys hassfest accepts.
 TRANSLATION_KEY = re.compile(r"^(?!.+[_-]{2})(?![_-])[a-z0-9-_]+(?<![_-])$")
-BRIDGE = "custom_components.comfoconnect.ComfoConnectBridge"
-UNIT_UUID = "00" * 16
 
 
 def load(name: str) -> dict:
@@ -63,46 +58,48 @@ def test_every_entity_and_option_is_translated(name: str) -> None:
         assert translations == load("strings.json")
 
 
-@pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(enable_custom_integrations):
-    """Load the integration from custom_components."""
-    return
+@pytest.fixture
+def platforms() -> list[Platform]:
+    """Set up only the sensor and button platforms."""
+    return [Platform.SENSOR, Platform.BUTTON]
 
 
-async def setup(hass: HomeAssistant, language: str) -> MockConfigEntry:
-    """Set up the sensor and button platforms with Home Assistant in a language."""
+@pytest.fixture
+def language(hass: HomeAssistant) -> str:
+    """Run Home Assistant in English; a test overrides this for another language."""
+    return "en"
+
+
+@pytest.fixture
+def in_language(hass: HomeAssistant, language: str) -> None:
+    """Set the language of Home Assistant before the integration is set up."""
     hass.config.language = language
-    entry = MockConfigEntry(domain=DOMAIN, title="192.0.2.10", data={CONF_HOST: "192.0.2.10", CONF_UUID: UNIT_UUID, CONF_LOCAL_UUID: "11" * 16})
-    entry.add_to_hass(hass)
-    with (
-        patch("custom_components.comfoconnect.PLATFORMS", [Platform.SENSOR, Platform.BUTTON]),
-        patch(f"{BRIDGE}.connect", autospec=True, side_effect=announcing(UNIT)),
-        patch(f"{BRIDGE}.disconnect", new_callable=AsyncMock),
-        patch(f"{BRIDGE}.get_node_info", new_callable=AsyncMock, return_value=NodeInfo("ComfoAirQ", None, None, None, None, None, None)),
-        patch(f"{BRIDGE}.register_sensor", new_callable=AsyncMock),
-    ):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
-    return entry
 
 
-SENSOR_UNIQUE_ID = f"{UNIT_UUID}-{SENSOR_TEMPERATURE_EXTRACT}"
-BUTTON_UNIQUE_ID = f"{UNIT_UUID}-cancel_boost"
+SENSOR_UNIQUE_ID = f"{BRIDGE_UUID}-{SENSOR_TEMPERATURE_EXTRACT}"
+BUTTON_UNIQUE_ID = f"{BRIDGE_UUID}-cancel_boost"
 
 
-async def test_english_names_give_the_same_entity_ids(hass: HomeAssistant) -> None:
-    """The English names are the names the entities had before, so their entity ids don't change."""
-    await setup(hass, "en")
-    registry = er.async_get(hass)
-    assert registry.async_get_entity_id(Platform.SENSOR, DOMAIN, SENSOR_UNIQUE_ID) == "sensor.comfoairq_inside_temperature"
-    assert registry.async_get_entity_id(Platform.BUTTON, DOMAIN, BUTTON_UNIQUE_ID) == "button.comfoairq_cancel_boost"
+async def test_english_names_give_the_same_entity_ids(
+    hass: HomeAssistant, entity_registry: er.EntityRegistry, in_language: None, init_integration: MockConfigEntry
+) -> None:
+    """Test that the English names are the names the entities had before, so their entity ids don't change."""
+    assert entity_registry.async_get_entity_id(Platform.SENSOR, DOMAIN, SENSOR_UNIQUE_ID) == "sensor.comfoairq_inside_temperature"
+    assert entity_registry.async_get_entity_id(Platform.BUTTON, DOMAIN, BUTTON_UNIQUE_ID) == "button.comfoairq_cancel_boost"
     assert hass.states.get("button.comfoairq_cancel_boost").attributes["friendly_name"] == "ComfoAirQ Cancel boost"
 
 
-async def test_dutch_names_keep_registered_entity_ids(hass: HomeAssistant) -> None:
-    """In Dutch the names are Dutch; an entity that is already registered keeps its entity id."""
-    er.async_get(hass).async_get_or_create(Platform.BUTTON, DOMAIN, BUTTON_UNIQUE_ID, suggested_object_id="comfoairq_cancel_boost")
-    await setup(hass, "nl")
+@pytest.fixture
+def registered_button(entity_registry: er.EntityRegistry) -> None:
+    """Register the cancel boost button with the entity id it got in English."""
+    entity_registry.async_get_or_create(Platform.BUTTON, DOMAIN, BUTTON_UNIQUE_ID, suggested_object_id="comfoairq_cancel_boost")
+
+
+@pytest.mark.parametrize("language", ["nl"])
+async def test_dutch_names_keep_registered_entity_ids(
+    hass: HomeAssistant, entity_registry: er.EntityRegistry, in_language: None, registered_button: None, init_integration: MockConfigEntry
+) -> None:
+    """Test that the names are Dutch in Dutch, and that an entity that is already registered keeps its entity id."""
     assert hass.states.get("button.comfoairq_cancel_boost").attributes["friendly_name"] == "ComfoAirQ Boost annuleren"
-    sensor = er.async_get(hass).async_get_entity_id(Platform.SENSOR, DOMAIN, SENSOR_UNIQUE_ID)
+    sensor = entity_registry.async_get_entity_id(Platform.SENSOR, DOMAIN, SENSOR_UNIQUE_ID)
     assert hass.states.get(sensor).attributes["friendly_name"] == "ComfoAirQ Binnentemperatuur"

@@ -1,9 +1,6 @@
 """Test the binary sensor platform."""
 
-from unittest.mock import MagicMock, patch
-
 import pytest
-from aiocomfoconnect import ComfoConnect
 from aiocomfoconnect.sensors import SENSOR_SEASON_COOLING_ACTIVE
 from custom_components.comfoconnect import EVENT_COMFOCONNECT_ALARM
 from custom_components.comfoconnect.const import DOMAIN
@@ -14,7 +11,6 @@ from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_capture_events, snapshot_platform
 from syrupy.assertion import SnapshotAssertion
 from tests.conftest import BRIDGE_UUID, push_alarms, push_sensor
-from tests.nodes import LAN_C, UNIT, announcing
 
 ALARMS = "binary_sensor.comfoairq_active_alarms"
 
@@ -68,28 +64,8 @@ async def test_alarms(hass: HomeAssistant, init_integration: MockConfigEntry) ->
 
 
 @pytest.mark.parametrize(("alarms", "expected"), [(None, STATE_UNKNOWN), ({}, STATE_OFF), ({79: "Replace filters"}, STATE_ON)])
-async def test_alarms_reported_while_connecting(
-    hass: HomeAssistant,
-    enable_custom_integrations: None,
-    mock_config_entry: MockConfigEntry,
-    mock_comfoconnect: dict[str, MagicMock],
-    alarms: dict[int, str] | None,
-    expected: str,
-) -> None:
+async def test_alarms_reported_while_connecting(hass: HomeAssistant, init_integration: MockConfigEntry, expected: str) -> None:
     """Test that the alarm sensor shows the alarms reported before it was added, and is unknown until the unit reports them."""
-    announce = announcing(UNIT, LAN_C)
-
-    async def connect(bridge: ComfoConnect, uuid: str) -> None:
-        await announce(bridge, uuid)
-        if alarms is not None:
-            bridge._alarm_callback_fn(UNIT.node_id, alarms)
-
-    mock_comfoconnect["connect"].side_effect = connect
-    mock_config_entry.add_to_hass(hass)
-    with patch("custom_components.comfoconnect.PLATFORMS", [Platform.BINARY_SENSOR]):
-        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
-
     assert hass.states.get(ALARMS).state == expected
 
 
@@ -115,23 +91,15 @@ async def test_alarm_events(hass: HomeAssistant, device_registry: dr.DeviceRegis
     ]
 
 
-async def test_alarm_event_while_connecting(
-    hass: HomeAssistant, enable_custom_integrations: None, mock_config_entry: MockConfigEntry, mock_comfoconnect: dict[str, MagicMock]
-) -> None:
+@pytest.fixture
+def events(hass: HomeAssistant) -> list:
+    """Capture the alarm events, from before the integration is set up."""
+    return async_capture_events(hass, EVENT_COMFOCONNECT_ALARM)
+
+
+@pytest.mark.parametrize("alarms", [{79: "Replace filters"}])
+async def test_alarm_event_while_connecting(hass: HomeAssistant, events: list, init_integration: MockConfigEntry) -> None:
     """Test that an alarm reported while connecting, before the unit's device exists, fires an event without a device."""
-    announce = announcing(UNIT, LAN_C)
-
-    async def connect(bridge: ComfoConnect, uuid: str) -> None:
-        await announce(bridge, uuid)
-        bridge._alarm_callback_fn(UNIT.node_id, {79: "Replace filters"})
-
-    mock_comfoconnect["connect"].side_effect = connect
-    events = async_capture_events(hass, EVENT_COMFOCONNECT_ALARM)
-    mock_config_entry.add_to_hass(hass)
-    with patch("custom_components.comfoconnect.PLATFORMS", [Platform.BINARY_SENSOR]):
-        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
-
     assert [event.data for event in events] == [
         {"device_id": None, "bridge_uuid": BRIDGE_UUID, "node_id": 1, "errors": [{"id": 79, "message": "Replace filters"}]},
     ]

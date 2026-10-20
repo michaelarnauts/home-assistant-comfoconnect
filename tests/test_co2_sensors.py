@@ -8,18 +8,18 @@ from aiocomfoconnect.comfoconnect import NodeInfo
 from aiocomfoconnect.const import ProductId
 from aiocomfoconnect.sensors import SENSOR_CO2_1, SENSOR_CO2_2
 from custom_components.comfoconnect.const import DOMAIN
-from homeassistant.const import Platform
+from homeassistant.const import STATE_UNAVAILABLE, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
-from tests.conftest import NODE_INFO, push_sensor
+from tests.conftest import NODE_INFO, announce_node, push_sensor
 from tests.nodes import LAN_C, UNIT
 
 
-def co2_node(node_id: int, zone_id: int = 1) -> Node:
-    """Return a CO2 sensor node."""
-    return Node(node_id, ProductId.CO2SENSOR, zone_id, 0)
+def co2_node(node_id: int, zone_id: int = 1, mode: int = 0) -> Node:
+    """Return a CO2 sensor node, offline with mode 1."""
+    return Node(node_id, ProductId.CO2SENSOR, zone_id, mode)
 
 
 @pytest.fixture
@@ -94,3 +94,15 @@ async def test_co2_sensors_are_numbered_by_node_id(hass: HomeAssistant, init_int
 async def test_at_most_eight_co2_sensors(hass: HomeAssistant, entity_registry: er.EntityRegistry, init_integration: MockConfigEntry) -> None:
     """Test that only the first eight CO2 sensors get an entity, since the unit has eight CO2 sensors."""
     assert sorted(co2_entities(entity_registry, init_integration)) == [f"DEMO{node_id:04}-co2" for node_id in range(10, 18)]
+
+
+@pytest.mark.parametrize("nodes", [[UNIT, LAN_C, co2_node(7)]])
+async def test_co2_sensor_follows_its_node(hass: HomeAssistant, init_integration: MockConfigEntry) -> None:
+    """Test that a CO2 sensor is unavailable while its node is off the bus, and available again once it's back."""
+    announce_node(init_integration, co2_node(7, mode=1))
+    await hass.async_block_till_done()
+    assert hass.states.get("sensor.living").state == STATE_UNAVAILABLE
+
+    announce_node(init_integration, co2_node(7))
+    await hass.async_block_till_done()
+    assert hass.states.get("sensor.living").state == "650"
