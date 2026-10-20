@@ -187,16 +187,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ComfoConnectConfigEntry)
 
     device_registry = dr.async_get(hass)
 
-    # The bridge type is known once the session has started: a ComfoConnect Pro identifies itself then.
-    bridge_model = "ComfoConnect Pro" if bridge.bridge_type == GatewayType.PRO else "ComfoConnect LAN C"
-
     # Add Bridge to device registry
     bridge_device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, bridge_info.serialNumber)},
         manufacturer="Zehnder",
-        name=bridge_model,
-        model=bridge_model,
+        name=bridge.model,
+        model=bridge.model,
         serial_number=bridge_info.serialNumber,
         sw_version=bridge.gateway_version,
     )
@@ -282,6 +279,13 @@ class ComfoConnectBridge(ComfoConnect):
         # The firmware version of the bridge, known once setup has read it.
         self.gateway_version: str | None = None
         self.is_available = True
+
+    @property
+    def model(self) -> str:
+        """Return the model of the bridge."""
+        # The bridge type is known once the session has started: a ComfoConnect Pro identifies itself then. The bridge
+        # also announces itself as a node, with product id 5 or 222, but only a while after the session started.
+        return PRODUCT_MODELS[ProductId.COMFOCONNECTPRO if self.bridge_type == GatewayType.PRO else ProductId.ZEHNDERGATEWAY]
 
     @callback
     def connection_state_callback(self, state: str) -> None:
