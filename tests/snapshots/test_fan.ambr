@@ -1,0 +1,64 @@
+# serializer version: 1
+# name: test_entities[fan.comfoairq-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': dict({
+      <FanEntityCapabilityAttribute.PRESET_MODES: 'preset_modes'>: list([
+        'auto',
+        'manual',
+      ]),
+    }),
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'fan',
+    'entity_category': None,
+    'entity_id': 'fan.comfoairq',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': None,
+    'platform': 'comfoconnect',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': <FanEntityFeature: 57>,
+    'translation_key': 'ventilation',
+    'unique_id': '00000000000000000000000000000000',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[fan.comfoairq-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'ComfoAirQ',
+      <FanEntityStateAttribute.PERCENTAGE: 'percentage'>: 33,
+      <FanEntityStateAttribute.PERCENTAGE_STEP: 'percentage_step'>: 33.333333333333336,
+      <FanEntityStateAttribute.PRESET_MODE: 'preset_mode'>: 'auto',
+      <FanEntityCapabilityAttribute.PRESET_MODES: 'preset_modes'>: list([
+        'auto',
+        'manual',
+      ]),
+      <EntityStateAttribute.SUPPORTED_FEATURES: 'supported_features'>: <FanEntityFeature: 57>,
+    }),
+    'context': <ANY>,
+    'entity_id': 'fan.comfoairq',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'on',
+  })
+# ---
