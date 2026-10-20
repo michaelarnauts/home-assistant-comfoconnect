@@ -3,7 +3,7 @@
 from types import SimpleNamespace
 
 import pytest
-from aiocomfoconnect.sensors import SENSOR_COMFORTCONTROL_MODE, SENSOR_DAYS_TO_REPLACE_FILTER, SENSOR_FAN_EXHAUST_FLOW, SENSOR_FAN_SUPPLY_FLOW
+from aiocomfoconnect.sensors import SENSOR_COMFORTCONTROL_MODE
 from custom_components.comfoconnect.sensor import SENSOR_TYPES, ComfoConnectSensor
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.core import HomeAssistant
@@ -17,22 +17,6 @@ def write_state(hass: HomeAssistant, key: int, value) -> str:
     entity.entity_id = f"sensor.test_{key}"
     entity._handle_update(value)
     return hass.states.get(entity.entity_id)
-
-
-@pytest.mark.parametrize(
-    ("key", "value", "device_class", "unit"),
-    [
-        (SENSOR_FAN_SUPPLY_FLOW, 150, SensorDeviceClass.VOLUME_FLOW_RATE, "m³/h"),
-        (SENSOR_FAN_EXHAUST_FLOW, 150, SensorDeviceClass.VOLUME_FLOW_RATE, "m³/h"),
-        (SENSOR_DAYS_TO_REPLACE_FILTER, 90, SensorDeviceClass.DURATION, "d"),
-    ],
-)
-async def test_measurements_have_a_device_class(hass: HomeAssistant, key: int, value: int, device_class: str, unit: str) -> None:
-    """Airflows and the filter countdown keep their unit."""
-    state = write_state(hass, key, value)
-    assert state.state == str(value)
-    assert state.attributes["device_class"] == device_class
-    assert state.attributes["unit_of_measurement"] == unit
 
 
 @pytest.mark.parametrize(("value", "expected"), [(2, "overruling"), (7, "unknown")])

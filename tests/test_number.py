@@ -17,13 +17,14 @@ from aiocomfoconnect.properties import (
 from custom_components.comfoconnect import ComfoConnectBridge
 from custom_components.comfoconnect.const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN
 from homeassistant.components.number import NumberDeviceClass
-from homeassistant.const import CONF_HOST, STATE_UNAVAILABLE
+from homeassistant.const import CONF_HOST, STATE_UNAVAILABLE, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_component import async_update_entity
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.common import MockConfigEntry, snapshot_platform
+from syrupy.assertion import SnapshotAssertion
 from tests.nodes import UNIT, announcing
 
 pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
@@ -88,32 +89,18 @@ def enable_numbers(hass: HomeAssistant, entry: MockConfigEntry) -> None:
         )
 
 
-async def test_rmot_numbers_load_with_device_limits(hass: HomeAssistant, entry: MockConfigEntry, protocol) -> None:
-    """Real setup forwards NUMBER and publishes temperatures with the actual device ranges."""
-    enable_numbers(hass, entry)
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
-
-    for entity_id, value, minimum, maximum in ((HEATING, "11.0", 0, 15), (COOLING, "20.0", 15, 40)):
-        state = hass.states.get(entity_id)
-        assert state is not None
-        assert state.state == value
-        assert state.attributes["unit_of_measurement"] == "°C"
-        assert state.attributes["device_class"] == NumberDeviceClass.TEMPERATURE
-        assert (state.attributes["min"], state.attributes["max"], state.attributes["step"]) == (minimum, maximum, 1)
+@pytest.fixture
+def platforms() -> list[Platform]:
+    """Set up only the number platform."""
+    return [Platform.NUMBER]
 
 
-async def test_rmot_numbers_are_disabled_configuration_entities(hass: HomeAssistant, entry: MockConfigEntry, protocol) -> None:
-    """Installing the integration does not enable extra property polling or controls."""
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
-    registry = er.async_get(hass)
-    for key in ("rmot_heating", "rmot_cooling"):
-        entity_id = registry.async_get_entity_id("number", DOMAIN, f"{UNIT_UUID}-{key}")
-        entity = registry.async_get(entity_id)
-        assert entity.disabled_by == er.RegistryEntryDisabler.INTEGRATION
-        assert entity.entity_category == EntityCategory.CONFIG
-        assert hass.states.get(entity_id) is None
+@pytest.mark.usefixtures("entity_registry_enabled_by_default")
+async def test_entities(
+    hass: HomeAssistant, entity_registry: er.EntityRegistry, snapshot: SnapshotAssertion, init_integration: MockConfigEntry
+) -> None:
+    """Test the number entities of the unit, with the values and limits the unit reports."""
+    await snapshot_platform(hass, entity_registry, snapshot, init_integration.entry_id)
 
 
 @pytest.mark.parametrize("entity_id,prop,value", [(HEATING, PROPERTY_RMOT_HEATING_THRESHOLD, 12), (COOLING, PROPERTY_RMOT_COOLING_THRESHOLD, 21)])
