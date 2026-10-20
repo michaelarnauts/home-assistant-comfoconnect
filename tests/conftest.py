@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, PropertyMock, create_autospec, p
 import pytest
 from aiocomfoconnect import Bridge, ComfoConnect
 from aiocomfoconnect.comfoconnect import NodeInfo
+from aiocomfoconnect.const import ConnectionState
 from aiocomfoconnect.properties import (
     PROPERTY_PROFILE_TEMPERATURE_COOL,
     PROPERTY_PROFILE_TEMPERATURE_NORMAL,
@@ -238,6 +239,11 @@ def push_sensor(entry: MockConfigEntry, sensor_id: int, value) -> None:
 def push_alarms(entry: MockConfigEntry, node_id: int, errors: dict[int, str]) -> None:
     """Push the alarms of a node, like the library does when the bridge reports them."""
     entry.runtime_data._alarm_callback_fn(node_id, errors)
+
+
+def set_connection_state(entry: MockConfigEntry, state: ConnectionState) -> None:
+    """Report a change of the session's state, like the library does when it loses the connection or gets it back."""
+    entry.runtime_data._connection_state_callback_fn(state)
 
 
 @pytest.fixture
