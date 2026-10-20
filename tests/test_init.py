@@ -28,7 +28,7 @@ from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 from syrupy.assertion import SnapshotAssertion
 from tests.conftest import BRIDGE_UUID, HOST, LOCAL_UUID, set_connection_state
-from tests.nodes import LAN_C, UNIT, announcing
+from tests.nodes import LAN_C
 
 NEW_HOST = "192.0.2.20"
 
@@ -171,12 +171,12 @@ async def test_setup_finds_the_bridge_again(
     error: Exception,
 ) -> None:
     """Test that a bridge that can't be reached is looked for on the network, and that its new address is kept."""
-    announce = announcing(UNIT, LAN_C)
+    connect_found_bridge = mock_comfoconnect["connect"].side_effect
 
     async def connect(bridge: ComfoConnect, uuid: str) -> None:
         if bridge.host == HOST:
             raise error
-        await announce(bridge, uuid)
+        await connect_found_bridge(bridge, uuid)
 
     mock_comfoconnect["connect"].side_effect = connect
 
