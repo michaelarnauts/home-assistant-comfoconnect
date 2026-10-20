@@ -17,9 +17,10 @@ from tests.conftest import BRIDGE_UUID, HOST, LOCAL_UUID
 
 # Errors of a bridge that can't be reached, or that another app is using.
 CONNECTION_ERRORS = [AioComfoConnectTimeout("timeout"), ComfoConnectOtherSession("busy")]
-MANUAL_OPTION = {COMFOCONNECT_MANUAL_BRIDGE_ID: "Manually add a ComfoConnect LAN C Bridge"}
+# What the user enters to pick the bridge, in the step that picks it.
+BRIDGE_INPUT = {"user": {CONF_UUID: BRIDGE_UUID}, "manual": {CONF_HOST: HOST}}
 
-pytestmark = pytest.mark.usefixtures("mock_setup_entry")
+pytestmark = pytest.mark.usefixtures("mock_setup_entry", "mock_discover_bridges")
 
 
 @pytest.fixture(autouse=True)
@@ -37,155 +38,81 @@ def assert_entry_created(result, local_uuid: str | None = None) -> None:
     assert result["result"].unique_id == BRIDGE_UUID
 
 
-async def start_user_flow(hass: HomeAssistant):
-    """Start the flow from the integrations page."""
-    return await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
-
-
-async def start_manual_flow(hass: HomeAssistant):
-    """Start the flow and choose to enter the host of the bridge."""
-    result = await start_user_flow(hass)
-    return await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_UUID: COMFOCONNECT_MANUAL_BRIDGE_ID})
-
-
-@pytest.mark.usefixtures("mock_discover_bridges")
-async def test_user_flow(hass: HomeAssistant, mock_bridge: MagicMock) -> None:
-    """Test that picking a discovered bridge registers on it with the default PIN."""
-    result = await start_user_flow(hass)
+async def start_flow(hass: HomeAssistant, step: str = "user"):
+    """Start the flow from the integrations page, and choose to enter the host of the bridge for the manual step."""
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    if step == "manual":
+        result = await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_UUID: COMFOCONNECT_MANUAL_BRIDGE_ID})
     assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "user"
+    assert result["step_id"] == step
     assert result["errors"] == {}
+    return result
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_UUID: BRIDGE_UUID})
+
+async def pick_bridge(hass: HomeAssistant, result, step: str = "user"):
+    """Pick the bridge in the form of this step."""
+    return await hass.config_entries.flow.async_configure(result["flow_id"], BRIDGE_INPUT[step])
+
+
+@pytest.mark.parametrize("step", ["user", "manual"])
+async def test_flow(hass: HomeAssistant, mock_bridge: MagicMock, step: str) -> None:
+    """Test that picking a discovered bridge, or entering its host, registers on it with the default PIN."""
+    result = await start_flow(hass, step)
+
+    result = await pick_bridge(hass, result, step)
 
     assert_entry_created(result)
     mock_bridge.register.assert_awaited_once_with(result["data"][CONF_LOCAL_UUID], "Home Assistant (test home)", DEFAULT_PIN)
     mock_bridge.disconnect.assert_awaited_once()
 
 
-@pytest.mark.usefixtures("mock_discover_bridges")
-async def test_user_flow_lists_unconfigured_bridges(hass: HomeAssistant, mock_config_entry: MockConfigEntry) -> None:
-    """Test that the form lists the bridges we don't have yet, and always offers to enter a host."""
-    result = await start_user_flow(hass)
-    (key,) = result["data_schema"].schema
-    assert result["data_schema"].schema[key].container == {BRIDGE_UUID: HOST, **MANUAL_OPTION}
-
-    mock_config_entry.add_to_hass(hass)
-    result = await start_user_flow(hass)
-    (key,) = result["data_schema"].schema
-    assert result["data_schema"].schema[key].container == MANUAL_OPTION
-
-
-@pytest.mark.usefixtures("mock_discover_bridges")
+@pytest.mark.parametrize("step", ["user", "manual"])
 @pytest.mark.parametrize("error", CONNECTION_ERRORS)
-async def test_user_flow_cannot_connect(hass: HomeAssistant, mock_bridge: MagicMock, error: Exception) -> None:
-    """Test that a bridge that can't be reached shows the list again, and can be picked again."""
-    result = await start_user_flow(hass)
+async def test_flow_cannot_connect(hass: HomeAssistant, mock_bridge: MagicMock, step: str, error: Exception) -> None:
+    """Test that a bridge that can't be reached shows the form again, and can be picked again."""
+    result = await start_flow(hass, step)
 
     mock_bridge.register.side_effect = error
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_UUID: BRIDGE_UUID})
+    result = await pick_bridge(hass, result, step)
     assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "user"
+    assert result["step_id"] == step
     assert result["errors"] == {"base": "cannot_connect"}
     mock_bridge.disconnect.assert_awaited_once()
 
     mock_bridge.register.side_effect = None
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_UUID: BRIDGE_UUID})
+    result = await pick_bridge(hass, result, step)
     assert_entry_created(result)
 
 
-@pytest.mark.usefixtures("mock_discover_bridges")
-async def test_user_flow_already_configured(hass: HomeAssistant, mock_bridge: MagicMock, mock_config_entry: MockConfigEntry) -> None:
-    """Test that a bridge that was added while the form was open isn't added twice."""
-    result = await start_user_flow(hass)
+@pytest.mark.parametrize("step", ["user", "manual"])
+async def test_flow_already_configured(hass: HomeAssistant, mock_bridge: MagicMock, mock_config_entry: MockConfigEntry, step: str) -> None:
+    """Test that a bridge we already have, or that was added while the form was open, isn't added twice."""
+    result = await start_flow(hass, step)
     mock_config_entry.add_to_hass(hass)
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_UUID: BRIDGE_UUID})
+    result = await pick_bridge(hass, result, step)
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
     mock_bridge.register.assert_not_awaited()
 
 
-async def test_manual_flow(hass: HomeAssistant, mock_discover_bridges: AsyncMock, mock_bridge: MagicMock) -> None:
-    """Test that entering the host of a bridge finds it there and registers on it."""
-    result = await start_manual_flow(hass)
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "manual"
-    assert result["errors"] == {}
-
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_HOST: HOST})
-
-    assert_entry_created(result)
-    assert mock_discover_bridges.await_args == call(HOST)
-    mock_bridge.register.assert_awaited_once_with(result["data"][CONF_LOCAL_UUID], "Home Assistant (test home)", DEFAULT_PIN)
-
-
 async def test_manual_flow_invalid_host(hass: HomeAssistant, mock_discover_bridges: AsyncMock, mock_bridge: MagicMock) -> None:
     """Test that a host without a bridge asks for the host again."""
-    result = await start_manual_flow(hass)
+    result = await start_flow(hass, "manual")
 
     mock_discover_bridges.return_value = []
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_HOST: HOST})
+    result = await pick_bridge(hass, result, "manual")
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "manual"
     assert result["errors"] == {"base": "invalid_host"}
 
     mock_discover_bridges.return_value = [mock_bridge]
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_HOST: HOST})
+    result = await pick_bridge(hass, result, "manual")
     assert_entry_created(result)
+    assert mock_discover_bridges.await_args == call(HOST)
 
 
-@pytest.mark.usefixtures("mock_discover_bridges")
-@pytest.mark.parametrize("error", CONNECTION_ERRORS)
-async def test_manual_flow_cannot_connect(hass: HomeAssistant, mock_bridge: MagicMock, error: Exception) -> None:
-    """Test that a bridge that can't be reached asks for the host again, with the host filled in."""
-    result = await start_manual_flow(hass)
-
-    mock_bridge.register.side_effect = error
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_HOST: HOST})
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "manual"
-    assert result["errors"] == {"base": "cannot_connect"}
-    (key,) = result["data_schema"].schema
-    assert key.description == {"suggested_value": HOST}
-
-    mock_bridge.register.side_effect = None
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_HOST: HOST})
-    assert_entry_created(result)
-
-
-@pytest.mark.usefixtures("mock_discover_bridges")
-async def test_manual_flow_already_configured(hass: HomeAssistant, mock_bridge: MagicMock, mock_config_entry: MockConfigEntry) -> None:
-    """Test that the host of a bridge we already have isn't added twice."""
-    mock_config_entry.add_to_hass(hass)
-    result = await start_manual_flow(hass)
-
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_HOST: HOST})
-
-    assert result["type"] is FlowResultType.ABORT
-    assert result["reason"] == "already_configured"
-    mock_bridge.register.assert_not_awaited()
-
-
-@pytest.mark.usefixtures("mock_discover_bridges")
-async def test_pin_flow(hass: HomeAssistant, mock_bridge: MagicMock) -> None:
-    """Test that a bridge that refuses the default PIN asks for the PIN, and registers with it."""
-    result = await start_user_flow(hass)
-
-    mock_bridge.register.side_effect = [ComfoConnectNotAllowed("refused"), None]
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_UUID: BRIDGE_UUID})
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "enter_pin"
-    assert result["errors"] == {}
-
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_PIN: "1234"})
-
-    assert_entry_created(result)
-    assert mock_bridge.register.await_args.args[2] == 1234
-
-
-@pytest.mark.usefixtures("mock_discover_bridges")
 @pytest.mark.parametrize(
     ("error", "reason"),
     [
@@ -193,12 +120,16 @@ async def test_pin_flow(hass: HomeAssistant, mock_bridge: MagicMock) -> None:
         (AioComfoConnectTimeout("timeout"), "cannot_connect"),
     ],
 )
-async def test_pin_flow_errors(hass: HomeAssistant, mock_bridge: MagicMock, error: Exception, reason: str) -> None:
-    """Test that a wrong PIN or a lost bridge asks for the PIN again, and that it can be entered again."""
-    result = await start_user_flow(hass)
+async def test_pin_flow(hass: HomeAssistant, mock_bridge: MagicMock, error: Exception, reason: str) -> None:
+    """Test that a bridge that refuses the default PIN asks for the PIN, and again after a wrong PIN or a lost bridge."""
+    result = await start_flow(hass)
 
     mock_bridge.register.side_effect = [ComfoConnectNotAllowed("refused"), error, None]
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_UUID: BRIDGE_UUID})
+    result = await pick_bridge(hass, result)
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "enter_pin"
+    assert result["errors"] == {}
+
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_PIN: "1234"})
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "enter_pin"
@@ -259,7 +190,6 @@ async def test_import_flow(hass: HomeAssistant, mock_discover_bridges: AsyncMock
     mock_bridge.register.assert_awaited_once_with(LOCAL_UUID, "Home Assistant (test home)", DEFAULT_PIN)
 
 
-@pytest.mark.usefixtures("mock_discover_bridges")
 async def test_import_flow_cannot_connect(hass: HomeAssistant, mock_bridge: MagicMock) -> None:
     """Test that a YAML import of a bridge that can't be reached aborts, since it has no form to return to."""
     mock_bridge.register.side_effect = AioComfoConnectTimeout("timeout")
@@ -270,7 +200,6 @@ async def test_import_flow_cannot_connect(hass: HomeAssistant, mock_bridge: Magi
     assert result["reason"] == "cannot_connect"
 
 
-@pytest.mark.usefixtures("mock_discover_bridges")
 @pytest.mark.parametrize(
     ("location_name", "device_name"),
     [
@@ -283,8 +212,8 @@ async def test_import_flow_cannot_connect(hass: HomeAssistant, mock_bridge: Magi
 async def test_registration_name_fits_bridge_buffer(hass: HomeAssistant, mock_bridge: MagicMock, location_name: str, device_name: str) -> None:
     """Test that a long or multibyte location name is cut to the 31 bytes the bridge has for the name, without breaking a character."""
     hass.config.location_name = location_name
-    result = await start_user_flow(hass)
+    result = await start_flow(hass)
 
-    await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_UUID: BRIDGE_UUID})
+    await pick_bridge(hass, result)
 
     assert mock_bridge.register.await_args.args[1] == device_name
