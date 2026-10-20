@@ -3,7 +3,8 @@
     "error": {
       "invalid_pin": "Invalid PIN",
       "invalid_host": "Could not find a ComfoConnect bridge at this address",
-      "cannot_connect": "Could not connect to the bridge. Check that it is on and reachable, and that the official app isn't using it."
+      "cannot_connect": "Could not connect to the bridge. Check that it is on and reachable, and that the official app isn't using it.",
+      "unknown": "[%key:common::config_flow::error::unknown%]"
     },
     "step": {
       "user": {
@@ -35,6 +36,10 @@
         "data_description": {
           "pin": "The PIN of the bridge, as set in the ComfoControl app. It's 0000 by default."
         }
+      },
+      "reauth_confirm": {
+        "title": "Register again",
+        "description": "Home Assistant is no longer registered on the bridge at {host}. Register again to reconnect; if the bridge doesn't use the default PIN, you'll be asked for it."
       }
     },
     "create_entry": {
@@ -43,7 +48,8 @@
     "abort": {
       "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]",
       "cannot_connect": "Could not connect to the bridge. Check that it is on and reachable, and that the official app isn't using it.",
-      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
+      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+      "unknown": "[%key:common::config_flow::error::unknown%]"
     }
   },
   "entity": {

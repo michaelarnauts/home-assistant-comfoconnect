@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from typing import Any
 
 import aiocomfoconnect
@@ -41,15 +42,25 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # Without a form to return to, an import that can't reach the bridge aborts in the manual step.
         return await self.async_step_manual({CONF_HOST: import_config[CONF_HOST]})
 
-    async def async_step_reauth(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """Handle a flow reauth."""
-        self.bridge = Bridge(user_input[CONF_HOST], user_input[CONF_UUID])
-        self.local_uuid = user_input[CONF_LOCAL_UUID]
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> ConfigFlowResult:
+        """Register again on a bridge that doesn't know us anymore, with the UUID we already use."""
+        self.bridge = Bridge(entry_data[CONF_HOST], entry_data[CONF_UUID])
+        self.local_uuid = entry_data[CONF_LOCAL_UUID]
+        return await self.async_step_reauth_confirm()
 
-        try:
-            return await self._register()
-        except AioComfoConnectError:
-            return self.async_abort(reason="cannot_connect")
+    async def async_step_reauth_confirm(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Ask to register again, and do so when confirmed."""
+        errors = {}
+        if user_input is not None:
+            try:
+                return await self._register()
+            except AioComfoConnectError:
+                errors = {"base": "cannot_connect"}
+            except Exception:
+                _LOGGER.exception("Unexpected error while registering on the bridge")
+                errors = {"base": "unknown"}
+
+        return self.async_show_form(step_id="reauth_confirm", errors=errors, description_placeholders={CONF_HOST: self.bridge.host})
 
     async def async_step_user(self, user_input: ConfigType | None = None) -> ConfigFlowResult:
         """Handle a flow initiated by the user."""
@@ -71,6 +82,9 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     return await self._register()
                 except AioComfoConnectError:
                     errors = {"base": "cannot_connect"}
+                except Exception:
+                    _LOGGER.exception("Unexpected error while registering on the bridge")
+                    errors = {"base": "unknown"}
 
         # Find bridges on the networks that Home Assistant is configured to use, and filter out the ones we already have configured
         broadcast_addresses = await network.async_get_ipv4_broadcast_addresses(self.hass)
@@ -116,9 +130,12 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 try:
                     return await self._register()
                 except AioComfoConnectError:
-                    if self.source == config_entries.SOURCE_IMPORT:
-                        return self.async_abort(reason="cannot_connect")
                     errors = {"base": "cannot_connect"}
+                except Exception:
+                    _LOGGER.exception("Unexpected error while registering on the bridge")
+                    errors = {"base": "unknown"}
+                if self.source == config_entries.SOURCE_IMPORT:
+                    return self.async_abort(reason=errors["base"])
 
         return self.async_show_form(
             step_id="manual",
@@ -153,9 +170,8 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Disconnect
             await self.bridge.disconnect()
 
-        if self.context.get("source") == config_entries.SOURCE_REAUTH:
-            self.hass.async_create_task(self.hass.config_entries.async_reload(self.context["entry_id"]))
-            return self.async_abort(reason="reauth_successful")
+        if self.source == config_entries.SOURCE_REAUTH:
+            return self.async_update_reload_and_abort(self._get_reauth_entry())
 
         return self.async_create_entry(
             title=self.bridge.host,
@@ -177,6 +193,9 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return await self._register(user_input[CONF_PIN])
             except AioComfoConnectError:
                 errors = {"base": "cannot_connect"}
+            except Exception:
+                _LOGGER.exception("Unexpected error while registering on the bridge")
+                errors = {"base": "unknown"}
 
         return self.async_show_form(
             step_id="enter_pin",
