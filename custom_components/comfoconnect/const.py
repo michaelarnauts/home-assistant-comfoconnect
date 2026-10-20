@@ -11,7 +11,7 @@ SERVICE_START_BOOST = "start_boost"
 ATTR_DURATION = "duration"
 
 # The model of a node that doesn't tell its model itself, by product id, as the official app names it. The app calls
-# product 5 "ComfoConnect Gateway", but that is the ComfoConnect LAN C.
+# product 5 "ComfoConnect Gateway", but that is the ComfoConnect LAN C, and writes "ComfoConnect PRO" in capitals.
 PRODUCT_MODELS = {
     ProductId.COMFOAIRQ: "ComfoAir Q",
     ProductId.COMFOSENSE: "ComfoSense C",
@@ -28,5 +28,5 @@ PRODUCT_MODELS = {
     ProductId.COMFOCLIME: "ComfoClime",
     ProductId.COMFODRY: "ComfoDry",
     ProductId.COMFOPOST: "ComfoPost",
-    ProductId.COMFOCONNECTPRO: "ComfoConnect PRO",
+    ProductId.COMFOCONNECTPRO: "ComfoConnect Pro",
 }

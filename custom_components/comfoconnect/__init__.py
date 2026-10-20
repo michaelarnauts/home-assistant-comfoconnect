@@ -7,8 +7,9 @@ from datetime import timedelta
 
 import voluptuous as vol
 from aiocomfoconnect import ComfoConnect, discover_bridges
+from aiocomfoconnect.bridge import Node
 from aiocomfoconnect.comfoconnect import NodeInfo
-from aiocomfoconnect.const import ConnectionState, GatewayType, ProductId
+from aiocomfoconnect.const import ConnectionState, ProductId
 from aiocomfoconnect.exceptions import (
     AioComfoConnectError,
     AioComfoConnectNotReachable,
@@ -84,8 +85,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-def co2_sensor_identifier(bridge: ComfoConnectBridge, node_id: int) -> tuple[str, str]:
-    """Return the device identifier of the CO2 sensor on a node."""
+def node_identifier(bridge: ComfoConnectBridge, node_id: int) -> tuple[str, str]:
+    """Return the device identifier of a node, other than the ventilation unit and the bridge."""
     return (DOMAIN, f"{bridge.uuid}-{node_id}")
 
 
@@ -104,26 +105,24 @@ def find_co2_sensors(bridge: ComfoConnectBridge) -> list[tuple[int, int]]:
     return list(zip(node_ids, CO2_SENSOR_IDS, strict=False))
 
 
-def node_device_info(info: NodeInfo) -> dict[str, str | None]:
-    """Return the device registry fields for what a node tells about itself."""
+def node_device_info(node: Node, info: NodeInfo | None) -> dict[str, str | None] | None:
+    """Return the device registry fields of a node, from its product id and what it tells about itself."""
+    # None for a node we can't name: a product we don't know, that doesn't tell its name or model.
+    info = info or NodeInfo(None, None, None, None, None, None, None)
+    # Most nodes don't tell their model, then it's named after the product.
+    model = info.model or PRODUCT_MODELS.get(node.product_id)
+    # A name can end with spaces, e.g. "CO2 woonkamer ".
+    name = (info.name or "").strip() or model
+    if not name:
+        return None
     return {
-        # A name can end with spaces, e.g. "CO2 woonkamer ".
-        "name": info.name.strip() if info.name else None,
-        "model": info.model,
+        "name": name,
+        "model": model,
         "model_id": info.article_number,
         "serial_number": info.serial_number,
         "sw_version": info.firmware,
         "hw_version": None if info.hardware_version is None else str(info.hardware_version),
     }
-
-
-async def read_co2_sensor_info(bridge: ComfoConnectBridge, node_id: int) -> dict[str, str | None]:
-    """Read the device info of a CO2 sensor; when that fails, the device is added without it."""
-    try:
-        return node_device_info(await bridge.get_node_info(node_id))
-    except AioComfoConnectError as err:
-        _LOGGER.debug("Could not read the device info of the CO2 sensor on node %s: %s", node_id, err)
-        return {}
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ComfoConnectConfigEntry) -> bool:
@@ -171,9 +170,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ComfoConnectConfigEntry)
     # A failed read must not leave a reconnecting session behind the failed entry.
     try:
         bridge_info = await bridge.cmd_version_request()
-        unit_info = node_device_info(await bridge.get_node_info())
+        unit_info = await bridge.get_node_info()
         bridge.co2_sensors = find_co2_sensors(bridge)
-        co2_sensor_info = {node_id: await read_co2_sensor_info(bridge, node_id) for node_id, _sensor_id in bridge.co2_sensors}
     except AioComfoConnectError as err:
         await bridge.disconnect()
         raise ConfigEntryNotReady(translation_domain=DOMAIN, translation_key="device_info_failed") from err
@@ -185,47 +183,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ComfoConnectConfigEntry)
     bridge.gateway_version = version_decode(bridge_info.gatewayVersion)
     entry.runtime_data = bridge
 
-    device_registry = dr.async_get(hass)
-
-    # The bridge type is known once the session has started: a ComfoConnect Pro identifies itself then.
-    bridge_model = "ComfoConnect Pro" if bridge.bridge_type == GatewayType.PRO else "ComfoConnect LAN C"
-
-    # Add Bridge to device registry
-    bridge_device = device_registry.async_get_or_create(
-        config_entry_id=entry.entry_id,
-        identifiers={(DOMAIN, bridge_info.serialNumber)},
-        manufacturer="Zehnder",
-        name=bridge_model,
-        model=bridge_model,
-        serial_number=bridge_info.serialNumber,
-        sw_version=bridge.gateway_version,
-    )
-
-    # Add Ventilation Unit to device registry, connected through the bridge. Passing `via_device` to
-    # async_get_or_create is deprecated, and its replacement `via_device_id` only exists there since
-    # Home Assistant 2026.8, so link the devices with async_update_device, which works on all versions.
-    unit_device = device_registry.async_get_or_create(
-        config_entry_id=entry.entry_id,
-        identifiers={(DOMAIN, bridge.uuid)},
-        manufacturer="Zehnder",
-        **unit_info,
-    )
-    device_registry.async_update_device(unit_device.id, via_device_id=bridge_device.id)
-    bridge.device_id = unit_device.id
-
-    # Add the ComfoNet CO2 sensors, connected through the bridge like the unit.
-    for node_id, _sensor_id in bridge.co2_sensors:
-        info = {**co2_sensor_info[node_id]}
-        info["model"] = info.get("model") or PRODUCT_MODELS[ProductId.CO2SENSOR]
-        # Without a name, the device is named after its model.
-        info["name"] = info.get("name") or info["model"]
-        co2_device = device_registry.async_get_or_create(
-            config_entry_id=entry.entry_id,
-            identifiers={co2_sensor_identifier(bridge, node_id)},
-            manufacturer="Zehnder",
-            **info,
-        )
-        device_registry.async_update_device(co2_device.id, via_device_id=bridge_device.id)
+    # Add a device for every node on the bus. The bridge announces some nodes, like itself, a little after we
+    # connected; the node callback adds those.
+    bridge.add_node_devices = True
+    try:
+        for node in list(bridge.nodes.values()):
+            await bridge.async_add_node_device(node, unit_info if node.node_id == bridge.ventilation_node_id else None)
+    except BaseException:
+        await bridge.disconnect()
+        raise
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -248,14 +214,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: ComfoConnectConfigEntry
 
 
 async def async_remove_config_entry_device(hass: HomeAssistant, entry: ComfoConnectConfigEntry, device_entry: dr.DeviceEntry) -> bool:
-    """Allow removing the device of a CO2 sensor that is no longer on the bus."""
+    """Allow removing the device of a node that is no longer on the bus."""
     bridge = entry.runtime_data
     prefix = f"{bridge.uuid}-"
     for domain, identifier in device_entry.identifiers:
         if domain == DOMAIN and identifier.startswith(prefix):
-            node = bridge.nodes.get(int(identifier.removeprefix(prefix)))
             # The nodes are only known while we are connected.
-            return bridge.is_available and (node is None or node.product_id != ProductId.CO2SENSOR)
+            return bridge.is_available and int(identifier.removeprefix(prefix)) not in bridge.nodes
     return False
 
 
@@ -270,6 +235,7 @@ class ComfoConnectBridge(ComfoConnect):
             sensor_callback=self.sensor_callback,
             alarm_callback=self.alarm_callback,
             connection_state_callback=self.connection_state_callback,
+            node_callback=self.node_callback,
         )
         self.hass = hass
         self.entry = entry
@@ -277,11 +243,65 @@ class ComfoConnectBridge(ComfoConnect):
         self.active_alarms: dict[int, dict[int, str]] = {}
         # The ventilation unit's device, known once setup has registered it.
         self.device_id: str | None = None
+        # The device of each node, and its node, once it has been added. Setup turns on adding them.
+        self.node_devices: dict[int, tuple[Node, str]] = {}
+        self.add_node_devices = False
         # The node id and sensor id of each CO2 sensor, known once setup has registered them.
         self.co2_sensors: list[tuple[int, int]] = []
         # The firmware version of the bridge, known once setup has read it.
         self.gateway_version: str | None = None
         self.is_available = True
+
+    async def async_add_node_device(self, node: Node, info: NodeInfo | None = None) -> None:
+        """Add the device of a node, with what it tells about itself, and link it to the bridge."""
+        if info is None:
+            try:
+                info = await self.get_node_info(node.node_id)
+            except AioComfoConnectError as err:
+                _LOGGER.debug("Could not read the device info of node %s: %s", node.node_id, err)
+        fields = node_device_info(node, info)
+        if fields is None:
+            _LOGGER.debug("Not adding a device for node %s with unknown product id %s", node.node_id, node.product_id)
+            return
+
+        if node.node_id == self.ventilation_node_id:
+            identifier = (DOMAIN, self.uuid)
+        elif node.is_bridge and fields["serial_number"]:
+            # Like the device of the bridge before every node was a device.
+            identifier = (DOMAIN, fields["serial_number"])
+        else:
+            identifier = node_identifier(self, node.node_id)
+        device = dr.async_get(self.hass).async_get_or_create(
+            config_entry_id=self.entry.entry_id,
+            identifiers={identifier},
+            manufacturer="Zehnder",
+            **fields,
+        )
+        self.node_devices[node.node_id] = (node, device.id)
+        if node.node_id == self.ventilation_node_id:
+            self.device_id = device.id
+        self._async_link_node_devices()
+
+    @callback
+    def _async_link_node_devices(self) -> None:
+        """Link the devices of the nodes to the device of the bridge, through which we reach them."""
+        bridge_node = self.bridge_node
+        if bridge_node is None or bridge_node.node_id not in self.node_devices:
+            return
+        _bridge_node, bridge_device_id = self.node_devices[bridge_node.node_id]
+        # Passing `via_device` to async_get_or_create is deprecated, and its replacement `via_device_id` only exists
+        # there since Home Assistant 2026.8, so link the devices with async_update_device, which works on all versions.
+        device_registry = dr.async_get(self.hass)
+        for node, device_id in self.node_devices.values():
+            if not node.is_bridge:
+                device_registry.async_update_device(device_id, via_device_id=bridge_device_id)
+
+    @callback
+    def node_callback(self, node: Node) -> None:
+        """Add the device of a node that the bridge announces once setup added the others."""
+        if not self.add_node_devices or node.is_offline or node.node_id in self.node_devices:
+            return
+        self.entry.async_create_background_task(self.hass, self.async_add_node_device(node), f"comfoconnect add node {node.node_id}")
 
     @callback
     def connection_state_callback(self, state: str) -> None:

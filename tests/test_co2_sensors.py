@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, PropertyMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from aiocomfoconnect.bridge import Node
@@ -19,6 +19,7 @@ from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.const import CONF_HOST, UnitOfRatio
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
+from tests.nodes import LAN_C, announcing
 
 MockConfigEntry = pytest.importorskip("pytest_homeassistant_custom_component.common").MockConfigEntry
 
@@ -28,9 +29,10 @@ UNIT = Node(1, ProductId.COMFOAIRQ, 1, 0)
 # What the nodes tell about themselves: node 7 has a name ending with a space, node 54 has no name, model or serial
 # number, node 60 can't be read.
 NODE_INFO = {
-    None: NodeInfo("ComfoAirQ", "ComfoAir Q450", "DEMO-ART-Q", "DEMO0001", "R1.4.0", 3),
-    7: NodeInfo("Living ", "CO2 demo", "DEMO-ART-CO2", "DEMO0007", "1.2.3", 1),
-    54: NodeInfo(None, None, None, None, "1.2.4", None),
+    None: NodeInfo("ComfoAirQ", "ComfoAir Q450", "DEMO-ART-Q", "DEMO0001", "R1.4.0", 3, 2),
+    7: NodeInfo("Living ", "CO2 demo", "DEMO-ART-CO2", "DEMO0007", "1.2.3", 1, 0),
+    54: NodeInfo(None, None, None, None, "1.2.4", None, None),
+    LAN_C.node_id: NodeInfo("ComfoConnect LAN C", None, None, "DEMO0001", "R1.5.1", 1, 0),
 }
 
 
@@ -71,7 +73,7 @@ def auto_enable_custom_integrations(enable_custom_integrations):
     ("nodes", "expected"),
     [
         (
-            [UNIT, co2_node(7), co2_node(54), co2_node(60)],
+            [UNIT, LAN_C, co2_node(7), co2_node(54), co2_node(60)],
             [
                 (7, SENSOR_CO2_1, ("Living", "CO2 demo", "DEMO-ART-CO2", "DEMO0007", "1.2.3", "1")),
                 # Without a model, the device gets the model of its product, and without a name, it's named after its model.
@@ -80,7 +82,7 @@ def auto_enable_custom_integrations(enable_custom_integrations):
                 (60, SENSOR_CO2_3, ("CO2 Sensor C", "CO2 Sensor C", None, None, None, None)),
             ],
         ),
-        ([UNIT], []),
+        ([UNIT, LAN_C], []),
     ],
 )
 async def test_co2_sensor_devices_and_entities(hass: HomeAssistant, nodes: list[Node], expected: list) -> None:
@@ -93,9 +95,8 @@ async def test_co2_sensor_devices_and_entities(hass: HomeAssistant, nodes: list[
     entry.add_to_hass(hass)
 
     with (
-        patch(f"{BRIDGE}.connect", new_callable=AsyncMock),
+        patch(f"{BRIDGE}.connect", autospec=True, side_effect=announcing(*nodes)),
         patch(f"{BRIDGE}.disconnect", new_callable=AsyncMock),
-        patch(f"{BRIDGE}.nodes", new_callable=PropertyMock, return_value={node.node_id: node for node in nodes}),
         patch(
             f"{BRIDGE}.cmd_version_request",
             new_callable=AsyncMock,
@@ -147,7 +148,7 @@ async def test_co2_sensor_devices_and_entities(hass: HomeAssistant, nodes: list[
         ("DEMO0001", True, False),
     ],
 )
-async def test_only_a_co2_sensor_that_left_the_bus_can_be_removed(hass: HomeAssistant, identifier: str, available: bool, removable: bool) -> None:
+async def test_only_a_node_that_left_the_bus_can_be_removed(hass: HomeAssistant, identifier: str, available: bool, removable: bool) -> None:
     """The sensor on node 7 is still on the bus, the one on node 54 is gone; the bridge and unit always stay."""
     bridge = SimpleNamespace(uuid=UNIT_UUID, is_available=available, nodes={1: UNIT, 7: co2_node(7)})
     device = SimpleNamespace(identifiers={(DOMAIN, identifier)})

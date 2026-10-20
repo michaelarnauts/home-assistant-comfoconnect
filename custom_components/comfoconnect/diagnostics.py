@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 from aiocomfoconnect.bridge import Node
-from aiocomfoconnect.const import GatewayType
 from aiocomfoconnect.exceptions import AioComfoConnectError
 from aiocomfoconnect.sensors import SENSORS
 from homeassistant.components.diagnostics import async_redact_data
@@ -36,7 +35,7 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ComfoCo
     data = {
         "entry": entry.data,
         "bridge": {
-            "type": "ComfoConnect Pro" if bridge.bridge_type == GatewayType.PRO else "ComfoConnect LAN C",
+            "type": bridge.bridge_type,
             "gateway_version": bridge.gateway_version,
             "available": bridge.is_available,
             "connection_state": bridge.connection_state,

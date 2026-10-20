@@ -83,7 +83,7 @@ from . import (
     SIGNAL_COMFOCONNECT_UPDATE_RECEIVED,
     ComfoConnectBridge,
     ComfoConnectConfigEntry,
-    co2_sensor_identifier,
+    node_identifier,
 )
 from .entity import ComfoConnectEntity
 
@@ -644,4 +644,4 @@ class ComfoConnectCO2Sensor(ComfoConnectSensor):
         )
         # Follow the node, since its sensor id shifts when a sensor with a lower node id is removed.
         self._attr_unique_id = f"{ccb.uuid}-co2-{node_id}"
-        self._attr_device_info = DeviceInfo(identifiers={co2_sensor_identifier(ccb, node_id)})
+        self._attr_device_info = DeviceInfo(identifiers={node_identifier(ccb, node_id)})

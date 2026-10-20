@@ -25,6 +25,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_component import async_update_entity
 from pytest_homeassistant_custom_component.common import MockConfigEntry
+from tests.nodes import UNIT, announcing
 
 pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
 BRIDGE = "custom_components.comfoconnect.ComfoConnectBridge"
@@ -65,11 +66,11 @@ def protocol():
         values[prop.property_id] = value
 
     with ExitStack() as stack:
-        for method in ("connect", "disconnect"):
-            stack.enter_context(patch(f"{BRIDGE}.{method}", new_callable=AsyncMock))
+        stack.enter_context(patch(f"{BRIDGE}.connect", autospec=True, side_effect=announcing(UNIT)))
+        stack.enter_context(patch(f"{BRIDGE}.disconnect", new_callable=AsyncMock))
         stack.enter_context(patch(f"{BRIDGE}.set_property", new_callable=AsyncMock, side_effect=set_property))
         stack.enter_context(
-            patch(f"{BRIDGE}.get_node_info", new_callable=AsyncMock, return_value=NodeInfo("Test unit", None, None, None, None, None))
+            patch(f"{BRIDGE}.get_node_info", new_callable=AsyncMock, return_value=NodeInfo("Test unit", None, None, None, None, None, None))
         )
         stack.enter_context(patch(f"{BRIDGE}.get_property_constraints", new_callable=AsyncMock, side_effect=get_property_constraints))
         stack.enter_context(
