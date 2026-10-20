@@ -15,8 +15,12 @@ from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from tests.conftest import BRIDGE_UUID, HOST, LOCAL_UUID
 
-# Errors of a bridge that can't be reached, or that another app is using.
-CONNECTION_ERRORS = [AioComfoConnectTimeout("timeout"), ComfoConnectOtherSession("busy")]
+# Errors of a bridge that can't be reached, or that another app is using, and an unexpected one, with the error they show.
+ERRORS = [
+    (AioComfoConnectTimeout("timeout"), "cannot_connect"),
+    (ComfoConnectOtherSession("busy"), "cannot_connect"),
+    (RuntimeError("unexpected"), "unknown"),
+]
 # What the user enters to pick the bridge, in the step that picks it.
 BRIDGE_INPUT = {"user": {CONF_UUID: BRIDGE_UUID}, "manual": {CONF_HOST: HOST}}
 
@@ -67,16 +71,16 @@ async def test_flow(hass: HomeAssistant, mock_bridge: MagicMock, step: str) -> N
 
 
 @pytest.mark.parametrize("step", ["user", "manual"])
-@pytest.mark.parametrize("error", CONNECTION_ERRORS)
-async def test_flow_cannot_connect(hass: HomeAssistant, mock_bridge: MagicMock, step: str, error: Exception) -> None:
-    """Test that a bridge that can't be reached shows the form again, and can be picked again."""
+@pytest.mark.parametrize(("error", "reason"), ERRORS)
+async def test_flow_errors(hass: HomeAssistant, mock_bridge: MagicMock, step: str, error: Exception, reason: str) -> None:
+    """Test that a bridge that can't be reached, or fails unexpectedly, shows the form again, and can be picked again."""
     result = await start_flow(hass, step)
 
     mock_bridge.register.side_effect = error
     result = await pick_bridge(hass, result, step)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == step
-    assert result["errors"] == {"base": "cannot_connect"}
+    assert result["errors"] == {"base": reason}
     mock_bridge.disconnect.assert_awaited_once()
 
     mock_bridge.register.side_effect = None
@@ -118,6 +122,7 @@ async def test_manual_flow_invalid_host(hass: HomeAssistant, mock_discover_bridg
     [
         (ComfoConnectNotAllowed("refused"), "invalid_pin"),
         (AioComfoConnectTimeout("timeout"), "cannot_connect"),
+        (RuntimeError("unexpected"), "unknown"),
     ],
 )
 async def test_pin_flow(hass: HomeAssistant, mock_bridge: MagicMock, error: Exception, reason: str) -> None:
@@ -140,11 +145,22 @@ async def test_pin_flow(hass: HomeAssistant, mock_bridge: MagicMock, error: Exce
     assert mock_bridge.register.await_args.args[2] == 4321
 
 
-async def test_reauth_flow(hass: HomeAssistant, mock_bridge: MagicMock, mock_config_entry: MockConfigEntry, mock_setup_entry: AsyncMock) -> None:
-    """Test that a reauth registers again with the UUID we already use, and reloads the entry."""
-    mock_config_entry.add_to_hass(hass)
+async def start_reauth_flow(hass: HomeAssistant, entry: MockConfigEntry):
+    """Start a reauth of the entry, which asks to register again."""
+    entry.add_to_hass(hass)
+    result = await entry.start_reauth_flow(hass)
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reauth_confirm"
+    assert result["description_placeholders"][CONF_HOST] == HOST
+    return result
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+
+async def test_reauth_flow(hass: HomeAssistant, mock_bridge: MagicMock, mock_config_entry: MockConfigEntry, mock_setup_entry: AsyncMock) -> None:
+    """Test that a reauth registers again with the UUID we already use once confirmed, and reloads the entry."""
+    result = await start_reauth_flow(hass, mock_config_entry)
+    mock_bridge.register.assert_not_awaited()
+
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
     await hass.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
@@ -155,10 +171,10 @@ async def test_reauth_flow(hass: HomeAssistant, mock_bridge: MagicMock, mock_con
 
 async def test_reauth_flow_pin(hass: HomeAssistant, mock_bridge: MagicMock, mock_config_entry: MockConfigEntry) -> None:
     """Test that a reauth on a bridge that refuses the default PIN asks for the PIN."""
-    mock_config_entry.add_to_hass(hass)
+    result = await start_reauth_flow(hass, mock_config_entry)
 
     mock_bridge.register.side_effect = [ComfoConnectNotAllowed("refused"), None]
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "enter_pin"
 
@@ -170,15 +186,24 @@ async def test_reauth_flow_pin(hass: HomeAssistant, mock_bridge: MagicMock, mock
     assert mock_bridge.register.await_args == call(LOCAL_UUID, "Home Assistant (test home)", 1234)
 
 
-async def test_reauth_flow_cannot_connect(hass: HomeAssistant, mock_bridge: MagicMock, mock_config_entry: MockConfigEntry) -> None:
-    """Test that a reauth on a bridge that can't be reached aborts, since it has no form to return to."""
-    mock_config_entry.add_to_hass(hass)
+@pytest.mark.parametrize(("error", "reason"), ERRORS)
+async def test_reauth_flow_errors(
+    hass: HomeAssistant, mock_bridge: MagicMock, mock_config_entry: MockConfigEntry, error: Exception, reason: str
+) -> None:
+    """Test that a reauth on a bridge that can't be reached asks again, and can be confirmed again."""
+    result = await start_reauth_flow(hass, mock_config_entry)
 
-    mock_bridge.register.side_effect = AioComfoConnectTimeout("timeout")
-    result = await mock_config_entry.start_reauth_flow(hass)
+    mock_bridge.register.side_effect = error
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reauth_confirm"
+    assert result["errors"] == {"base": reason}
 
+    mock_bridge.register.side_effect = None
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    await hass.async_block_till_done()
     assert result["type"] is FlowResultType.ABORT
-    assert result["reason"] == "cannot_connect"
+    assert result["reason"] == "reauth_successful"
 
 
 async def test_import_flow(hass: HomeAssistant, mock_discover_bridges: AsyncMock, mock_bridge: MagicMock) -> None:
@@ -190,14 +215,15 @@ async def test_import_flow(hass: HomeAssistant, mock_discover_bridges: AsyncMock
     mock_bridge.register.assert_awaited_once_with(LOCAL_UUID, "Home Assistant (test home)", DEFAULT_PIN)
 
 
-async def test_import_flow_cannot_connect(hass: HomeAssistant, mock_bridge: MagicMock) -> None:
+@pytest.mark.parametrize(("error", "reason"), ERRORS)
+async def test_import_flow_errors(hass: HomeAssistant, mock_bridge: MagicMock, error: Exception, reason: str) -> None:
     """Test that a YAML import of a bridge that can't be reached aborts, since it has no form to return to."""
-    mock_bridge.register.side_effect = AioComfoConnectTimeout("timeout")
+    mock_bridge.register.side_effect = error
 
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_IMPORT}, data={CONF_HOST: HOST, "token": LOCAL_UUID})
 
     assert result["type"] is FlowResultType.ABORT
-    assert result["reason"] == "cannot_connect"
+    assert result["reason"] == reason
 
 
 @pytest.mark.parametrize(

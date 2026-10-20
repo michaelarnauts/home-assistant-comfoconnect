@@ -3,7 +3,8 @@
         "error": {
             "invalid_pin": "Ongeldige pincode",
             "invalid_host": "Geen ComfoConnect-gateway gevonden op dit adres",
-            "cannot_connect": "Kan geen verbinding maken met de gateway. Controleer of die aan staat en bereikbaar is, en of de officiële app hem niet gebruikt."
+            "cannot_connect": "Kan geen verbinding maken met de gateway. Controleer of die aan staat en bereikbaar is, en of de officiële app hem niet gebruikt.",
+            "unknown": "Onverwachte fout"
         },
         "step": {
             "user": {
@@ -35,6 +36,10 @@
                 "data_description": {
                     "pin": "De pincode van de gateway, zoals ingesteld in de ComfoControl-app. Standaard is dat 0000."
                 }
+            },
+            "reauth_confirm": {
+                "title": "Opnieuw registreren",
+                "description": "Home Assistant is niet meer geregistreerd op de gateway op {host}. Registreer opnieuw om weer te verbinden; als de gateway niet de standaardpincode gebruikt, wordt die gevraagd."
             }
         },
         "create_entry": {
@@ -43,7 +48,8 @@
         "abort": {
             "reauth_successful": "Opnieuw authenticeren is gelukt",
             "cannot_connect": "Kan geen verbinding maken met de gateway. Controleer of die aan staat en bereikbaar is, en of de officiële app hem niet gebruikt.",
-            "already_configured": "Apparaat is al geconfigureerd"
+            "already_configured": "Apparaat is al geconfigureerd",
+            "unknown": "Onverwachte fout"
         }
     },
     "entity": {

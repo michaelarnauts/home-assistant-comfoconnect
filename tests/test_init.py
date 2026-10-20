@@ -99,18 +99,16 @@ async def test_setup_not_allowed(
     enable_custom_integrations: None,
     mock_config_entry: MockConfigEntry,
     mock_comfoconnect: dict[str, MagicMock],
-    mock_bridge: MagicMock,
 ) -> None:
     """Test that a bridge that doesn't know us anymore asks to register again."""
     mock_comfoconnect["connect"].side_effect = ComfoConnectNotAllowed("Not registered")
-    mock_bridge.register.side_effect = ComfoConnectNotAllowed("Wrong PIN")
 
     await setup_entry(hass, mock_config_entry)
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR
     [flow] = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
     assert flow["context"]["source"] == SOURCE_REAUTH
-    assert flow["step_id"] == "enter_pin"
+    assert flow["step_id"] == "reauth_confirm"
 
 
 @pytest.mark.parametrize("error", [ComfoConnectRmiError("Busy"), AioComfoConnectTimeout("Timed out")])
@@ -214,12 +212,10 @@ async def test_setup_found_bridge_failed(
     mock_config_entry: MockConfigEntry,
     mock_comfoconnect: dict[str, MagicMock],
     mock_rediscover: MagicMock,
-    mock_bridge: MagicMock,
     error: Exception,
     state: ConfigEntryState,
 ) -> None:
     """Test that a bridge that fails at its new address too is tried again later, or asks to register again."""
-    mock_bridge.register.side_effect = ComfoConnectNotAllowed("Wrong PIN")
     mock_comfoconnect["connect"].side_effect = [AioComfoConnectTimeout("Timed out"), error]
 
     await setup_entry(hass, mock_config_entry)
@@ -262,16 +258,15 @@ async def test_polled_entities_wait_for_the_session(
     mock_comfoconnect["get_property_constraints"].assert_not_awaited()
 
 
-async def test_session_not_allowed(hass: HomeAssistant, mock_bridge: MagicMock, init_integration: MockConfigEntry) -> None:
+async def test_session_not_allowed(hass: HomeAssistant, init_integration: MockConfigEntry) -> None:
     """Test that a session the bridge refuses, because it doesn't know us anymore, asks to register again."""
-    mock_bridge.register.side_effect = ComfoConnectNotAllowed("Wrong PIN")
     set_connection_state(init_integration, ConnectionState.NOT_ALLOWED)
     await hass.async_block_till_done()
 
     assert hass.states.get("fan.comfoairq").state == STATE_UNAVAILABLE
     [flow] = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
     assert flow["context"]["source"] == SOURCE_REAUTH
-    assert flow["step_id"] == "enter_pin"
+    assert flow["step_id"] == "reauth_confirm"
 
 
 @pytest.mark.usefixtures("mock_discover_bridges", "mock_setup_entry")
