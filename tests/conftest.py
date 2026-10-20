@@ -235,6 +235,11 @@ def push_sensor(entry: MockConfigEntry, sensor_id: int, value) -> None:
     entry.runtime_data._sensor_callback_fn(SENSORS[sensor_id], value)
 
 
+def push_alarms(entry: MockConfigEntry, node_id: int, errors: dict[int, str]) -> None:
+    """Push the alarms of a node, like the library does when the bridge reports them."""
+    entry.runtime_data._alarm_callback_fn(node_id, errors)
+
+
 @pytest.fixture
 def platforms() -> list[Platform]:
     """Return the platforms to set up; a test module overrides this to set up only its own."""
