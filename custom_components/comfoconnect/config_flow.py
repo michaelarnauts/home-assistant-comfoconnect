@@ -42,11 +42,7 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_reauth(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle a flow reauth."""
-        # Discover the bridge so we know which type it is, since a ComfoConnect Pro needs to be
-        # registered differently than a LAN C. Fall back to the stored data when it doesn't answer.
-        bridges = await aiocomfoconnect.discover_bridges(user_input[CONF_HOST])
-        discovered_bridge = next((bridge for bridge in bridges if bridge.uuid == user_input[CONF_UUID]), None)
-        self.bridge = discovered_bridge or Bridge(user_input[CONF_HOST], user_input[CONF_UUID])
+        self.bridge = Bridge(user_input[CONF_HOST], user_input[CONF_UUID])
         self.local_uuid = user_input[CONF_LOCAL_UUID]
 
         try:
@@ -135,8 +131,7 @@ class ComfoConnectConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # LAN C reserves one byte of its 32-byte name buffer for the terminator.
             device_name = f"Home Assistant ({self.hass.config.location_name})"
             device_name = device_name.encode("utf-8")[:31].decode("utf-8", errors="ignore")
-            # This connects to the bridge, checks if we are registered already by starting a session,
-            # and registers us when we are not.
+            # This connects to the bridge, registers us and starts a session.
             await self.bridge.register(
                 self.local_uuid,
                 device_name,
