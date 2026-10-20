@@ -295,14 +295,21 @@ class ComfoConnectBridge(ComfoConnect):
     @callback
     def node_callback(self, node: Node) -> None:
         """Add the device of a node that the bridge announces once setup added the others, and forget one that left."""
+        if not self.add_node_devices:
+            return
+        # The entities of a node are only available while it is on the bus.
+        async_dispatcher_send(self.hass, SIGNAL_COMFOCONNECT_AVAILABILITY.format(self.uuid), self.is_available)
         if node.is_offline:
             self.node_devices.pop(node.node_id, None)
             return
         # The bridge announces every node again in a new session; the device of one we know stays as it is.
         known = self.node_devices.get(node.node_id)
-        if not self.add_node_devices or (known is not None and known[0] == node):
-            return
-        self.entry.async_create_background_task(self.hass, self.async_add_node_device(node), f"comfoconnect add node {node.node_id}")
+        if known is None or known[0] != node:
+            self.entry.async_create_background_task(self.hass, self.async_add_node_device(node), f"comfoconnect add node {node.node_id}")
+
+    def is_on_bus(self, serial_number: str) -> bool:
+        """Return whether the node with this serial number is on the bus in this session."""
+        return any(serial == serial_number and node_id in self.nodes for node_id, (_node, _device_id, serial) in self.node_devices.items())
 
     @callback
     def connection_state_callback(self, state: str) -> None:

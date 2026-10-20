@@ -10,7 +10,7 @@ from aiocomfoconnect.bridge import Node
 from aiocomfoconnect.comfoconnect import NodeInfo
 from aiocomfoconnect.const import ProductId
 from aiocomfoconnect.exceptions import ComfoConnectRmiError
-from custom_components.comfoconnect import EVENT_COMFOCONNECT_ALARM
+from custom_components.comfoconnect import EVENT_COMFOCONNECT_ALARM, async_remove_config_entry_device
 from custom_components.comfoconnect.const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant, callback
@@ -170,3 +170,21 @@ async def test_node_that_cant_be_read(hass: HomeAssistant) -> None:
         await hass.async_block_till_done()
 
     assert devices(hass, entry)[UNIT_UUID][-1] == "ComfoConnect LAN C"
+
+
+async def test_node_on_the_bus(hass: HomeAssistant) -> None:
+    """A node is on the bus while the bridge announces it, until it goes offline."""
+    entry = await setup_entry(hass, UNIT, LAN_C, SWITCH)
+    bridge = entry.runtime_data
+    assert bridge.is_on_bus("DEMO0043")
+
+    offline = Node(SWITCH.node_id, SWITCH.product_id, SWITCH.zone_id, 1)
+    bridge._process_node_notification(
+        SimpleNamespace(nodeId=offline.node_id, productId=offline.product_id, zoneId=offline.zone_id, mode=offline.mode)
+    )
+    await hass.async_block_till_done()
+
+    assert not bridge.is_on_bus("DEMO0043")
+    # Its device can be removed now.
+    device = dr.async_get(hass).async_get_device_by_identifier((DOMAIN, "DEMO0043"), entry.entry_id)
+    assert await async_remove_config_entry_device(hass, entry, device)

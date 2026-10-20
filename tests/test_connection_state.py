@@ -85,7 +85,14 @@ def _entities(bridge):
 
 async def test_entities_follow_the_bridge_availability(hass: HomeAssistant) -> None:
     """Every platform's entities go unavailable and come back with the bridge."""
-    bridge = SimpleNamespace(uuid="test", is_available=True, active_alarms={}, register_sensor=AsyncMock(), get_mode=AsyncMock(return_value="auto"))
+    bridge = SimpleNamespace(
+        uuid="test",
+        is_available=True,
+        active_alarms={},
+        register_sensor=AsyncMock(),
+        get_mode=AsyncMock(return_value="auto"),
+        is_on_bus=lambda serial_number: True,
+    )
     entities = _entities(bridge)
     for index, entity in enumerate(entities):
         entity.hass = hass
@@ -96,6 +103,24 @@ async def test_entities_follow_the_bridge_availability(hass: HomeAssistant) -> N
     assert [hass.states.get(entity.entity_id).state for entity in entities] == [STATE_UNAVAILABLE] * len(entities)
     async_dispatcher_send(hass, SIGNAL_COMFOCONNECT_AVAILABILITY.format("test"), True)
     assert STATE_UNAVAILABLE not in [hass.states.get(entity.entity_id).state for entity in entities]
+
+
+async def test_co2_sensor_follows_its_node(hass: HomeAssistant) -> None:
+    """A CO2 sensor is unavailable while its node isn't on the bus, also when the bridge is."""
+    on_bus = {"DEMO0007": True}
+    bridge = SimpleNamespace(uuid="test", is_available=True, register_sensor=AsyncMock(), is_on_bus=on_bus.get)
+    entity = ComfoConnectCO2Sensor(bridge, SimpleNamespace(), "DEMO0007", SENSOR_CO2_1)
+    entity.hass = hass
+    entity.entity_id = "sensor.co2"
+    await entity.async_added_to_hass()
+
+    on_bus["DEMO0007"] = False
+    async_dispatcher_send(hass, SIGNAL_COMFOCONNECT_AVAILABILITY.format("test"), True)
+    assert hass.states.get("sensor.co2").state == STATE_UNAVAILABLE
+
+    on_bus["DEMO0007"] = True
+    async_dispatcher_send(hass, SIGNAL_COMFOCONNECT_AVAILABILITY.format("test"), True)
+    assert hass.states.get("sensor.co2").state != STATE_UNAVAILABLE
 
 
 def test_entities_keep_their_unique_id_and_device() -> None:

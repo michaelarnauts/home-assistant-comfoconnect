@@ -648,5 +648,11 @@ class ComfoConnectCO2Sensor(ComfoConnectSensor):
             ),
         )
         # Follow the sensor, since its sensor id shifts when a sensor with a lower node id is removed.
+        self._serial_number = serial_number
         self._attr_unique_id = f"{serial_number}-co2"
         self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, serial_number)})
+
+    @property
+    def available(self) -> bool:
+        """Available while the bridge has a session and the sensor is on the bus."""
+        return super().available and self._ccb.is_on_bus(self._serial_number)
