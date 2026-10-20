@@ -23,7 +23,7 @@ from aiocomfoconnect.properties import (
     Property,
     PropertyConstraints,
 )
-from aiocomfoconnect.sensors import SENSORS, Sensor
+from aiocomfoconnect.sensors import SENSOR_CO2_1, SENSOR_CO2_8, SENSORS, Sensor
 from homeassistant.const import CONF_HOST, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import Entity
@@ -102,6 +102,8 @@ SENSOR_VALUES = {
     419: False,
     784: 0,
     802: 0.0,
+    # The CO2 level of each ComfoNet CO2 sensor.
+    **dict.fromkeys(range(SENSOR_CO2_1, SENSOR_CO2_8 + 1), 650),
 }
 PROPERTY_VALUES = [
     (PROPERTY_TEMPERATURE_PROFILE_MODE, "adaptive"),

@@ -269,6 +269,8 @@ class ComfoConnectBridge(ComfoConnect):
         if node.node_id == self.ventilation_node_id:
             self.device_id = device.id
         self._async_link_node_devices()
+        # The entities of a node that's back on the bus are available again, now that we know its device.
+        async_dispatcher_send(self.hass, SIGNAL_COMFOCONNECT_AVAILABILITY.format(self.uuid), self.is_available)
 
     @callback
     def _async_link_node_devices(self) -> None:
