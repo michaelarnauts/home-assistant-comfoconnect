@@ -35,7 +35,6 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ComfoCo
     data = {
         "entry": entry.data,
         "bridge": {
-            "type": bridge.bridge_type,
             "available": bridge.is_available,
             "connection_state": bridge.connection_state,
         },

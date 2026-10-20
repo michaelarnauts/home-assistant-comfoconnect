@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, Mock
 
 from aiocomfoconnect.bridge import Node
 from aiocomfoconnect.comfoconnect import NodeInfo
-from aiocomfoconnect.const import ConnectionState, GatewayType
+from aiocomfoconnect.const import ConnectionState
 from aiocomfoconnect.exceptions import AioComfoConnectTimeout
 from custom_components.comfoconnect.diagnostics import async_get_config_entry_diagnostics
 from homeassistant.components.diagnostics import REDACTED
@@ -16,7 +16,6 @@ async def test_config_entry_diagnostics(hass: HomeAssistant) -> None:
     entry = Mock(data={"host": "192.0.2.1", "uuid": "00" * 16, "local_uuid": "11" * 16})
     info = NodeInfo("ComfoAirQ", "ComfoAirQ 350", "471502004", "SERIAL123", "R1.12.0", 2, 1)
     bridge = Mock(
-        bridge_type=GatewayType.PRO,
         is_available=True,
         connection_state=ConnectionState.CONNECTED,
         nodes={1: Node(1, 1, 1, 1), 2: Node(2, 5, 1, 1)},
@@ -30,7 +29,7 @@ async def test_config_entry_diagnostics(hass: HomeAssistant) -> None:
 
     assert data == {
         "entry": {"host": REDACTED, "uuid": REDACTED, "local_uuid": REDACTED},
-        "bridge": {"type": GatewayType.PRO, "available": True, "connection_state": "connected"},
+        "bridge": {"available": True, "connection_state": "connected"},
         "nodes": [
             {
                 "node_id": 1,
