@@ -79,6 +79,20 @@
       "sensor_based_ventilation_state": {
         "default": "mdi:auto-fix"
       }
+    },
+    "number": {
+      "airflow_away": {
+        "default": "mdi:home-export-outline"
+      },
+      "airflow_low": {
+        "default": "mdi:fan-speed-1"
+      },
+      "airflow_medium": {
+        "default": "mdi:fan-speed-2"
+      },
+      "airflow_high": {
+        "default": "mdi:fan-speed-3"
+      }
     }
   },
   "services": {

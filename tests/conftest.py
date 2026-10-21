@@ -1,7 +1,7 @@
 """Pytest configuration."""
 
 import sys
-from collections.abc import Generator
+from collections.abc import AsyncGenerator, Generator
 from contextlib import ExitStack
 from pathlib import Path
 from types import SimpleNamespace
@@ -14,6 +14,10 @@ from aiocomfoconnect.comfoconnect import NodeInfo
 from aiocomfoconnect.const import ConnectionState
 from aiocomfoconnect.exceptions import ComfoConnectRmiError
 from aiocomfoconnect.properties import (
+    PROPERTY_FLOW_AWAY,
+    PROPERTY_FLOW_HIGH,
+    PROPERTY_FLOW_LOW,
+    PROPERTY_FLOW_MEDIUM,
     PROPERTY_PROFILE_TEMPERATURE_COOL,
     PROPERTY_PROFILE_TEMPERATURE_NORMAL,
     PROPERTY_PROFILE_TEMPERATURE_WARM,
@@ -113,6 +117,10 @@ PROPERTY_VALUES = [
     (PROPERTY_SENSOR_VENTILATION_HUMIDITY_PROTECTION, "auto"),
 ]
 PROPERTY_CONSTRAINTS = [
+    (PROPERTY_FLOW_AWAY, PropertyConstraints(85, 50, 140, 5)),
+    (PROPERTY_FLOW_LOW, PropertyConstraints(140, 50, 250, 5)),
+    (PROPERTY_FLOW_MEDIUM, PropertyConstraints(250, 50, 500, 5)),
+    (PROPERTY_FLOW_HIGH, PropertyConstraints(420, 250, 500, 5)),
     (PROPERTY_RMOT_HEATING_THRESHOLD, PropertyConstraints(15.0, 0.0, 15.0, 1.0)),
     (PROPERTY_RMOT_COOLING_THRESHOLD, PropertyConstraints(16.0, 15.0, 40.0, 1.0)),
     (PROPERTY_PROFILE_TEMPERATURE_WARM, PropertyConstraints(23.0, 23.0, 28.9, 1.0)),
@@ -133,13 +141,16 @@ def mock_config_entry() -> MockConfigEntry:
 
 
 @pytest.fixture
-def mock_setup_entry() -> Generator[AsyncMock]:
+async def mock_setup_entry(hass: HomeAssistant) -> AsyncGenerator[AsyncMock]:
     """Don't set up the config entry that a flow creates, nor unload it."""
     with (
         patch("custom_components.comfoconnect.async_setup_entry", return_value=True) as setup_entry,
         patch("custom_components.comfoconnect.async_unload_entry", return_value=True),
     ):
         yield setup_entry
+        # Unload the fake loaded entries before restoring the real unload handler.
+        for entry in hass.config_entries.async_entries(DOMAIN):
+            await hass.config_entries.async_unload(entry.entry_id)
 
 
 @pytest.fixture
