@@ -7,6 +7,10 @@ from dataclasses import dataclass
 
 from aiocomfoconnect.exceptions import AioComfoConnectError
 from aiocomfoconnect.properties import (
+    PROPERTY_FLOW_AWAY,
+    PROPERTY_FLOW_HIGH,
+    PROPERTY_FLOW_LOW,
+    PROPERTY_FLOW_MEDIUM,
     PROPERTY_PROFILE_TEMPERATURE_COOL,
     PROPERTY_PROFILE_TEMPERATURE_NORMAL,
     PROPERTY_PROFILE_TEMPERATURE_WARM,
@@ -15,7 +19,7 @@ from aiocomfoconnect.properties import (
     Property,
 )
 from homeassistant.components.number import NumberDeviceClass, NumberEntity, NumberEntityDescription, NumberMode
-from homeassistant.const import UnitOfTemperature
+from homeassistant.const import UnitOfTemperature, UnitOfVolumeFlowRate
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity import EntityCategory
@@ -44,6 +48,38 @@ class ComfoConnectNumberEntityDescription(NumberEntityDescription, ComfoConnectN
 
 
 NUMBER_TYPES = (
+    ComfoConnectNumberEntityDescription(
+        key="airflow_away",
+        translation_key="airflow_away",
+        device_class=NumberDeviceClass.VOLUME_FLOW_RATE,
+        native_unit_of_measurement=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR,
+        mode=NumberMode.BOX,
+        property=PROPERTY_FLOW_AWAY,
+    ),
+    ComfoConnectNumberEntityDescription(
+        key="airflow_low",
+        translation_key="airflow_low",
+        device_class=NumberDeviceClass.VOLUME_FLOW_RATE,
+        native_unit_of_measurement=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR,
+        mode=NumberMode.BOX,
+        property=PROPERTY_FLOW_LOW,
+    ),
+    ComfoConnectNumberEntityDescription(
+        key="airflow_medium",
+        translation_key="airflow_medium",
+        device_class=NumberDeviceClass.VOLUME_FLOW_RATE,
+        native_unit_of_measurement=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR,
+        mode=NumberMode.BOX,
+        property=PROPERTY_FLOW_MEDIUM,
+    ),
+    ComfoConnectNumberEntityDescription(
+        key="airflow_high",
+        translation_key="airflow_high",
+        device_class=NumberDeviceClass.VOLUME_FLOW_RATE,
+        native_unit_of_measurement=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR,
+        mode=NumberMode.BOX,
+        property=PROPERTY_FLOW_HIGH,
+    ),
     ComfoConnectNumberEntityDescription(
         key="rmot_heating",
         translation_key="rmot_heating",
@@ -99,7 +135,7 @@ async def async_setup_entry(
 
 
 class ComfoConnectNumber(ComfoConnectEntity, NumberEntity):
-    """Representation of a ComfoConnect temperature setting."""
+    """Representation of a ComfoConnect numeric setting."""
 
     _attr_entity_category = EntityCategory.CONFIG
     _attr_entity_registry_enabled_default = False
@@ -123,7 +159,7 @@ class ComfoConnectNumber(ComfoConnectEntity, NumberEntity):
             self.async_schedule_update_ha_state(True)
 
     async def async_update(self) -> None:
-        """Read the temperature and its device-specific limits."""
+        """Read the value and its device-specific limits."""
         if not self._ccb.is_available:
             self._attr_available = False
             return
@@ -143,9 +179,13 @@ class ComfoConnectNumber(ComfoConnectEntity, NumberEntity):
         self._attr_available = self._ccb.is_available
 
     async def async_set_native_value(self, value: float) -> None:
-        """Write the temperature, then read back what the unit reports."""
+        """Write the value, then read back what the unit reports."""
+        prop = self.entity_description.property
+        # HA sends floats; unscaled numeric properties use integers on the wire.
+        if prop.scale is None:
+            value = round(value)
         try:
-            await self._ccb.set_property(self.entity_description.property, value)
+            await self._ccb.set_property(prop, value)
         except AioComfoConnectError as err:
             raise HomeAssistantError(
                 translation_domain=DOMAIN, translation_key="set_failed", translation_placeholders={"entity": self.name, "error": str(err)}

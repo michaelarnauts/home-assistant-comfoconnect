@@ -1,12 +1,18 @@
 """Test the number platform."""
 
 from datetime import timedelta
-from unittest.mock import ANY, MagicMock
+from types import SimpleNamespace
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import pytest
+from aiocomfoconnect import ComfoConnect
 from aiocomfoconnect.const import ConnectionState
 from aiocomfoconnect.exceptions import ComfoConnectNotReachable, ComfoConnectRmiError
 from aiocomfoconnect.properties import (
+    PROPERTY_FLOW_AWAY,
+    PROPERTY_FLOW_HIGH,
+    PROPERTY_FLOW_LOW,
+    PROPERTY_FLOW_MEDIUM,
     PROPERTY_PROFILE_TEMPERATURE_COOL,
     PROPERTY_PROFILE_TEMPERATURE_NORMAL,
     PROPERTY_PROFILE_TEMPERATURE_WARM,
@@ -21,13 +27,15 @@ from homeassistant.components.number import ATTR_MAX, ATTR_MIN, ATTR_VALUE, SERV
 from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
 from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed, snapshot_platform
 from syrupy.assertion import SnapshotAssertion
 from tests.conftest import PROPERTY_CONSTRAINTS, set_connection_state
 
 HEATING = "number.comfoairq_heating_rmot_threshold"
+# Keep the real serializer available while the session fixture patches the library's methods.
+SET_PROPERTY = ComfoConnect.set_property
 
 pytestmark = pytest.mark.usefixtures("entity_registry_enabled_by_default")
 
@@ -68,6 +76,10 @@ async def test_entities(
 @pytest.mark.parametrize(
     ("entity_id", "prop"),
     [
+        ("number.comfoairq_away_airflow_target", PROPERTY_FLOW_AWAY),
+        ("number.comfoairq_low_airflow_target", PROPERTY_FLOW_LOW),
+        ("number.comfoairq_medium_airflow_target", PROPERTY_FLOW_MEDIUM),
+        ("number.comfoairq_high_airflow_target", PROPERTY_FLOW_HIGH),
         (HEATING, PROPERTY_RMOT_HEATING_THRESHOLD),
         ("number.comfoairq_cooling_rmot_threshold", PROPERTY_RMOT_COOLING_THRESHOLD),
         ("number.comfoairq_warm_profile_temperature", PROPERTY_PROFILE_TEMPERATURE_WARM),
@@ -78,10 +90,10 @@ async def test_entities(
 async def test_set_value(
     hass: HomeAssistant, mock_comfoconnect: dict[str, MagicMock], init_integration: MockConfigEntry, entity_id: str, prop: Property
 ) -> None:
-    """Test that a value is written in degrees to its own property, and that the state shows what the unit reports after it."""
+    """Test that a value is written in native units to its own property, and that state follows the readback."""
     value = hass.states.get(entity_id).attributes[ATTR_MIN]
     mock_comfoconnect["get_property_constraints"].side_effect = None
-    mock_comfoconnect["get_property_constraints"].return_value = PropertyConstraints(value, value, 40.0, 1.0)
+    mock_comfoconnect["get_property_constraints"].return_value = PropertyConstraints(value, value, value + 40.0, 1.0)
 
     await hass.services.async_call(NUMBER_DOMAIN, SERVICE_SET_VALUE, {ATTR_ENTITY_ID: entity_id, ATTR_VALUE: value}, blocking=True)
     await hass.async_block_till_done()
@@ -99,6 +111,51 @@ async def test_set_value_failed(hass: HomeAssistant, mock_comfoconnect: dict[str
 
     assert failure.value.translation_domain == DOMAIN
     assert failure.value.translation_key == "set_failed"
+
+
+@pytest.mark.parametrize(
+    ("entity_id", "prop", "value"),
+    [
+        ("number.comfoairq_away_airflow_target", PROPERTY_FLOW_AWAY, 90),
+        ("number.comfoairq_low_airflow_target", PROPERTY_FLOW_LOW, 145),
+        ("number.comfoairq_medium_airflow_target", PROPERTY_FLOW_MEDIUM, 255),
+        ("number.comfoairq_high_airflow_target", PROPERTY_FLOW_HIGH, 425),
+        (HEATING, PROPERTY_RMOT_HEATING_THRESHOLD, 12.5),
+    ],
+)
+async def test_set_value_encoded(
+    hass: HomeAssistant,
+    mock_comfoconnect: dict[str, MagicMock],
+    init_integration: MockConfigEntry,
+    entity_id: str,
+    prop: Property,
+    value: float,
+) -> None:
+    """Encode HA's float service values with the real library before sending the RMI command."""
+    mock_comfoconnect["set_property"].side_effect = SET_PROPERTY
+    raw_value = round(value / prop.scale) if prop.scale is not None else int(value)
+    expected = bytes([0x03, prop.unit, prop.subunit, prop.property_id]) + raw_value.to_bytes(2, "little", signed=True)
+
+    with patch.object(ComfoConnect, "cmd_rmi_request", new_callable=AsyncMock, return_value=SimpleNamespace(message=b"")) as rmi_request:
+        await hass.services.async_call(NUMBER_DOMAIN, SERVICE_SET_VALUE, {ATTR_ENTITY_ID: entity_id, ATTR_VALUE: value}, blocking=True)
+        await hass.async_block_till_done()
+
+    rmi_request.assert_awaited_once_with(expected, node_id=None)
+
+
+@pytest.mark.parametrize("value", [49, 141], ids=["below-device-minimum", "above-device-maximum"])
+async def test_airflow_outside_device_limits(
+    hass: HomeAssistant, mock_comfoconnect: dict[str, MagicMock], init_integration: MockConfigEntry, value: int
+) -> None:
+    """Reject an airflow outside the commissioned speed's range before sending a command."""
+    with pytest.raises(ServiceValidationError):
+        await hass.services.async_call(
+            NUMBER_DOMAIN,
+            SERVICE_SET_VALUE,
+            {ATTR_ENTITY_ID: "number.comfoairq_away_airflow_target", ATTR_VALUE: value},
+            blocking=True,
+        )
+    mock_comfoconnect["set_property"].assert_not_awaited()
 
 
 async def test_poll(
