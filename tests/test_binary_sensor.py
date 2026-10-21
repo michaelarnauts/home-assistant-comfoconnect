@@ -113,3 +113,15 @@ async def test_binary_sensor_follows_the_unit(hass: HomeAssistant, init_integrat
     await hass.async_block_till_done()
 
     assert hass.states.get("binary_sensor.comfoairq_cooling_season_active").state == expected
+
+
+async def test_alarms_are_logged(hass: HomeAssistant, caplog: pytest.LogCaptureFixture, init_integration: MockConfigEntry) -> None:
+    """Test that an alarm is logged, but not a report without alarms, which every node sends when a session starts."""
+    push_alarms(init_integration, 2, {})
+    push_alarms(init_integration, 1, {79: "Replace filters"})
+    push_alarms(init_integration, 1, {})
+    await hass.async_block_till_done()
+
+    assert [record.getMessage() for record in caplog.records if record.name == "custom_components.comfoconnect"] == [
+        "Alarm received for Node 1:\n* 79: Replace filters\n"
+    ]
