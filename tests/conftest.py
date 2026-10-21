@@ -1,7 +1,7 @@
 """Pytest configuration."""
 
 import sys
-from collections.abc import Generator
+from collections.abc import AsyncGenerator, Generator
 from contextlib import ExitStack
 from pathlib import Path
 from types import SimpleNamespace
@@ -133,13 +133,16 @@ def mock_config_entry() -> MockConfigEntry:
 
 
 @pytest.fixture
-def mock_setup_entry() -> Generator[AsyncMock]:
+async def mock_setup_entry(hass: HomeAssistant) -> AsyncGenerator[AsyncMock]:
     """Don't set up the config entry that a flow creates, nor unload it."""
     with (
         patch("custom_components.comfoconnect.async_setup_entry", return_value=True) as setup_entry,
         patch("custom_components.comfoconnect.async_unload_entry", return_value=True),
     ):
         yield setup_entry
+        # Unload the fake loaded entries before restoring the real unload handler.
+        for entry in hass.config_entries.async_entries(DOMAIN):
+            await hass.config_entries.async_unload(entry.entry_id)
 
 
 @pytest.fixture
