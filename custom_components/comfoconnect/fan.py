@@ -174,10 +174,7 @@ class ComfoConnectFan(ComfoConnectEntity, FanEntity):
             ) from err
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
-        """Set new preset mode."""
-        if preset_mode not in self.preset_modes:
-            raise ValueError(f"Invalid preset mode: {preset_mode}")
-
+        """Set new preset mode; Home Assistant already rejected one that isn't in preset_modes."""
         _LOGGER.debug("Changing preset mode to %s", preset_mode)
         try:
             await self._ccb.set_mode(preset_mode)

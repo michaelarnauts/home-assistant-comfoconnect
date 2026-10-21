@@ -7,7 +7,7 @@ import voluptuous as vol
 from aiocomfoconnect.exceptions import AioComfoConnectTimeout
 from aiocomfoconnect.sensors import SENSOR_FAN_SPEED_MODE, SENSOR_OPERATING_MODE
 from custom_components.comfoconnect.const import ATTR_DURATION, DOMAIN, SERVICE_START_BOOST
-from homeassistant.components.fan import ATTR_PERCENTAGE, ATTR_PRESET_MODE, SERVICE_SET_PERCENTAGE, SERVICE_SET_PRESET_MODE
+from homeassistant.components.fan import ATTR_PERCENTAGE, ATTR_PRESET_MODE, SERVICE_SET_PERCENTAGE, SERVICE_SET_PRESET_MODE, NotValidPresetModeError
 from homeassistant.components.fan import DOMAIN as FAN_DOMAIN
 from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, SERVICE_TURN_ON, STATE_OFF, STATE_ON, Platform
 from homeassistant.core import HomeAssistant
@@ -147,3 +147,11 @@ async def test_start_boost_failed(hass: HomeAssistant, mock_comfoconnect: dict[s
 
     assert failure.value.translation_key == "start_boost_failed"
     assert str(failure.value) == "Failed to start boost: No answer"
+
+
+async def test_set_invalid_preset_mode(hass: HomeAssistant, mock_comfoconnect: dict[str, MagicMock], init_integration: MockConfigEntry) -> None:
+    """Test that Home Assistant rejects a preset mode the fan doesn't have, before it reaches the unit."""
+    with pytest.raises(NotValidPresetModeError):
+        await hass.services.async_call(FAN_DOMAIN, SERVICE_SET_PRESET_MODE, {ATTR_ENTITY_ID: FAN, ATTR_PRESET_MODE: "away"}, blocking=True)
+
+    mock_comfoconnect["set_mode"].assert_not_awaited()
