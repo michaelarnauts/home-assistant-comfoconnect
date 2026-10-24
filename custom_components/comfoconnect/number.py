@@ -144,6 +144,7 @@ class ComfoConnectNumber(ComfoConnectEntity, NumberEntity):
 
     async def async_set_native_value(self, value: float) -> None:
         """Write the temperature, then read back what the unit reports."""
+        self._ccb.command_sent()
         try:
             await self._ccb.set_property(self.entity_description.property, value)
         except AioComfoConnectError as err:

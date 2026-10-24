@@ -156,6 +156,7 @@ class ComfoConnectFan(ComfoConnectEntity, FanEntity):
         else:
             speed = percentage_to_ordered_list_item(FAN_SPEEDS, percentage)
 
+        self._ccb.command_sent()
         try:
             await self._ccb.set_speed(speed)
         except AioComfoConnectError as err:
@@ -166,6 +167,7 @@ class ComfoConnectFan(ComfoConnectEntity, FanEntity):
     async def async_start_boost(self, duration: timedelta) -> None:
         """Start boost mode for the given duration."""
         _LOGGER.debug("Starting boost for %s", duration)
+        self._ccb.command_sent()
         try:
             await self._ccb.set_boost(True, int(duration.total_seconds()))
         except AioComfoConnectError as err:
@@ -176,6 +178,7 @@ class ComfoConnectFan(ComfoConnectEntity, FanEntity):
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new preset mode; Home Assistant already rejected one that isn't in preset_modes."""
         _LOGGER.debug("Changing preset mode to %s", preset_mode)
+        self._ccb.command_sent()
         try:
             await self._ccb.set_mode(preset_mode)
         except AioComfoConnectError as err:
