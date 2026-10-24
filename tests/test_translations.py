@@ -1,4 +1,4 @@
-"""Every entity is named through its translation key, in English and Dutch."""
+"""Every entity is named through its translation key, in English, Dutch and German."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ def load(name: str) -> dict:
     return json.loads((COMPONENT / name).read_text())["entity"]
 
 
-@pytest.mark.parametrize("name", ["strings.json", "translations/en.json", "translations/nl.json"])
+@pytest.mark.parametrize("name", ["strings.json", "translations/en.json", "translations/nl.json", "translations/de.json"])
 def test_every_entity_and_option_is_translated(name: str) -> None:
     """Each entity has a translated name, and each select option and enum state a translated state."""
     translations = load(name)
@@ -95,11 +95,20 @@ def registered_button(entity_registry: er.EntityRegistry) -> None:
     entity_registry.async_get_or_create(Platform.BUTTON, DOMAIN, BUTTON_UNIQUE_ID, suggested_object_id="comfoairq_cancel_boost")
 
 
-@pytest.mark.parametrize("language", ["nl"])
-async def test_dutch_names_keep_registered_entity_ids(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, in_language: None, registered_button: None, init_integration: MockConfigEntry
+@pytest.mark.parametrize(
+    ("language", "button_name", "sensor_name"),
+    [("nl", "ComfoAirQ Boost annuleren", "ComfoAirQ Binnentemperatuur"), ("de", "ComfoAirQ Party Timer beenden", "ComfoAirQ Innentemperatur")],
+)
+async def test_translated_names_keep_registered_entity_ids(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    in_language: None,
+    registered_button: None,
+    init_integration: MockConfigEntry,
+    button_name: str,
+    sensor_name: str,
 ) -> None:
-    """Test that the names are Dutch in Dutch, and that an entity that is already registered keeps its entity id."""
-    assert hass.states.get("button.comfoairq_cancel_boost").attributes["friendly_name"] == "ComfoAirQ Boost annuleren"
+    """Test that the names are in the language of Home Assistant, and that an entity that is already registered keeps its entity id."""
+    assert hass.states.get("button.comfoairq_cancel_boost").attributes["friendly_name"] == button_name
     sensor = entity_registry.async_get_entity_id(Platform.SENSOR, DOMAIN, SENSOR_UNIQUE_ID)
-    assert hass.states.get(sensor).attributes["friendly_name"] == "ComfoAirQ Binnentemperatuur"
+    assert hass.states.get(sensor).attributes["friendly_name"] == sensor_name

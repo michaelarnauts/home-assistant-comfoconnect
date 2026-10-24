@@ -1,0 +1,410 @@
+{
+    "config": {
+        "error": {
+            "invalid_pin": "Ungültige PIN",
+            "invalid_host": "Unter dieser Adresse wurde keine ComfoConnect-Bridge gefunden",
+            "cannot_connect": "Verbindung zur Bridge fehlgeschlagen. Prüfe, ob sie eingeschaltet und erreichbar ist und nicht gerade von der offiziellen App verwendet wird.",
+            "unknown": "Unerwarteter Fehler"
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "uuid": "Bridge"
+                },
+                "data_description": {
+                    "uuid": "Die in deinem Netzwerk gefundenen Bridges. Wähle die Eingabe einer Adresse, falls deine nicht aufgeführt ist."
+                },
+                "title": "ComfoConnect LAN C Bridge hinzufügen",
+                "description": "Wähle die ComfoConnect LAN C Bridge aus der Liste unten aus."
+            },
+            "manual": {
+                "data": {
+                    "host": "Host"
+                },
+                "data_description": {
+                    "host": "Der Hostname oder die IP-Adresse der Bridge."
+                },
+                "title": "ComfoConnect LAN C Bridge manuell hinzufügen",
+                "description": "Gib unten den Hostnamen oder die IP-Adresse der ComfoConnect LAN C Bridge ein."
+            },
+            "enter_pin": {
+                "title": "PIN eingeben",
+                "description": "Die ausgewählte ComfoConnect LAN C Bridge verwendet nicht die Standard-PIN. Bitte gib die richtige PIN ein.",
+                "data": {
+                    "pin": "PIN"
+                },
+                "data_description": {
+                    "pin": "Die PIN der Bridge, wie in der ComfoControl-App festgelegt. Standardmäßig ist sie 0000."
+                }
+            },
+            "reauth_confirm": {
+                "title": "Erneut registrieren",
+                "description": "Home Assistant ist nicht mehr bei der Bridge unter {host} registriert. Registriere es erneut, um die Verbindung wiederherzustellen; falls die Bridge nicht die Standard-PIN verwendet, wirst du danach gefragt."
+            }
+        },
+        "create_entry": {
+            "default": "Einige Sensoren sind standardmäßig nicht aktiviert. Du kannst sie nach der Einrichtung der Integration in der Entitätsverwaltung aktivieren."
+        },
+        "abort": {
+            "reauth_successful": "Die erneute Authentifizierung war erfolgreich",
+            "cannot_connect": "Verbindung zur Bridge fehlgeschlagen. Prüfe, ob sie eingeschaltet und erreichbar ist und nicht gerade von der offiziellen App verwendet wird.",
+            "already_configured": "Gerät ist bereits konfiguriert",
+            "unknown": "Unerwarteter Fehler"
+        }
+    },
+    "entity": {
+        "binary_sensor": {
+            "heating_season_active": {
+                "name": "Heizperiode aktiv"
+            },
+            "cooling_season_active": {
+                "name": "Kühlperiode aktiv"
+            },
+            "comfofond_ghe_present": {
+                "name": "ComfoFond vorhanden"
+            },
+            "postheater_present": {
+                "name": "Nachheizregister vorhanden"
+            },
+            "comfocool_state": {
+                "name": "ComfoCool Status"
+            },
+            "active_alarms": {
+                "name": "Aktive Alarme"
+            }
+        },
+        "button": {
+            "reset_errors": {
+                "name": "Fehler zurücksetzen"
+            },
+            "cancel_boost": {
+                "name": "Party Timer beenden"
+            },
+            "cancel_away": {
+                "name": "Abwesend beenden"
+            }
+        },
+        "fan": {
+            "ventilation": {
+                "state_attributes": {
+                    "preset_mode": {
+                        "state": {
+                            "auto": "Auto",
+                            "manual": "Manuell"
+                        }
+                    }
+                }
+            }
+        },
+        "number": {
+            "rmot_heating": {
+                "name": "Heizgrenzwert RMOT"
+            },
+            "rmot_cooling": {
+                "name": "Kühlgrenzwert RMOT"
+            },
+            "profile_temperature_warm": {
+                "name": "Festwert Warm"
+            },
+            "profile_temperature_normal": {
+                "name": "Festwert Normal"
+            },
+            "profile_temperature_cool": {
+                "name": "Festwert Kühl"
+            }
+        },
+        "select": {
+            "select_mode": {
+                "name": "Lüftungsmodus",
+                "state": {
+                    "auto": "Auto",
+                    "manual": "Manuell"
+                }
+            },
+            "bypass_mode": {
+                "name": "Bypass-Modus",
+                "state": {
+                    "auto": "Auto",
+                    "on": "Offen",
+                    "off": "Geschlossen"
+                }
+            },
+            "balance_mode": {
+                "name": "Ventilatormodus",
+                "state": {
+                    "balance": "Zu- und Abluft",
+                    "supply_only": "Nur Zuluft",
+                    "exhaust_only": "Nur Abluft"
+                }
+            },
+            "temperature_profile": {
+                "name": "Temperaturprofil",
+                "state": {
+                    "warm": "Warm",
+                    "normal": "Normal",
+                    "cool": "Kühl"
+                }
+            },
+            "temperature_profile_mode": {
+                "name": "Temperaturprofil-Modus",
+                "state": {
+                    "adaptive": "Adaptiv",
+                    "fixed": "Festwert"
+                }
+            },
+            "comfocool": {
+                "name": "ComfoCool-Modus",
+                "state": {
+                    "auto": "Auto",
+                    "off": "Aus"
+                }
+            },
+            "boost_timeout": {
+                "name": "Party Timer",
+                "state": {
+                    "off": "Aus",
+                    "active": "Aktiv",
+                    "10": "10 Minuten",
+                    "20": "20 Minuten",
+                    "30": "30 Minuten",
+                    "40": "40 Minuten",
+                    "50": "50 Minuten",
+                    "60": "60 Minuten"
+                }
+            },
+            "away_timeout": {
+                "name": "Abwesend-Modus",
+                "state": {
+                    "off": "Aus",
+                    "active": "Aktiv",
+                    "10": "10 Minuten",
+                    "20": "20 Minuten",
+                    "30": "30 Minuten",
+                    "40": "40 Minuten",
+                    "50": "50 Minuten",
+                    "60": "60 Minuten",
+                    "120": "2 Stunden",
+                    "480": "8 Stunden",
+                    "1440": "24 Stunden",
+                    "10080": "7 Tage",
+                    "20160": "14 Tage"
+                }
+            },
+            "bypass_timeout": {
+                "name": "Bypass-Timer",
+                "state": {
+                    "off": "Aus",
+                    "active": "Aktiv",
+                    "10": "10 Minuten",
+                    "20": "20 Minuten",
+                    "30": "30 Minuten",
+                    "40": "40 Minuten",
+                    "50": "50 Minuten",
+                    "60": "60 Minuten"
+                }
+            },
+            "sensor_ventmode_temperature_passive": {
+                "name": "Komfortregelung passive Temperatur",
+                "state": {
+                    "auto": "Nur Auto",
+                    "on": "Ein",
+                    "off": "Aus"
+                }
+            },
+            "sensor_ventmode_humidity_comfort": {
+                "name": "Komfortregelung Feuchte",
+                "state": {
+                    "auto": "Nur Auto",
+                    "on": "Ein",
+                    "off": "Aus"
+                }
+            },
+            "sensor_ventmode_humidity_protection": {
+                "name": "Komfortregelung aktiver Feuchteschutz",
+                "state": {
+                    "auto": "Nur Auto",
+                    "on": "Ein",
+                    "off": "Aus"
+                }
+            }
+        },
+        "sensor": {
+            "outside_humidity_after_preheater": {
+                "name": "Außenluftfeuchtigkeit nach Vorheizregister"
+            },
+            "inside_temperature": {
+                "name": "Innentemperatur"
+            },
+            "inside_humidity": {
+                "name": "Innenluftfeuchtigkeit"
+            },
+            "current_rmot": {
+                "name": "RMOT aktuell"
+            },
+            "target_temperature": {
+                "name": "Solltemperatur"
+            },
+            "outside_temperature": {
+                "name": "Außenlufttemperatur"
+            },
+            "outside_humidity": {
+                "name": "Außenluftfeuchtigkeit"
+            },
+            "supply_temperature": {
+                "name": "Zulufttemperatur"
+            },
+            "supply_humidity": {
+                "name": "Zuluftfeuchtigkeit"
+            },
+            "supply_fan_speed": {
+                "name": "Drehzahl Zuluftventilator"
+            },
+            "supply_fan_duty": {
+                "name": "Leistung Zuluftventilator"
+            },
+            "exhaust_fan_speed": {
+                "name": "Drehzahl Abluftventilator"
+            },
+            "exhaust_fan_duty": {
+                "name": "Leistung Abluftventilator"
+            },
+            "exhaust_temperature": {
+                "name": "Fortlufttemperatur"
+            },
+            "exhaust_humidity": {
+                "name": "Fortluftfeuchtigkeit"
+            },
+            "supply_airflow": {
+                "name": "Luftmenge Zuluft"
+            },
+            "exhaust_airflow": {
+                "name": "Luftmenge Abluft"
+            },
+            "bypass_state": {
+                "name": "Status Bypass"
+            },
+            "days_to_replace_filter": {
+                "name": "Tage bis Filterwechsel"
+            },
+            "ventilation_current_power_usage": {
+                "name": "Stromverbrauch Lüftung aktuell"
+            },
+            "ventilation_total_energy_usage": {
+                "name": "Energieverbrauch Lüftung insgesamt"
+            },
+            "preheater_current_power_usage": {
+                "name": "Stromverbrauch Vorheizregister aktuell"
+            },
+            "preheater_total_energy_usage": {
+                "name": "Energieverbrauch Vorheizregister insgesamt"
+            },
+            "analog_input_1": {
+                "name": "Analogeingang 1"
+            },
+            "analog_input_2": {
+                "name": "Analogeingang 2"
+            },
+            "analog_input_3": {
+                "name": "Analogeingang 3"
+            },
+            "analog_input_4": {
+                "name": "Analogeingang 4"
+            },
+            "airflow_constraint": {
+                "name": "Luftmengenbegrenzung"
+            },
+            "comfofond_ghe_state": {
+                "name": "ComfoFond Status"
+            },
+            "comfofond_ground_temperature": {
+                "name": "ComfoFond Soletemperatur"
+            },
+            "comfofond_outdoor_air_temperature": {
+                "name": "ComfoFond Außenlufttemperatur"
+            },
+            "comfocool_condensor_temperature": {
+                "name": "ComfoCool Kondensatortemperatur"
+            },
+            "ventilation_year_energy_usage": {
+                "name": "Energieverbrauch Lüftung seit Jahresbeginn"
+            },
+            "preheater_year_energy_usage": {
+                "name": "Energieverbrauch Vorheizregister seit Jahresbeginn"
+            },
+            "avoided_heating_power": {
+                "name": "Einsparung Heizen aktuell"
+            },
+            "avoided_heating_year_energy": {
+                "name": "Einsparung Heizen dieses Jahr"
+            },
+            "avoided_heating_total_energy": {
+                "name": "Einsparung Heizen gesamt"
+            },
+            "avoided_cooling_power": {
+                "name": "Einsparung Kühlen aktuell"
+            },
+            "avoided_cooling_year_energy": {
+                "name": "Einsparung Kühlen dieses Jahr"
+            },
+            "avoided_cooling_total_energy": {
+                "name": "Einsparung Kühlen gesamt"
+            },
+            "postheater_state": {
+                "name": "Status Nachheizregister"
+            },
+            "temperature_before_postheater": {
+                "name": "Temperatur vor Nachheizregister"
+            },
+            "sensor_based_ventilation_state": {
+                "name": "Status Komfortregelung",
+                "state": {
+                    "disabled": "Deaktiviert",
+                    "active": "Aktiv",
+                    "overruling": "Übersteuert"
+                }
+            }
+        }
+    },
+    "selector": {
+        "bridge": {
+            "options": {
+                "manual": "Adresse einer Bridge eingeben"
+            }
+        }
+    },
+    "services": {
+        "start_boost": {
+            "name": "Party Timer starten",
+            "description": "Startet den Party Timer für eine frei wählbare Dauer. Mit der Schaltfläche „Party Timer beenden“ oder der Option „Aus“ der Auswahl „Party Timer“ beendest du ihn vorzeitig.",
+            "fields": {
+                "duration": {
+                    "name": "Dauer",
+                    "description": "Wie lange der Party Timer läuft."
+                }
+            }
+        }
+    },
+    "exceptions": {
+        "access_denied": {
+            "message": "Die Bridge hat den Zugriff verweigert. Registriere Home Assistant erneut bei der Bridge."
+        },
+        "device_info_failed": {
+            "message": "Die Bridge hat ihre Geräteinformationen nicht geliefert."
+        },
+        "set_failed": {
+            "message": "{entity} konnte nicht gesetzt werden: {error}"
+        },
+        "press_failed": {
+            "message": "{entity} konnte nicht gedrückt werden: {error}"
+        },
+        "set_speed_failed": {
+            "message": "Die Lüftungsstufe konnte nicht gesetzt werden: {error}"
+        },
+        "set_preset_mode_failed": {
+            "message": "Der Lüftungsmodus konnte nicht gesetzt werden: {error}"
+        },
+        "start_boost_failed": {
+            "message": "Der Party Timer konnte nicht gestartet werden: {error}"
+        }
+    }
+}
