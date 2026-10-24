@@ -16,7 +16,7 @@ from custom_components.comfoconnect.const import DOMAIN
 from custom_components.comfoconnect.fan import PRESET_MODES, ComfoConnectFan
 from custom_components.comfoconnect.number import NUMBER_TYPES
 from custom_components.comfoconnect.select import SELECT_TYPES
-from custom_components.comfoconnect.sensor import SENSOR_TYPES
+from custom_components.comfoconnect.sensor import SENSOR_TYPES, ComfoConnectPresetEndSensor
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
@@ -52,6 +52,7 @@ def test_every_entity_and_option_is_translated(name: str) -> None:
             assert all(TRANSLATION_KEY.match(option) for option in options)
             assert set(options) <= set(translations[platform][description.translation_key].get("state", {}))
     assert translations["binary_sensor"][ComfoConnectAlarmBinarySensor(bridge).translation_key]["name"]
+    assert translations["sensor"][ComfoConnectPresetEndSensor(bridge).translation_key]["name"]
     fan = translations["fan"][ComfoConnectFan(bridge, None).translation_key]
     assert set(fan["state_attributes"]["preset_mode"]["state"]) == set(PRESET_MODES)
     if name == "translations/en.json":
