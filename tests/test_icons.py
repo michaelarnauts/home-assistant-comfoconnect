@@ -10,7 +10,7 @@ from custom_components.comfoconnect.button import BUTTON_TYPES
 from custom_components.comfoconnect.fan import ComfoConnectFan
 from custom_components.comfoconnect.number import NUMBER_TYPES
 from custom_components.comfoconnect.select import SELECT_TYPES
-from custom_components.comfoconnect.sensor import SENSOR_TYPES
+from custom_components.comfoconnect.sensor import SENSOR_TYPES, ComfoConnectPresetEndSensor
 
 ICONS = json.loads((Path(__file__).parent.parent / "custom_components" / "comfoconnect" / "icons.json").read_text())
 
@@ -27,6 +27,7 @@ def test_icons_belong_to_entities_and_not_to_the_code() -> None:
     }
     keys = {platform: {description.translation_key for description in items} for platform, items in descriptions.items()}
     keys["binary_sensor"].add(ComfoConnectAlarmBinarySensor(bridge).translation_key)
+    keys["sensor"].add(ComfoConnectPresetEndSensor(bridge).translation_key)
     keys["fan"] = {ComfoConnectFan(bridge, None).translation_key}
 
     for platform, icons in ICONS["entity"].items():

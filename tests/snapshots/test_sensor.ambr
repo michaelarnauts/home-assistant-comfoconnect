@@ -1,4 +1,121 @@
 # serializer version: 1
+# name: test_entities[sensor.comfoairq_active_preset-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': dict({
+      <SensorEntityCapabilityAttribute.OPTIONS: 'options'>: list([
+        'auto',
+        'temporary_override',
+        'manual',
+        'boost',
+        'away',
+      ]),
+    }),
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': None,
+    'entity_id': 'sensor.comfoairq_active_preset',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Active preset',
+    'options': dict({
+    }),
+    'original_device_class': <SensorDeviceClass.ENUM: 'enum'>,
+    'original_icon': None,
+    'original_name': 'Active preset',
+    'platform': 'comfoconnect',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'active_preset',
+    'unique_id': '00000000000000000000000000000000-49',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[sensor.comfoairq_active_preset-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'enum',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'ComfoAirQ Active preset',
+      <SensorEntityCapabilityAttribute.OPTIONS: 'options'>: list([
+        'auto',
+        'temporary_override',
+        'manual',
+        'boost',
+        'away',
+      ]),
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.comfoairq_active_preset',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'auto',
+  })
+# ---
+# name: test_entities[sensor.comfoairq_active_preset_end-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': None,
+    'entity_id': 'sensor.comfoairq_active_preset_end',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Active preset end',
+    'options': dict({
+    }),
+    'original_device_class': <SensorDeviceClass.TIMESTAMP: 'timestamp'>,
+    'original_icon': None,
+    'original_name': 'Active preset end',
+    'platform': 'comfoconnect',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'active_preset_end',
+    'unique_id': '00000000000000000000000000000000-active_preset_end',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[sensor.comfoairq_active_preset_end-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'timestamp',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'ComfoAirQ Active preset end',
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.comfoairq_active_preset_end',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'unknown',
+  })
+# ---
 # name: test_entities[sensor.comfoairq_airflow_constraint-entry]
   EntityRegistryEntrySnapshot({
     'aliases': list([

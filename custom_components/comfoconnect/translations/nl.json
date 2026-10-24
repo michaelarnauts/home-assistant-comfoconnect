@@ -362,6 +362,19 @@
                     "active": "Actief",
                     "overruling": "Heeft voorrang"
                 }
+            },
+            "active_preset": {
+                "name": "Actieve modus",
+                "state": {
+                    "auto": "Auto",
+                    "temporary_override": "Tijdelijk aangepast",
+                    "manual": "Manueel",
+                    "boost": "Boost",
+                    "away": "Afwezig"
+                }
+            },
+            "active_preset_end": {
+                "name": "Einde actieve modus"
             }
         }
     },
