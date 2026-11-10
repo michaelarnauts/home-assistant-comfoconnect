@@ -370,6 +370,13 @@
             "options": {
                 "manual": "Het adres van een gateway invullen"
             }
+        },
+        "alarm_notifications": {
+            "options": {
+                "off": "Uit",
+                "faults": "Alleen storingen",
+                "faults_and_maintenance": "Storingen en onderhoud"
+            }
         }
     },
     "services": {
@@ -405,6 +412,17 @@
         },
         "start_boost_failed": {
             "message": "Starten van de boostmodus is mislukt: {error}"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Alarmmeldingen",
+                "description": "Kies welke alarmen in het meldingenpaneel van Home Assistant verschijnen. Filterherinneringen zijn onderhoud. Alarmsensoren en gebeurtenissen blijven bij elke keuze beschikbaar. Wijzigingen gelden direct.",
+                "data": {
+                    "alarm_notifications": "Ingebouwde meldingen"
+                }
+            }
         }
     }
 }

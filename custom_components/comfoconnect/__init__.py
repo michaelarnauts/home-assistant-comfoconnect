@@ -30,6 +30,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.typing import ConfigType
 
 from .const import ATTR_DURATION, CONF_LOCAL_UUID, CONF_UUID, DOMAIN, PRODUCT_MODELS, SERVICE_START_BOOST
+from .notifications import CONF_ALARM_NOTIFICATIONS, DATA_NOTIFICATIONS, AlarmNotificationMode, AlarmNotifications
 
 PLATFORMS: list[Platform] = [
     Platform.FAN,
@@ -122,8 +123,15 @@ def node_device_info(node: Node, info: NodeInfo | None) -> dict[str, str | None]
 async def async_setup_entry(hass: HomeAssistant, entry: ComfoConnectConfigEntry) -> bool:
     """Set up Zehnder ComfoConnect from a config entry."""
 
+    # Retain confirmed alarms and dismissal state for the config entry's lifetime.
+    controllers = hass.data.setdefault(DATA_NOTIFICATIONS, {})
+    if (notifications := controllers.get(entry.entry_id)) is None:
+        notifications = controllers[entry.entry_id] = AlarmNotifications(hass, entry.data[CONF_UUID])
+        notifications.listen_to_options(entry)
+    notifications.set_mode(entry.options.get(CONF_ALARM_NOTIFICATIONS, AlarmNotificationMode.OFF))
+
     try:
-        bridge = ComfoConnectBridge(hass, entry, entry.data[CONF_HOST])
+        bridge = ComfoConnectBridge(hass, entry, entry.data[CONF_HOST], notifications)
         await bridge.connect(entry.data[CONF_LOCAL_UUID])
 
     except ComfoConnectNotAllowed:
@@ -144,7 +152,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ComfoConnectConfigEntry)
             raise ConfigEntryNotReady from err
 
         # Try again, with the updated host this time
-        bridge = ComfoConnectBridge(hass, entry, discovered_bridge.host)
+        bridge = ComfoConnectBridge(hass, entry, discovered_bridge.host, notifications)
         try:
             await bridge.connect(entry.data[CONF_LOCAL_UUID])
 
@@ -196,6 +204,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ComfoConnectConfigEntry)
     return True
 
 
+async def async_remove_entry(hass: HomeAssistant, entry: ComfoConnectConfigEntry) -> None:
+    """Release this entry's notification and options listener."""
+    if notifications := hass.data.get(DATA_NOTIFICATIONS, {}).pop(entry.entry_id, None):
+        notifications.close()
+
+
 async def async_unload_entry(hass: HomeAssistant, entry: ComfoConnectConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
@@ -215,7 +229,7 @@ async def async_remove_config_entry_device(hass: HomeAssistant, entry: ComfoConn
 class ComfoConnectBridge(ComfoConnect):
     """Representation of a ComfoConnect bridge."""
 
-    def __init__(self, hass: HomeAssistant, entry: ComfoConnectConfigEntry, host: str):
+    def __init__(self, hass: HomeAssistant, entry: ComfoConnectConfigEntry, host: str, notifications: AlarmNotifications | None = None):
         """Initialize the ComfoConnect bridge of a config entry."""
         super().__init__(
             host,
@@ -227,6 +241,7 @@ class ComfoConnectBridge(ComfoConnect):
         )
         self.hass = hass
         self.entry = entry
+        self.notifications = notifications or AlarmNotifications(hass, entry.data[CONF_UUID])
         # Latest alarms per node; a node is missing until it has reported.
         self.active_alarms: dict[int, dict[int, str]] = {}
         # The ventilation unit's device, known once setup has registered it.
@@ -352,6 +367,7 @@ class ComfoConnectBridge(ComfoConnect):
             )
 
         # Every node reports its alarms when a session starts, mostly none.
+        self.notifications.update(node_id, errors)
         if not errors:
             return
         message = f"Alarm received for Node {node_id}:\n"
