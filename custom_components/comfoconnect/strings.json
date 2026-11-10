@@ -111,6 +111,18 @@
       },
       "profile_temperature_cool": {
         "name": "Cool profile temperature"
+      },
+      "airflow_away": {
+        "name": "Away airflow target"
+      },
+      "airflow_low": {
+        "name": "Low airflow target"
+      },
+      "airflow_medium": {
+        "name": "Medium airflow target"
+      },
+      "airflow_high": {
+        "name": "High airflow target"
       }
     },
     "select": {

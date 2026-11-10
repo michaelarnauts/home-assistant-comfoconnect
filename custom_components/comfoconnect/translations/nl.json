@@ -111,6 +111,18 @@
             },
             "profile_temperature_cool": {
                 "name": "Temperatuur profiel koel"
+            },
+            "airflow_away": {
+                "name": "Luchtdebiet afwezig"
+            },
+            "airflow_low": {
+                "name": "Luchtdebiet laag"
+            },
+            "airflow_medium": {
+                "name": "Luchtdebiet midden"
+            },
+            "airflow_high": {
+                "name": "Luchtdebiet hoog"
             }
         },
         "select": {

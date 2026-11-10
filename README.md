@@ -66,6 +66,12 @@ The `comfoconnect_alarm` event reports changed alarms and clears per node. Its p
 
 Enable the Heating RMOT threshold and Cooling RMOT threshold number entities to configure the running mean outdoor temperature limits used for heating and cooling. The entities use the minimum, maximum, and step reported by the unit and are disabled by default.
 
+### Airflow targets
+
+Enable the Away, Low, Medium and High airflow target number entities to configure the airflow of each fan speed in m³/h. They are disabled by default and use the minimum, maximum and step reported by the unit. Writing a value changes that speed's stored airflow setting; it does not select the speed.
+
+These are the installer's commissioned settings. Record the existing values before changing them, since they affect the ventilation balance.
+
 ### Profile temperatures
 
 Enable the Warm, Normal and Cool profile temperature number entities to configure the comfort temperature of each temperature profile. The unit only uses them when Temperature Profile Mode is `fixed`; in `adaptive` mode it derives the comfort temperature from the RMOT, but it still stores the values. The Target temperature sensor shows the comfort temperature the unit is currently using. Like the RMOT thresholds, they are disabled by default.
