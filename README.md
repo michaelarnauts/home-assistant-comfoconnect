@@ -30,7 +30,7 @@ This integration supports the following additional features over the existing in
 * Changes to fan speed won't be reverted after 2 hours
 * Support to clear alarms
 * Ignores invalid sensor values at the beginning of a session (Workaround for bridge firmware bug)
-* Throttles high frequency sensor updates (airflow & fan duty) to once every 10 seconds
+* Throttles high frequency sensor updates (airflow & fan duty) to once every 10 seconds, except for a minute after a command from Home Assistant, while the fans ramp
 
 **Note: Not all sensors are enabled by default. You can enable them on the integration page.**
 

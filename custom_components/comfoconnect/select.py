@@ -387,6 +387,7 @@ class ComfoConnectSelect(ComfoConnectEntity, SelectEntity):
 
     async def async_select_option(self, option: str) -> None:
         """Set the selected option."""
+        self._ccb.command_sent()
         try:
             await self.entity_description.set_value_fn(self._ccb, option)
             if TIMER_ACTIVE in self.entity_description.options:

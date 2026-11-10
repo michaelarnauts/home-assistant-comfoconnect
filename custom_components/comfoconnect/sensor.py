@@ -591,7 +591,8 @@ class ComfoConnectSensor(ComfoConnectEntity, SensorEntity):
             self.entity_description.key,
         )
 
-        # A throttled sensor writes its first update at once, then at most once per cooldown, and always ends with its latest value.
+        # A throttled sensor writes its first update at once, then at most once per cooldown, and always ends with its latest value;
+        # shortly after a command from Home Assistant it writes every update.
         if self.entity_description.throttle:
             self._debouncer = Debouncer(
                 self.hass,
@@ -625,7 +626,7 @@ class ComfoConnectSensor(ComfoConnectEntity, SensorEntity):
             self._attr_native_value = self.entity_description.mapping(value)
         else:
             self._attr_native_value = value
-        if self._debouncer:
+        if self._debouncer and not self._ccb.fast_updates:
             self._debouncer.async_schedule_call()
         else:
             self.async_write_ha_state()

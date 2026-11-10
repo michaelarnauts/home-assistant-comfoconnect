@@ -87,6 +87,7 @@ class ComfoConnectButton(ComfoConnectEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         """Press the button."""
+        self._ccb.command_sent()
         try:
             await self.entity_description.press_fn(self._ccb, self._attr_unique_id)
         except AioComfoConnectError as err:

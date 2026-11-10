@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from datetime import timedelta
 
 import voluptuous as vol
@@ -55,6 +56,9 @@ type ComfoConnectConfigEntry = ConfigEntry[ComfoConnectBridge]
 
 # The unit takes a timer duration in whole seconds, as a signed 32-bit number.
 MAX_TIMER_DURATION = timedelta(seconds=2**31 - 1)
+
+# The fans ramp for about half a minute after a command, so the busy sensors write every update for a while after one.
+FAST_UPDATES_AFTER_COMMAND = timedelta(seconds=60)
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -236,6 +240,8 @@ class ComfoConnectBridge(ComfoConnect):
         self.node_devices: dict[int, tuple[Node, str, str | None]] = {}
         self.add_node_devices = False
         self.is_available = True
+        # Until when the busy sensors write every update, in time.monotonic(), after a command from Home Assistant.
+        self.fast_updates_until = 0.0
 
     async def async_add_node_device(self, node: Node, info: NodeInfo | None = None) -> None:
         """Add the device of a node, with what it tells about itself, and link it to the bridge."""
@@ -311,6 +317,16 @@ class ComfoConnectBridge(ComfoConnect):
         self.set_available(state == ConnectionState.CONNECTED)
         if state == ConnectionState.NOT_ALLOWED:
             self.entry.async_start_reauth(self.hass)
+
+    @callback
+    def command_sent(self) -> None:
+        """Let the busy sensors write every update for a while, since the unit changes after a command from Home Assistant."""
+        self.fast_updates_until = time.monotonic() + FAST_UPDATES_AFTER_COMMAND.total_seconds()
+
+    @property
+    def fast_updates(self) -> bool:
+        """Return whether the busy sensors write every update, since a command from Home Assistant was sent shortly before."""
+        return time.monotonic() < self.fast_updates_until
 
     @callback
     def set_available(self, available: bool) -> None:
