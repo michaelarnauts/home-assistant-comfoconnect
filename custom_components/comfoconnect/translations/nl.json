@@ -362,6 +362,30 @@
                     "active": "Actief",
                     "overruling": "Heeft voorrang"
                 }
+            },
+            "outside_dew_point": {
+                "name": "Buitenlucht dauwpunt"
+            },
+            "outside_absolute_humidity": {
+                "name": "Buitenlucht absolute luchtvochtigheid"
+            },
+            "supply_dew_point": {
+                "name": "Toevoerlucht dauwpunt"
+            },
+            "supply_absolute_humidity": {
+                "name": "Toevoerlucht absolute luchtvochtigheid"
+            },
+            "inside_dew_point": {
+                "name": "Binnenlucht dauwpunt"
+            },
+            "inside_absolute_humidity": {
+                "name": "Binnenlucht absolute luchtvochtigheid"
+            },
+            "exhaust_dew_point": {
+                "name": "Afvoerlucht dauwpunt"
+            },
+            "exhaust_absolute_humidity": {
+                "name": "Afvoerlucht absolute luchtvochtigheid"
             }
         }
     },

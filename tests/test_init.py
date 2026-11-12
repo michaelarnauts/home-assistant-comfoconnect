@@ -19,6 +19,7 @@ from aiocomfoconnect.exceptions import (
     VentilationUnitNotFoundException,
 )
 from custom_components.comfoconnect.const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN
+from custom_components.comfoconnect.sensor import CALCULATED_SENSOR_TYPES
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.config_entries import SOURCE_IMPORT, SOURCE_REAUTH, ConfigEntryState
 from homeassistant.const import CONF_HOST, EVENT_HOMEASSISTANT_STOP, STATE_UNAVAILABLE
@@ -238,7 +239,9 @@ async def test_entities_follow_the_session(
     set_connection_state(init_integration, ConnectionState.CONNECTED)
     set_connection_state(init_integration, ConnectionState.CONNECTED)
     await hass.async_block_till_done()
-    assert STATE_UNAVAILABLE not in {hass.states.get(entity_id).state for entity_id in entity_ids}
+    # Calculated sensors wait for fresh readings from both inputs after reconnecting.
+    calculated_ids = {f"sensor.comfoairq_{description.key}" for description in CALCULATED_SENSOR_TYPES}
+    assert STATE_UNAVAILABLE not in {hass.states.get(entity_id).state for entity_id in entity_ids if entity_id not in calculated_ids}
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")

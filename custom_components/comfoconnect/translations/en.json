@@ -362,6 +362,30 @@
                     "active": "Active",
                     "overruling": "Overruling"
                 }
+            },
+            "outside_dew_point": {
+                "name": "Outside dew point"
+            },
+            "outside_absolute_humidity": {
+                "name": "Outside absolute humidity"
+            },
+            "supply_dew_point": {
+                "name": "Supply dew point"
+            },
+            "supply_absolute_humidity": {
+                "name": "Supply absolute humidity"
+            },
+            "inside_dew_point": {
+                "name": "Inside dew point"
+            },
+            "inside_absolute_humidity": {
+                "name": "Inside absolute humidity"
+            },
+            "exhaust_dew_point": {
+                "name": "Exhaust dew point"
+            },
+            "exhaust_absolute_humidity": {
+                "name": "Exhaust absolute humidity"
             }
         }
     },

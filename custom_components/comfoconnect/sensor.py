@@ -6,6 +6,8 @@ import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import timedelta
+from functools import partial
+from math import exp, isfinite, log
 
 from aiocomfoconnect.sensors import (
     SENSOR_AIRFLOW_CONSTRAINTS,
@@ -65,6 +67,7 @@ from homeassistant.components.sensor import (
 from homeassistant.const import (
     PERCENTAGE,
     REVOLUTIONS_PER_MINUTE,
+    UnitOfDensity,
     UnitOfElectricPotential,
     UnitOfEnergy,
     UnitOfPower,
@@ -545,6 +548,35 @@ SENSOR_TYPES = (
 )
 
 
+@dataclass(kw_only=True)
+class ComfoConnectCalculatedSensorDescription(SensorEntityDescription):
+    """A moisture measurement from one air stream's temperature and humidity."""
+
+    temperature_sensor: int
+    humidity_sensor: int
+
+
+CALCULATED_SENSOR_TYPES = tuple(
+    ComfoConnectCalculatedSensorDescription(
+        key=f"{stream}_{measurement}",
+        translation_key=f"{stream}_{measurement}",
+        device_class=SensorDeviceClass.TEMPERATURE if measurement == "dew_point" else SensorDeviceClass.ABSOLUTE_HUMIDITY,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS if measurement == "dew_point" else UnitOfDensity.GRAMS_PER_CUBIC_METER,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+        temperature_sensor=temperature,
+        humidity_sensor=humidity,
+    )
+    for stream, temperature, humidity in (
+        ("outside", SENSOR_TEMPERATURE_OUTDOOR, SENSOR_HUMIDITY_OUTDOOR),
+        ("supply", SENSOR_TEMPERATURE_SUPPLY, SENSOR_HUMIDITY_SUPPLY),
+        ("inside", SENSOR_TEMPERATURE_EXTRACT, SENSOR_HUMIDITY_EXTRACT),
+        ("exhaust", SENSOR_TEMPERATURE_EXHAUST, SENSOR_HUMIDITY_EXHAUST),
+    )
+    for measurement in ("dew_point", "absolute_humidity")
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ComfoConnectConfigEntry,
@@ -561,6 +593,7 @@ async def async_setup_entry(
         if node_id in ccb.node_devices
     ]
 
+    sensors += [ComfoConnectCalculatedSensor(ccb, description) for description in CALCULATED_SENSOR_TYPES]
     async_add_entities(sensors)
 
 
@@ -609,7 +642,7 @@ class ComfoConnectSensor(ComfoConnectEntity, SensorEntity):
                 self._handle_update,
             )
         )
-        await self._ccb.register_sensor(self.entity_description.ccb_sensor)
+        await self._ccb.async_register_sensor_once(self.entity_description.ccb_sensor)
 
     @callback
     def _handle_update(self, value):
@@ -657,3 +690,69 @@ class ComfoConnectCO2Sensor(ComfoConnectSensor):
     def available(self) -> bool:
         """Available while the bridge has a session and the sensor is on the bus."""
         return super().available and self._ccb.is_on_bus(self._serial_number)
+
+
+class ComfoConnectCalculatedSensor(ComfoConnectEntity, SensorEntity):
+    """Dew point or absolute humidity, updated by either input directly from the bridge."""
+
+    _attr_should_poll = False
+    entity_description: ComfoConnectCalculatedSensorDescription
+
+    def __init__(self, ccb: ComfoConnectBridge, description: ComfoConnectCalculatedSensorDescription) -> None:
+        """Initialize a calculated measurement on the ventilation unit."""
+        super().__init__(ccb)
+        self.entity_description = description
+        self._attr_unique_id = f"{ccb.uuid}-{description.key}"
+        self._inputs: dict[int, float | None] = {}
+
+    @property
+    def available(self) -> bool:
+        """Both inputs must be valid, and the bridge must have a session."""
+        return super().available and self.native_value is not None
+
+    @callback
+    def _handle_availability(self, available: bool) -> None:
+        """Discard the previous session's inputs when the bridge disconnects."""
+        if not available:
+            self._inputs.clear()
+            self._attr_native_value = None
+        super()._handle_availability(available)
+
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to both inputs, even if their standalone entities are disabled."""
+        await super().async_added_to_hass()
+        for sensor_id in (self.entity_description.temperature_sensor, self.entity_description.humidity_sensor):
+            self.async_on_remove(
+                async_dispatcher_connect(
+                    self.hass,
+                    SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(self._ccb.uuid, sensor_id),
+                    partial(self._handle_input, sensor_id),
+                )
+            )
+            await self._ccb.async_register_sensor_once(SENSORS[sensor_id])
+
+    @callback
+    def _handle_input(self, sensor_id: int, value: float | None) -> None:
+        """Calculate from the latest pair, clearing the result when either input is invalid."""
+        self._inputs[sensor_id] = value
+        temperature = self._inputs.get(self.entity_description.temperature_sensor)
+        humidity = self._inputs.get(self.entity_description.humidity_sensor)
+        self._attr_native_value = None
+        # Magnus approximation over water, supported from -45 to 60 °C.
+        # https://www.npl.co.uk/resources/q-a/dew-point-and-relative-humidity
+        if (
+            isinstance(temperature, (int, float))
+            and isinstance(humidity, (int, float))
+            and isfinite(temperature)
+            and isfinite(humidity)
+            and -45 <= temperature <= 60
+            and 0 <= humidity <= 100
+        ):
+            exponent = 17.62 * temperature / (243.12 + temperature)
+            if self.device_class == SensorDeviceClass.ABSOLUTE_HUMIDITY:
+                # Ideal gas relation: vapor pressure in hPa to water density in g/m³.
+                self._attr_native_value = 216.7 * (humidity / 100 * 6.112 * exp(exponent)) / (273.15 + temperature)
+            elif humidity > 0:
+                gamma = log(humidity / 100) + exponent
+                self._attr_native_value = 243.12 * gamma / (17.62 - gamma)
+        self.async_write_ha_state()

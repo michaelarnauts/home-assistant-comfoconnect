@@ -362,6 +362,30 @@
                     "active": "Aktiv",
                     "overruling": "Übersteuert"
                 }
+            },
+            "outside_dew_point": {
+                "name": "Außenluft Taupunkt"
+            },
+            "outside_absolute_humidity": {
+                "name": "Außenluft absolute Luftfeuchtigkeit"
+            },
+            "supply_dew_point": {
+                "name": "Zuluft Taupunkt"
+            },
+            "supply_absolute_humidity": {
+                "name": "Zuluft absolute Luftfeuchtigkeit"
+            },
+            "inside_dew_point": {
+                "name": "Innenluft Taupunkt"
+            },
+            "inside_absolute_humidity": {
+                "name": "Innenluft absolute Luftfeuchtigkeit"
+            },
+            "exhaust_dew_point": {
+                "name": "Fortluft Taupunkt"
+            },
+            "exhaust_absolute_humidity": {
+                "name": "Fortluft absolute Luftfeuchtigkeit"
             }
         }
     },
