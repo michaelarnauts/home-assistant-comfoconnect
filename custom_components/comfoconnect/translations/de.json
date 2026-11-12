@@ -364,28 +364,28 @@
                 }
             },
             "outside_dew_point": {
-                "name": "Außenluft Taupunkt"
+                "name": "Taupunkt Außenluft"
             },
             "outside_absolute_humidity": {
-                "name": "Außenluft absolute Luftfeuchtigkeit"
+                "name": "Absolute Feuchte Außenluft"
             },
             "supply_dew_point": {
-                "name": "Zuluft Taupunkt"
+                "name": "Taupunkt Zuluft"
             },
             "supply_absolute_humidity": {
-                "name": "Zuluft absolute Luftfeuchtigkeit"
+                "name": "Absolute Feuchte Zuluft"
             },
             "inside_dew_point": {
-                "name": "Innenluft Taupunkt"
+                "name": "Taupunkt Innenluft"
             },
             "inside_absolute_humidity": {
-                "name": "Innenluft absolute Luftfeuchtigkeit"
+                "name": "Absolute Feuchte Innenluft"
             },
             "exhaust_dew_point": {
-                "name": "Fortluft Taupunkt"
+                "name": "Taupunkt Fortluft"
             },
             "exhaust_absolute_humidity": {
-                "name": "Fortluft absolute Luftfeuchtigkeit"
+                "name": "Absolute Feuchte Fortluft"
             }
         }
     },
