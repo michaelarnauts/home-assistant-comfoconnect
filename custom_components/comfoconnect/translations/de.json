@@ -362,6 +362,20 @@
                     "active": "Aktiv",
                     "overruling": "Übersteuert"
                 }
+            },
+            "active_preset": {
+                "name": "Aktiver Modus",
+                "state": {
+                    "auto": "Auto",
+                    "temporary_override": "Temporär übersteuert",
+                    "manual": "Manuell",
+                    "boost": "Party Timer",
+                    "boost_switch": "Party-Schalter",
+                    "away": "Abwesend"
+                }
+            },
+            "active_preset_end": {
+                "name": "Ende aktiver Modus"
             }
         }
     },

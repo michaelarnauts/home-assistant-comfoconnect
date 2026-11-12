@@ -54,6 +54,12 @@ Choose a duration in Away Mode to start a timer. Choose Off, or use Cancel away,
 
 Away Mode offers durations in minutes, 2/8/24 hours, and 7/14 days. Cancel the timer when you return early. In automations, the durations are in minutes too, e.g. `120` for 2 hours and `10080` for 7 days.
 
+### Active preset
+
+The Active preset sensor shows which timer sets the fan speed: `auto` (the unit follows its week schedule), `temporary_override` (the speed was changed in auto mode), `manual`, `boost`, `boost_switch` (a boost started by a switch on the Option Box) or `away`. Changing the speed in auto mode keeps the unit in auto mode, only overriding the speed until the next change of the week schedule, like the official app shows it.
+
+The Active preset end sensor shows when that timer ends. It is read from the unit when the active preset changes, and is unknown in auto mode and in manual mode, which has no end.
+
 ### Bypass timer
 
 Choose a duration in Bypass timer to force bypass on for 10–60 minutes. Choose Off (`off`) to restore automatic control. Active (`active`) means bypass is forced on, including through Bypass Mode; selecting it only refreshes status.

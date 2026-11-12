@@ -7,6 +7,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import timedelta
 
+from aiocomfoconnect.const import SCHEDULE_PRESET
+from aiocomfoconnect.exceptions import AioComfoConnectError
 from aiocomfoconnect.sensors import (
     SENSOR_AIRFLOW_CONSTRAINTS,
     SENSOR_ANALOG_INPUT_1,
@@ -37,6 +39,7 @@ from aiocomfoconnect.sensors import (
     SENSOR_HUMIDITY_EXTRACT,
     SENSOR_HUMIDITY_OUTDOOR,
     SENSOR_HUMIDITY_SUPPLY,
+    SENSOR_OPERATING_MODE_2,
     SENSOR_POSTHEATER_STATE,
     SENSOR_POSTHEATER_TEMPERATURE_BEFORE,
     SENSOR_POWER_USAGE,
@@ -78,6 +81,7 @@ from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import dt as dt_util
 
 from . import (
     SIGNAL_COMFOCONNECT_UPDATE_RECEIVED,
@@ -90,11 +94,25 @@ from .entity import ComfoConnectEntity
 
 _LOGGER = logging.getLogger(__name__)
 
-# Push only: the entities subscribe to their sensor once, they never poll or send commands.
+# Push only: the entities subscribe to their sensor once, they never poll or send commands. The end of the active preset is read
+# when the unit pushes another preset.
 PARALLEL_UPDATES = 0
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=10)
 
+
+# The timer of the preset schedule that sets the fan speed, as the unit reports it on SENSOR_OPERATING_MODE_2. In auto (255) no
+# timer runs and the unit follows its week schedule; a speed changed in auto mode is a temporary override (timer 1).
+PRESET_AUTO = 255
+ACTIVE_PRESET = {
+    PRESET_AUTO: "auto",
+    1: "temporary_override",
+    5: "manual",
+    6: "boost",
+    # A boost started by a switch on the Option Box (measured in #261); it doesn't start the boost timer.
+    8: "boost_switch",
+    11: "away",
+}
 
 COMFORT_CONTROL_STATE = {
     0: "disabled",
@@ -542,6 +560,15 @@ SENSOR_TYPES = (
         # An enum sensor only accepts its options, so an unknown state is shown as unknown.
         mapping=COMFORT_CONTROL_STATE.get,
     ),
+    ComfoconnectSensorEntityDescription(
+        key=SENSOR_OPERATING_MODE_2,
+        device_class=SensorDeviceClass.ENUM,
+        options=list(ACTIVE_PRESET.values()),
+        translation_key="active_preset",
+        ccb_sensor=SENSORS.get(SENSOR_OPERATING_MODE_2),
+        # A timer we don't name, like one started by an RF remote, is shown as unknown.
+        mapping=ACTIVE_PRESET.get,
+    ),
 )
 
 
@@ -554,6 +581,7 @@ async def async_setup_entry(
     ccb = config_entry.runtime_data
 
     sensors = [ComfoConnectSensor(ccb=ccb, config_entry=config_entry, description=description) for description in SENSOR_TYPES]
+    sensors.append(ComfoConnectPresetEndSensor(ccb))
     # A CO2 sensor is identified by its serial number, so one without a device yet gets no entity.
     sensors += [
         ComfoConnectCO2Sensor(ccb, config_entry, ccb.node_devices[node_id][2], sensor_id)
@@ -657,3 +685,53 @@ class ComfoConnectCO2Sensor(ComfoConnectSensor):
     def available(self) -> bool:
         """Available while the bridge has a session and the sensor is on the bus."""
         return super().available and self._ccb.is_on_bus(self._serial_number)
+
+
+class ComfoConnectPresetEndSensor(ComfoConnectEntity, SensorEntity):
+    """When the timer of the active preset ends, like a boost or a temporary override in auto mode."""
+
+    _attr_should_poll = False
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_translation_key = "active_preset_end"
+
+    def __init__(self, ccb: ComfoConnectBridge) -> None:
+        """Initialize the sensor of the end of the active preset."""
+        super().__init__(ccb)
+        self._attr_unique_id = f"{ccb.uuid}-active_preset_end"
+        self._preset: int | None = None
+
+    async def async_added_to_hass(self) -> None:
+        """Follow the active preset."""
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
+                SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(self._ccb.uuid, SENSOR_OPERATING_MODE_2),
+                self._handle_update,
+            )
+        )
+        await self._ccb.register_sensor(SENSORS[SENSOR_OPERATING_MODE_2])
+
+    @callback
+    def _handle_update(self, value: int) -> None:
+        """Read the end of the timer of a new preset."""
+        # The unit also pushes the time left (SENSOR_NEXT_CHANGE_FAN), but every second, so the timer is read once instead.
+        self._preset = value
+        self._ccb.entry.async_create_background_task(self.hass, self._async_read_end(value), "comfoconnect read active preset end")
+
+    async def _async_read_end(self, preset: int) -> None:
+        """Read when the timer of the preset ends; auto, and a timer that runs until it is cancelled, have no end."""
+        end = None
+        if preset != PRESET_AUTO:
+            try:
+                timer = await self._ccb.get_timer(SCHEDULE_PRESET, preset)
+            except AioComfoConnectError as err:
+                _LOGGER.warning("Could not read the end of the active preset: %s", err)
+            else:
+                if timer.active and timer.remaining >= 0:
+                    end = dt_util.utcnow().replace(microsecond=0) + timedelta(seconds=timer.remaining)
+        # The unit can push another preset while the timer is read; only the end of the latest one is shown.
+        if preset != self._preset:
+            return
+        self._attr_native_value = end
+        self.async_write_ha_state()

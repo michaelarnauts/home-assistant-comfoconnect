@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, PropertyMock, create_autospec, p
 import pytest
 from aiocomfoconnect import Bridge, ComfoConnect
 from aiocomfoconnect.bridge import Node
-from aiocomfoconnect.comfoconnect import NodeInfo
+from aiocomfoconnect.comfoconnect import NodeInfo, TimerEntry
 from aiocomfoconnect.const import ConnectionState
 from aiocomfoconnect.exceptions import ComfoConnectRmiError
 from aiocomfoconnect.properties import (
@@ -50,6 +50,7 @@ NODE_INFO = {
     LAN_C.node_id: NodeInfo("ComfoConnect LAN C", None, None, "DEMO0001", "R1.5.1", 1, 0),
 }
 SENSOR_VALUES = {
+    49: 255,  # Active preset timer: none, auto
     56: 255,  # Operating mode: auto
     65: 1,  # Fan speed
     66: 0,  # Bypass activation
@@ -224,6 +225,7 @@ def mock_comfoconnect(nodes: list[Node], node_info: dict[int | None, NodeInfo], 
         "get_property": get_property,
         "get_property_constraints": get_property_constraints,
         "set_property": None,
+        "get_timer": TimerEntry(False, 0, -1, -1, 0),
         "get_mode": "auto",
         "set_mode": None,
         "set_speed": None,

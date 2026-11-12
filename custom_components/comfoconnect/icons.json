@@ -78,6 +78,9 @@
       },
       "sensor_based_ventilation_state": {
         "default": "mdi:auto-fix"
+      },
+      "active_preset": {
+        "default": "mdi:fan-clock"
       }
     }
   },

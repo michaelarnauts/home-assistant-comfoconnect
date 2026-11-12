@@ -362,6 +362,20 @@
                     "active": "Active",
                     "overruling": "Overruling"
                 }
+            },
+            "active_preset": {
+                "name": "Active preset",
+                "state": {
+                    "auto": "Auto",
+                    "temporary_override": "Temporary override",
+                    "manual": "Manual",
+                    "boost": "Boost",
+                    "boost_switch": "Boost switch",
+                    "away": "Away"
+                }
+            },
+            "active_preset_end": {
+                "name": "Active preset end"
             }
         }
     },
