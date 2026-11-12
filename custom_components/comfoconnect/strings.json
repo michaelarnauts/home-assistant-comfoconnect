@@ -370,6 +370,7 @@
           "temporary_override": "Temporary override",
           "manual": "Manual",
           "boost": "Boost",
+          "boost_switch": "Boost switch",
           "away": "Away"
         }
       },
