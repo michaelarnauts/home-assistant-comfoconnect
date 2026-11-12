@@ -16,7 +16,7 @@ from custom_components.comfoconnect.const import DOMAIN
 from custom_components.comfoconnect.fan import PRESET_MODES, ComfoConnectFan
 from custom_components.comfoconnect.number import NUMBER_TYPES
 from custom_components.comfoconnect.select import SELECT_TYPES
-from custom_components.comfoconnect.sensor import SENSOR_TYPES
+from custom_components.comfoconnect.sensor import CALCULATED_SENSOR_TYPES, SENSOR_TYPES
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
@@ -39,7 +39,7 @@ def test_every_entity_and_option_is_translated(name: str) -> None:
     translations = load(name)
     bridge = SimpleNamespace(uuid="test", is_available=True, active_alarms={})
     descriptions = {
-        "sensor": SENSOR_TYPES,
+        "sensor": (*SENSOR_TYPES, *CALCULATED_SENSOR_TYPES),
         "binary_sensor": BINARY_SENSOR_TYPES,
         "select": SELECT_TYPES,
         "number": NUMBER_TYPES,

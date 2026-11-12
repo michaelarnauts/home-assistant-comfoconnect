@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import timedelta
 
@@ -236,6 +237,8 @@ class ComfoConnectBridge(ComfoConnect):
         self.node_devices: dict[int, tuple[Node, str, str | None]] = {}
         self.add_node_devices = False
         self.is_available = True
+        self._sensor_registrations: dict[int, asyncio.Task[None]] = {}
+        self._latest_sensor_values: dict[int, object] = {}
 
     async def async_add_node_device(self, node: Node, info: NodeInfo | None = None) -> None:
         """Add the device of a node, with what it tells about itself, and link it to the bridge."""
@@ -318,12 +321,25 @@ class ComfoConnectBridge(ComfoConnect):
         if self.is_available == available:
             return
         self.is_available = available
+        if not available:
+            self._latest_sensor_values.clear()
         _LOGGER.info("Bridge %s availability changed: %s", self.uuid, available)
         async_dispatcher_send(self.hass, SIGNAL_COMFOCONNECT_AVAILABILITY.format(self.uuid), available)
 
+    async def async_register_sensor_once(self, sensor: Sensor) -> None:
+        """Share one subscription and replay a valid cached reading to new listeners."""
+        registration = self._sensor_registrations.get(sensor.id)
+        if registration is None or registration.done() and (registration.cancelled() or registration.exception() is not None):
+            registration = self.hass.async_create_task(self.register_sensor(sensor))
+            self._sensor_registrations[sensor.id] = registration
+        await registration
+        if sensor.id in self._latest_sensor_values:
+            self.sensor_callback(sensor, self._latest_sensor_values[sensor.id])
+
     @callback
     def sensor_callback(self, sensor: Sensor, value):
-        """Notify listeners that we have received an update."""
+        """Cache an emitted reading and notify listeners that we have received an update."""
+        self._latest_sensor_values[sensor.id] = value
         async_dispatcher_send(
             self.hass,
             SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(self.uuid, sensor.id),

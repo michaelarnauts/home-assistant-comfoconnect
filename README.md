@@ -20,6 +20,7 @@ integration in Home Assistant.
 * Configure the temperature profile mode (adaptive / fixed)
 * Configure the warm, normal and cool profile temperatures
 * Control timed away mode
+* Show dew point and absolute humidity for outside, supply, inside (extract), and exhaust air
 * Show various sensors
 
 This integration supports the following additional features over the existing integration:
