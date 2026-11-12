@@ -56,7 +56,7 @@ Away Mode offers durations in minutes, 2/8/24 hours, and 7/14 days. Cancel the t
 
 ### Active preset
 
-The Active preset sensor shows which timer sets the fan speed: `auto` (the unit follows its week schedule), `temporary_override` (the speed was changed in auto mode), `manual`, `boost` or `away`. Changing the speed in auto mode keeps the unit in auto mode, only overriding the speed until the next change of the week schedule, like the official app shows it.
+The Active preset sensor shows which timer sets the fan speed: `auto` (the unit follows its week schedule), `temporary_override` (the speed was changed in auto mode), `manual`, `boost`, `boost_switch` (a boost started by a switch on the Option Box) or `away`. Changing the speed in auto mode keeps the unit in auto mode, only overriding the speed until the next change of the week schedule, like the official app shows it.
 
 The Active preset end sensor shows when that timer ends. It is read from the unit when the active preset changes, and is unknown in auto mode and in manual mode, which has no end.
 

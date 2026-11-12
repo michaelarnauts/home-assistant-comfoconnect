@@ -79,7 +79,7 @@ async def test_sensor_based_ventilation_state(hass: HomeAssistant, init_integrat
 
 @pytest.mark.parametrize(
     ("value", "expected"),
-    [(255, "auto"), (1, "temporary_override"), (5, "manual"), (6, "boost"), (11, "away"), (2, STATE_UNKNOWN)],
+    [(255, "auto"), (1, "temporary_override"), (5, "manual"), (6, "boost"), (8, "boost_switch"), (11, "away"), (2, STATE_UNKNOWN)],
 )
 async def test_active_preset(hass: HomeAssistant, init_integration: MockConfigEntry, value: int, expected: str) -> None:
     """Test that the active preset shows the timer the unit reports, and a timer we don't name as unknown."""

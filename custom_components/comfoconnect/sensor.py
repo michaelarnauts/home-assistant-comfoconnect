@@ -109,6 +109,8 @@ ACTIVE_PRESET = {
     1: "temporary_override",
     5: "manual",
     6: "boost",
+    # A boost started by a switch on the Option Box (measured in #261); it doesn't start the boost timer.
+    8: "boost_switch",
     11: "away",
 }
 
