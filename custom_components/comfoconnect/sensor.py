@@ -51,6 +51,7 @@ from aiocomfoconnect.sensors import (
     SENSOR_TEMPERATURE_EXTRACT,
     SENSOR_TEMPERATURE_OUTDOOR,
     SENSOR_TEMPERATURE_SUPPLY,
+    SENSOR_UNIT_AIRFLOW,
     SENSORS,
 )
 from aiocomfoconnect.sensors import (
@@ -85,7 +86,7 @@ from . import (
     ComfoConnectConfigEntry,
     find_co2_sensors,
 )
-from .const import DOMAIN
+from .const import AIRFLOW_UNIT_LPS, AIRFLOW_UNIT_M3PH, DOMAIN, VOLUME_AIRFLOW_UNITS
 from .entity import ComfoConnectEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -100,6 +101,12 @@ COMFORT_CONTROL_STATE = {
     0: "disabled",
     1: "active",
     2: "overruling",
+}
+
+AIRFLOW_SENSOR_IDS = (SENSOR_FAN_SUPPLY_FLOW, SENSOR_FAN_EXHAUST_FLOW)
+AIRFLOW_NATIVE_UNITS = {
+    AIRFLOW_UNIT_LPS: UnitOfVolumeFlowRate.LITERS_PER_SECOND,
+    AIRFLOW_UNIT_M3PH: UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR,
 }
 
 
@@ -119,6 +126,14 @@ class ComfoconnectSensorEntityDescription(SensorEntityDescription, ComfoconnectR
 
 
 SENSOR_TYPES = (
+    ComfoconnectSensorEntityDescription(
+        key=SENSOR_UNIT_AIRFLOW,
+        translation_key="airflow_unit",
+        ccb_sensor=SENSORS[SENSOR_UNIT_AIRFLOW],
+        entity_registry_enabled_default=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        mapping={"lps": "L/s", "m3ph": "m³/h", "kgph": "kg/h"}.get,
+    ),
     ComfoconnectSensorEntityDescription(
         key=SENSOR_HUMIDITY_AFTER_PREHEATER,
         device_class=SensorDeviceClass.HUMIDITY,
@@ -258,7 +273,6 @@ SENSOR_TYPES = (
         device_class=SensorDeviceClass.VOLUME_FLOW_RATE,
         state_class=SensorStateClass.MEASUREMENT,
         translation_key="supply_airflow",
-        native_unit_of_measurement=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR,
         ccb_sensor=SENSORS.get(SENSOR_FAN_SUPPLY_FLOW),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -269,7 +283,6 @@ SENSOR_TYPES = (
         device_class=SensorDeviceClass.VOLUME_FLOW_RATE,
         state_class=SensorStateClass.MEASUREMENT,
         translation_key="exhaust_airflow",
-        native_unit_of_measurement=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR,
         ccb_sensor=SENSORS.get(SENSOR_FAN_EXHAUST_FLOW),
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -581,6 +594,26 @@ class ComfoConnectSensor(ComfoConnectEntity, SensorEntity):
         self.entity_description = description
         self._attr_unique_id = f"{self._ccb.uuid}-{description.key}"
         self._debouncer: Debouncer | None = None
+        if description.key in AIRFLOW_SENSOR_IDS:
+            self._set_airflow_unit()
+
+    @property
+    def available(self) -> bool:
+        """Volume flow is unavailable if the device reports mass flow instead."""
+        return super().available and (self.entity_description.key not in AIRFLOW_SENSOR_IDS or self._ccb.airflow_unit in VOLUME_AIRFLOW_UNITS)
+
+    def _set_airflow_unit(self) -> None:
+        """Declare the raw reading's device-native unit, leaving HA display conversion to HA."""
+        self._attr_native_unit_of_measurement = AIRFLOW_NATIVE_UNITS.get(self._ccb.airflow_unit)
+
+    @callback
+    def _handle_airflow_unit(self, value: str) -> None:
+        """A change in device units must not reinterpret an earlier reading."""
+        old_unit = self._attr_native_unit_of_measurement
+        self._set_airflow_unit()
+        if old_unit != self._attr_native_unit_of_measurement:
+            self._attr_native_value = None
+        self.async_write_ha_state()
 
     async def async_added_to_hass(self) -> None:
         """Register for sensor updates."""
@@ -609,6 +642,14 @@ class ComfoConnectSensor(ComfoConnectEntity, SensorEntity):
                 self._handle_update,
             )
         )
+        if self.entity_description.key in AIRFLOW_SENSOR_IDS:
+            self.async_on_remove(
+                async_dispatcher_connect(
+                    self.hass,
+                    SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(self._ccb.uuid, SENSOR_UNIT_AIRFLOW),
+                    self._handle_airflow_unit,
+                )
+            )
         await self._ccb.register_sensor(self.entity_description.ccb_sensor)
 
     @callback
@@ -625,6 +666,8 @@ class ComfoConnectSensor(ComfoConnectEntity, SensorEntity):
             self._attr_native_value = self.entity_description.mapping(value)
         else:
             self._attr_native_value = value
+        if self.entity_description.key in AIRFLOW_SENSOR_IDS:
+            self._set_airflow_unit()
         if self._debouncer:
             self._debouncer.async_schedule_call()
         else:

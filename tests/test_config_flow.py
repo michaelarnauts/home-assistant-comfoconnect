@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, call
 import pytest
 from aiocomfoconnect.exceptions import AioComfoConnectTimeout, ComfoConnectNotAllowed, ComfoConnectOtherSession
 from custom_components.comfoconnect.config_flow import COMFOCONNECT_MANUAL_BRIDGE_ID, DEFAULT_PIN
-from custom_components.comfoconnect.const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN
+from custom_components.comfoconnect.const import CONF_AIRFLOW_UNIT, CONF_LOCAL_UUID, CONF_UUID, DOMAIN
 from homeassistant.config_entries import SOURCE_IMPORT, SOURCE_USER
 from homeassistant.const import CONF_HOST, CONF_PIN
 from homeassistant.core import HomeAssistant
@@ -37,7 +37,12 @@ def assert_entry_created(result, local_uuid: str | None = None) -> None:
     """Assert that the flow created the entry for the bridge, with our own UUID if we know it up front."""
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == HOST
-    assert result["data"] == {CONF_HOST: HOST, CONF_UUID: BRIDGE_UUID, CONF_LOCAL_UUID: local_uuid or result["data"][CONF_LOCAL_UUID]}
+    assert result["data"] == {
+        CONF_HOST: HOST,
+        CONF_UUID: BRIDGE_UUID,
+        CONF_LOCAL_UUID: local_uuid or result["data"][CONF_LOCAL_UUID],
+        CONF_AIRFLOW_UNIT: "m3ph",
+    }
     assert len(result["data"][CONF_LOCAL_UUID]) == 32
     assert result["result"].unique_id == BRIDGE_UUID
 
@@ -68,6 +73,44 @@ async def test_flow(hass: HomeAssistant, mock_bridge: MagicMock, step: str) -> N
     assert_entry_created(result)
     mock_bridge.register.assert_awaited_once_with(result["data"][CONF_LOCAL_UUID], "Home Assistant (test home)", DEFAULT_PIN)
     mock_bridge.disconnect.assert_awaited_once()
+
+
+async def test_detects_litres_per_second(hass: HomeAssistant, mock_bridge: MagicMock) -> None:
+    """New Q450 setups record L/s when device PDO 224 reports that unit."""
+
+    async def request_sensor(pdid: int, pdo_type: int) -> None:
+        mock_bridge.set_sensor_callback.call_args.args[0](pdid, 2)
+
+    mock_bridge.cmd_rpdo_request.side_effect = request_sensor
+    result = await start_flow(hass)
+    result = await pick_bridge(hass, result)
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"][CONF_AIRFLOW_UNIT] == "lps"
+    mock_bridge.cmd_rpdo_request.assert_called_once()
+
+
+async def test_unknown_unit_prompts_for_fallback(hass: HomeAssistant, mock_bridge: MagicMock) -> None:
+    """When PDO 224 is unavailable, ask the user rather than silently guessing."""
+    mock_bridge.cmd_rpdo_request.side_effect = AioComfoConnectTimeout("unit unavailable")
+    result = await start_flow(hass)
+    result = await pick_bridge(hass, result)
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "airflow_unit"
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_AIRFLOW_UNIT: "lps"})
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"][CONF_AIRFLOW_UNIT] == "lps"
+
+
+async def test_existing_entry_has_fallback_options(hass: HomeAssistant, mock_config_entry: MockConfigEntry) -> None:
+    """Already configured devices can choose a fallback without re-adding the integration."""
+    mock_config_entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+    assert result["type"] is FlowResultType.FORM
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {CONF_AIRFLOW_UNIT: "lps"})
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert mock_config_entry.options[CONF_AIRFLOW_UNIT] == "lps"
 
 
 @pytest.mark.parametrize("step", ["user", "manual"])

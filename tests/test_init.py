@@ -18,7 +18,7 @@ from aiocomfoconnect.exceptions import (
     ComfoConnectRmiError,
     VentilationUnitNotFoundException,
 )
-from custom_components.comfoconnect.const import CONF_LOCAL_UUID, CONF_UUID, DOMAIN
+from custom_components.comfoconnect.const import CONF_AIRFLOW_UNIT, CONF_LOCAL_UUID, CONF_UUID, DOMAIN
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.config_entries import SOURCE_IMPORT, SOURCE_REAUTH, ConfigEntryState
 from homeassistant.const import CONF_HOST, EVENT_HOMEASSISTANT_STOP, STATE_UNAVAILABLE
@@ -277,7 +277,7 @@ async def test_import_from_yaml(hass: HomeAssistant, enable_custom_integrations:
 
     [entry] = hass.config_entries.async_entries(DOMAIN)
     assert entry.source == SOURCE_IMPORT
-    assert entry.data == {CONF_HOST: HOST, CONF_UUID: BRIDGE_UUID, CONF_LOCAL_UUID: LOCAL_UUID}
+    assert entry.data == {CONF_HOST: HOST, CONF_UUID: BRIDGE_UUID, CONF_LOCAL_UUID: LOCAL_UUID, CONF_AIRFLOW_UNIT: "m3ph"}
 
 
 async def test_entities_disabled_by_default(

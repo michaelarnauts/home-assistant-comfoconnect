@@ -77,6 +77,7 @@ SENSOR_VALUES = {
     216: 0,
     217: 86,
     218: 528,
+    224: "m3ph",  # Device airflow unit; overridden in tests for an L/s-configured Q450.
     221: 20.3,
     225: 1,
     227: 0,
@@ -148,6 +149,18 @@ def mock_bridge() -> Generator[MagicMock]:
     bridge = create_autospec(Bridge, instance=True)
     bridge.host = HOST
     bridge.uuid = BRIDGE_UUID
+    sensor_callback = None
+
+    def set_sensor_callback(callback) -> None:
+        nonlocal sensor_callback
+        sensor_callback = callback
+
+    async def request_sensor(pdid: int, pdo_type: int) -> None:
+        if sensor_callback is not None:
+            sensor_callback(pdid, 3)  # Default test bridge uses m³/h.
+
+    bridge.set_sensor_callback.side_effect = set_sensor_callback
+    bridge.cmd_rpdo_request.side_effect = request_sensor
     with patch("custom_components.comfoconnect.config_flow.Bridge", return_value=bridge):
         yield bridge
 

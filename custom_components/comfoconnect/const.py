@@ -6,6 +6,14 @@ DOMAIN = "comfoconnect"
 
 CONF_LOCAL_UUID = "local_uuid"
 CONF_UUID = "uuid"
+CONF_AIRFLOW_UNIT = "airflow_unit"
+
+# aiocomfoconnect decodes PDO 224 (Device Airflow Unit) to these identifiers.
+AIRFLOW_UNIT_KGPH = "kgph"
+AIRFLOW_UNIT_LPS = "lps"
+AIRFLOW_UNIT_M3PH = "m3ph"
+AIRFLOW_UNITS = (AIRFLOW_UNIT_KGPH, AIRFLOW_UNIT_LPS, AIRFLOW_UNIT_M3PH)
+VOLUME_AIRFLOW_UNITS = (AIRFLOW_UNIT_LPS, AIRFLOW_UNIT_M3PH)
 
 SERVICE_START_BOOST = "start_boost"
 ATTR_DURATION = "duration"

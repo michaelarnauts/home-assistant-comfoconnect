@@ -31,6 +31,7 @@
     'sensor.comfoairq_comfofond_ground_temperature',
     'sensor.comfoairq_comfofond_outdoor_air_temperature',
     'sensor.comfoairq_current_rmot',
+    'sensor.comfoairq_device_airflow_unit',
     'sensor.comfoairq_exhaust_airflow',
     'sensor.comfoairq_exhaust_fan_duty',
     'sensor.comfoairq_exhaust_fan_speed',
