@@ -40,6 +40,13 @@
             "reauth_confirm": {
                 "title": "Erneut registrieren",
                 "description": "Home Assistant ist nicht mehr bei der Bridge unter {host} registriert. Registriere es erneut, um die Verbindung wiederherzustellen; falls die Bridge nicht die Standard-PIN verwendet, wirst du danach gefragt."
+            },
+            "airflow_unit": {
+                "title": "Einheit des Luftvolumenstroms bestätigen",
+                "description": "Das Lüftungsgerät hat nicht gemeldet, ob die Luftstromwerte in L/s oder m³/h angegeben werden. Wähle die am Gerät eingestellte Einheit. Eine später vom Gerät gemeldete Einheit hat Vorrang.",
+                "data": {
+                    "airflow_unit": "Einheit des Luftvolumenstroms"
+                }
             }
         },
         "create_entry": {
@@ -50,6 +57,17 @@
             "cannot_connect": "Verbindung zur Bridge fehlgeschlagen. Prüfe, ob sie eingeschaltet und erreichbar ist und nicht gerade von der offiziellen App verwendet wird.",
             "already_configured": "Gerät ist bereits konfiguriert",
             "unknown": "Unerwarteter Fehler"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Ersatzwert für die Luftstromeinheit",
+                "description": "Wird nur verwendet, wenn das Lüftungsgerät keine Einheit meldet. Die vom Gerät gemeldete Einheit hat immer Vorrang.",
+                "data": {
+                    "airflow_unit": "Ersatzwert für Luftstromeinheit"
+                }
+            }
         }
     },
     "entity": {
@@ -273,6 +291,9 @@
             },
             "exhaust_humidity": {
                 "name": "Fortluftfeuchtigkeit"
+            },
+            "airflow_unit": {
+                "name": "Luftstromeinheit des Geräts"
             },
             "supply_airflow": {
                 "name": "Luftmenge Zuluft"

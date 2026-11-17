@@ -40,6 +40,13 @@
             "reauth_confirm": {
                 "title": "Opnieuw registreren",
                 "description": "Home Assistant is niet meer geregistreerd op de gateway op {host}. Registreer opnieuw om weer te verbinden; als de gateway niet de standaardpincode gebruikt, wordt die gevraagd."
+            },
+            "airflow_unit": {
+                "title": "Eenheid voor luchtdebiet bevestigen",
+                "description": "De ventilatie-unit heeft niet gemeld of de luchtdebietwaarden in L/s of m³/h zijn. Kies de eenheid die op de unit is ingesteld. Een later door de unit gemelde eenheid heeft voorrang.",
+                "data": {
+                    "airflow_unit": "Eenheid luchtdebiet"
+                }
             }
         },
         "create_entry": {
@@ -50,6 +57,17 @@
             "cannot_connect": "Kan geen verbinding maken met de gateway. Controleer of die aan staat en bereikbaar is, en of de officiële app hem niet gebruikt.",
             "already_configured": "Apparaat is al geconfigureerd",
             "unknown": "Onverwachte fout"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Terugvaleenheid voor luchtdebiet",
+                "description": "Alleen gebruikt wanneer de ventilatie-unit zelf geen eenheid meldt. Een door de unit gemelde eenheid heeft voorrang.",
+                "data": {
+                    "airflow_unit": "Terugvaleenheid luchtdebiet"
+                }
+            }
         }
     },
     "entity": {
@@ -273,6 +291,9 @@
             },
             "exhaust_humidity": {
                 "name": "Afvoerluchtvochtigheid"
+            },
+            "airflow_unit": {
+                "name": "Eenheid luchtdebiet van het apparaat"
             },
             "supply_airflow": {
                 "name": "Luchtdebiet toevoerventilator"

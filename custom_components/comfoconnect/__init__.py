@@ -16,7 +16,7 @@ from aiocomfoconnect.exceptions import (
     AioComfoConnectTimeout,
     ComfoConnectNotAllowed,
 )
-from aiocomfoconnect.sensors import SENSOR_CO2_1, SENSOR_CO2_8, Sensor
+from aiocomfoconnect.sensors import SENSOR_CO2_1, SENSOR_CO2_8, SENSOR_UNIT_AIRFLOW, SENSORS, Sensor
 from homeassistant.components import network
 from homeassistant.components.fan import DOMAIN as FAN_DOMAIN
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
@@ -29,7 +29,17 @@ from homeassistant.helpers import service
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.typing import ConfigType
 
-from .const import ATTR_DURATION, CONF_LOCAL_UUID, CONF_UUID, DOMAIN, PRODUCT_MODELS, SERVICE_START_BOOST
+from .const import (
+    AIRFLOW_UNIT_M3PH,
+    AIRFLOW_UNITS,
+    ATTR_DURATION,
+    CONF_AIRFLOW_UNIT,
+    CONF_LOCAL_UUID,
+    CONF_UUID,
+    DOMAIN,
+    PRODUCT_MODELS,
+    SERVICE_START_BOOST,
+)
 
 PLATFORMS: list[Platform] = [
     Platform.FAN,
@@ -174,6 +184,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ComfoConnectConfigEntry)
 
     entry.runtime_data = bridge
 
+    # The bridge reports the unit of raw fan airflow values through PDO 224.
+    # Subscribe before creating airflow entities so their first state can use it.
+    # Older models may not support this diagnostic, in which case the saved
+    # setup choice or the pre-existing m³/h default remains the fallback.
+    try:
+        await bridge.register_sensor(SENSORS[SENSOR_UNIT_AIRFLOW])
+    except AioComfoConnectError as err:
+        _LOGGER.info("The ventilation unit did not expose its airflow unit: %s", err)
+    except BaseException:
+        await bridge.disconnect()
+        raise
+
     # Add a device for every node on the bus. The bridge announces some nodes, like itself, a little after we
     # connected; the node callback adds those.
     bridge.add_node_devices = True
@@ -192,8 +214,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ComfoConnectConfigEntry)
         await bridge.disconnect()
 
     entry.async_on_unload(hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, disconnect_bridge))
+    entry.async_on_unload(entry.add_update_listener(async_update_options))
 
     return True
+
+
+async def async_update_options(hass: HomeAssistant, entry: ComfoConnectConfigEntry) -> None:
+    """Reload the integration when the fallback unit setting changes."""
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ComfoConnectConfigEntry) -> bool:
@@ -236,6 +264,12 @@ class ComfoConnectBridge(ComfoConnect):
         self.node_devices: dict[int, tuple[Node, str, str | None]] = {}
         self.add_node_devices = False
         self.is_available = True
+        self.reported_airflow_unit: str | None = None
+
+    @property
+    def airflow_unit(self) -> str:
+        """Prefer the device's live unit, then the saved choice, then the old default."""
+        return self.reported_airflow_unit or self.entry.options.get(CONF_AIRFLOW_UNIT) or self.entry.data.get(CONF_AIRFLOW_UNIT) or AIRFLOW_UNIT_M3PH
 
     async def async_add_node_device(self, node: Node, info: NodeInfo | None = None) -> None:
         """Add the device of a node, with what it tells about itself, and link it to the bridge."""
@@ -308,6 +342,8 @@ class ComfoConnectBridge(ComfoConnect):
     @callback
     def connection_state_callback(self, state: str) -> None:
         """Follow the session the library keeps up, and ask to register again when the bridge refuses it."""
+        if state != ConnectionState.CONNECTED:
+            self.reported_airflow_unit = None
         self.set_available(state == ConnectionState.CONNECTED)
         if state == ConnectionState.NOT_ALLOWED:
             self.entry.async_start_reauth(self.hass)
@@ -324,6 +360,8 @@ class ComfoConnectBridge(ComfoConnect):
     @callback
     def sensor_callback(self, sensor: Sensor, value):
         """Notify listeners that we have received an update."""
+        if sensor.id == SENSOR_UNIT_AIRFLOW and value in AIRFLOW_UNITS:
+            self.reported_airflow_unit = value
         async_dispatcher_send(
             self.hass,
             SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(self.uuid, sensor.id),

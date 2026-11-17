@@ -40,6 +40,13 @@
       "reauth_confirm": {
         "title": "Register again",
         "description": "Home Assistant is no longer registered on the bridge at {host}. Register again to reconnect; if the bridge doesn't use the default PIN, you'll be asked for it."
+      },
+      "airflow_unit": {
+        "title": "Confirm airflow measurement unit",
+        "description": "The ventilation unit did not report whether its airflow readings use L/s or m³/h. Select the unit configured on the ventilation unit. If the unit subsequently reports its own setting, that takes precedence.",
+        "data": {
+          "airflow_unit": "Airflow measurement unit"
+        }
       }
     },
     "create_entry": {
@@ -50,6 +57,17 @@
       "cannot_connect": "Could not connect to the bridge. Check that it is on and reachable, and that the official app isn't using it.",
       "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
       "unknown": "[%key:common::config_flow::error::unknown%]"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Fallback airflow measurement unit",
+        "description": "Used only if the ventilation unit does not report its airflow unit. A device-reported unit always takes precedence.",
+        "data": {
+          "airflow_unit": "Fallback airflow unit"
+        }
+      }
     }
   },
   "entity": {
@@ -273,6 +291,9 @@
       },
       "exhaust_humidity": {
         "name": "Exhaust humidity"
+      },
+      "airflow_unit": {
+        "name": "Device airflow unit"
       },
       "supply_airflow": {
         "name": "Supply airflow"

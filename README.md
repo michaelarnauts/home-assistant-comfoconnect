@@ -31,8 +31,17 @@ This integration supports the following additional features over the existing in
 * Support to clear alarms
 * Ignores invalid sensor values at the beginning of a session (Workaround for bridge firmware bug)
 * Throttles high frequency sensor updates (airflow & fan duty) to once every 10 seconds
+* Detects the fan airflow units reported by the ventilation unit, without assuming every unit uses m³/h
 
 **Note: Not all sensors are enabled by default. You can enable them on the integration page.**
+
+### Airflow measurement units
+
+The supply and exhaust airflow sensors use the **native measurement unit reported by the ventilation unit** (PDO 224): litres per second (`L/s`) or cubic metres per hour (`m³/h`). For example, 67 L/s must not be interpreted as 67 m³/h. Home Assistant may convert the correctly identified native value to another display unit according to each entity's preferences.
+
+During new device setup, the integration attempts to detect this setting. If the unit does not report it, the setup flow asks the user to select `L/s` or `m³/h`. The selected or detected value is remembered for later sessions, but a live device report always takes precedence. The fallback can also be changed under the integration's **Configure** options. Previously configured integrations retain the old `m³/h` assumption until a device reading or an explicit fallback replaces it.
+
+For diagnostics, the optional **Device airflow unit** entity exposes the unit reported by the device. Units reporting mass flow (`kg/h`) are recognised, but volume-flow entities are unavailable for that mode because they cannot safely be converted to `L/s` or `m³/h` without additional information.
 
 ### Boost mode
 

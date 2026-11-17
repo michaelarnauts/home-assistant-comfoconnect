@@ -3,9 +3,16 @@
 from datetime import timedelta
 
 import pytest
-from aiocomfoconnect.sensors import SENSOR_COMFORTCONTROL_MODE, SENSOR_FAN_SUPPLY_SPEED, SENSOR_TEMPERATURE_EXTRACT
+from aiocomfoconnect.sensors import (
+    SENSOR_COMFORTCONTROL_MODE,
+    SENSOR_FAN_EXHAUST_FLOW,
+    SENSOR_FAN_SUPPLY_FLOW,
+    SENSOR_FAN_SUPPLY_SPEED,
+    SENSOR_TEMPERATURE_EXTRACT,
+    SENSOR_UNIT_AIRFLOW,
+)
 from freezegun.api import FrozenDateTimeFactory
-from homeassistant.const import STATE_UNKNOWN, Platform
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed, snapshot_platform
@@ -52,6 +59,37 @@ async def test_other_sensors_write_every_value(hass: HomeAssistant, init_integra
         push_sensor(init_integration, SENSOR_TEMPERATURE_EXTRACT, value)
         await hass.async_block_till_done()
         assert hass.states.get("sensor.comfoairq_inside_temperature").state == str(value)
+
+
+@pytest.mark.usefixtures("entity_registry_enabled_by_default")
+async def test_airflow_uses_device_native_unit(hass: HomeAssistant, freezer: FrozenDateTimeFactory, init_integration: MockConfigEntry) -> None:
+    """A Q450 reporting 67 L/s must not end up as an incorrect 18.6 L/s."""
+    push_sensor(init_integration, SENSOR_UNIT_AIRFLOW, "lps")
+    push_sensor(init_integration, SENSOR_FAN_SUPPLY_FLOW, 67)
+    push_sensor(init_integration, SENSOR_FAN_EXHAUST_FLOW, 66)
+    freezer.tick(timedelta(seconds=10))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+
+    for entity_id, raw_lps in (("sensor.comfoairq_supply_airflow", 67), ("sensor.comfoairq_exhaust_airflow", 66)):
+        state = hass.states.get(entity_id)
+        if state.attributes["unit_of_measurement"] == "L/s":
+            assert float(state.state) == raw_lps
+        else:
+            assert state.attributes["unit_of_measurement"] == "m³/h"
+            assert float(state.state) == pytest.approx(raw_lps * 3.6)
+    assert hass.states.get("sensor.comfoairq_device_airflow_unit").state == "L/s"
+
+    # A unit change clears old values rather than reinterpreting them.
+    push_sensor(init_integration, SENSOR_UNIT_AIRFLOW, "kgph")
+    await hass.async_block_till_done()
+    assert hass.states.get("sensor.comfoairq_supply_airflow").state == STATE_UNAVAILABLE
+    assert hass.states.get("sensor.comfoairq_exhaust_airflow").state == STATE_UNAVAILABLE
+
+    push_sensor(init_integration, SENSOR_UNIT_AIRFLOW, "m3ph")
+    await hass.async_block_till_done()
+    # No old raw L/s reading may be shown in m³/h until a fresh airflow update.
+    assert hass.states.get("sensor.comfoairq_supply_airflow").state == STATE_UNKNOWN
 
 
 @pytest.mark.parametrize(("value", "expected"), [(0, "disabled"), (2, "overruling"), (7, STATE_UNKNOWN)])
