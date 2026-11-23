@@ -51,6 +51,7 @@ from aiocomfoconnect.sensors import (
     SENSOR_TEMPERATURE_EXTRACT,
     SENSOR_TEMPERATURE_OUTDOOR,
     SENSOR_TEMPERATURE_SUPPLY,
+    SENSOR_UNIT_AIRFLOW,
     SENSORS,
 )
 from aiocomfoconnect.sensors import (
@@ -117,6 +118,11 @@ class ComfoconnectSensorEntityDescription(SensorEntityDescription, ComfoconnectR
     throttle: bool = False
     mapping: Callable = None
 
+
+# The airflow sensors, which report in the airflow unit the unit is set to.
+AIRFLOW_SENSORS = {SENSOR_FAN_SUPPLY_FLOW, SENSOR_FAN_EXHAUST_FLOW}
+# The airflow units, as the library reports them, that aren't m³/h.
+AIRFLOW_UNITS = {"lps": UnitOfVolumeFlowRate.LITERS_PER_SECOND}
 
 SENSOR_TYPES = (
     ComfoconnectSensorEntityDescription(
@@ -553,7 +559,12 @@ async def async_setup_entry(
     """Set up the ComfoConnect sensors."""
     ccb = config_entry.runtime_data
 
-    sensors = [ComfoConnectSensor(ccb=ccb, config_entry=config_entry, description=description) for description in SENSOR_TYPES]
+    sensors = [
+        (ComfoConnectAirflowSensor if description.key in AIRFLOW_SENSORS else ComfoConnectSensor)(
+            ccb=ccb, config_entry=config_entry, description=description
+        )
+        for description in SENSOR_TYPES
+    ]
     # A CO2 sensor is identified by its serial number, so one without a device yet gets no entity.
     sensors += [
         ComfoConnectCO2Sensor(ccb, config_entry, ccb.node_devices[node_id][2], sensor_id)
@@ -629,6 +640,51 @@ class ComfoConnectSensor(ComfoConnectEntity, SensorEntity):
             self._debouncer.async_schedule_call()
         else:
             self.async_write_ha_state()
+
+
+class ComfoConnectAirflowSensor(ComfoConnectSensor):
+    """
+    An airflow, in the airflow unit the ventilation unit is set to (m³/h or L/s).
+
+    The unit reports the airflow in the unit it's set to, which it reports itself as a sensor. Home Assistant has no unit for
+    kg/h, so that one shows as m³/h, which is also how the official app calculates with it.
+    """
+
+    _unit_known = False
+    _pending_value = None
+
+    async def async_added_to_hass(self) -> None:
+        """Register for the airflow and for the airflow unit."""
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
+                SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(self._ccb.uuid, SENSOR_UNIT_AIRFLOW),
+                self._handle_unit_update,
+            )
+        )
+        await self._ccb.register_sensor(SENSORS[SENSOR_UNIT_AIRFLOW])
+
+    @callback
+    def _handle_update(self, value):
+        """Handle an airflow, but only show it once we know its unit."""
+        if not self._unit_known:
+            self._pending_value = value
+            return
+        super()._handle_update(value)
+
+    @callback
+    def _handle_unit_update(self, value):
+        """
+        Handle the airflow unit, and show the airflow that waited for it.
+
+        When the unit changes later, the new unit is shown with the next airflow, which is in that unit.
+        """
+        self._attr_native_unit_of_measurement = AIRFLOW_UNITS.get(value, UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR)
+        self._unit_known = True
+        if self._pending_value is not None:
+            value, self._pending_value = self._pending_value, None
+            super()._handle_update(value)
 
 
 class ComfoConnectCO2Sensor(ComfoConnectSensor):

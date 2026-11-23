@@ -31,6 +31,7 @@ This integration supports the following additional features over the existing in
 * Support to clear alarms
 * Ignores invalid sensor values at the beginning of a session (Workaround for bridge firmware bug)
 * Throttles high frequency sensor updates (airflow & fan duty) to once every 10 seconds
+* Shows the airflow in the unit the ventilation unit is set to (m³/h or L/s)
 
 **Note: Not all sensors are enabled by default. You can enable them on the integration page.**
 
